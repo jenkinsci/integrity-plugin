@@ -1,0 +1,36 @@
+<!--
+	The index.jelly file is used to display a detailed change log on the Changes page. 
+	The listing should include all data that is available in each change log entry.
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
+  <h2>${%Summary}</h2>
+  <table class="pane" style="border:none">
+  <tr>
+  	<th class="changeset-message">Action</th>  
+  	<th class="changeset-message">Author</th>
+  	<th class="changeset-message">Filename</th>
+  	<th class="changeset-message">Revision</th>
+  	<th class="changeset-message">Date</th>
+  	<th class="changeset-message">Comments</th>
+  </tr>
+  <j:forEach var="cs" items="${it.items}" varStatus="loop">
+  <tr>
+	<j:choose>
+		<j:when test="${cs.action.equals('update')}">
+			<td><a href="${browser.getDiffLink(cs)}" target="_blank"><t:editTypeIcon type="${cs.editType}"/></a></td>
+		</j:when>
+		<j:otherwise>
+			<td><t:editTypeIcon type="${cs.editType}"/></td>
+		</j:otherwise>
+	</j:choose>			
+  	<td>${cs.author}</td>
+  	<td>${cs.file}</td>
+  	<td><a href="${browser.getChangeSetLink(cs)}" target="_blank">${cs.revision}</a></td>
+  	<td>${cs.date}</td>
+  	<td>${cs.msg}</td>
+  </tr>
+  </j:forEach>    
+  </table>
+</j:jelly>

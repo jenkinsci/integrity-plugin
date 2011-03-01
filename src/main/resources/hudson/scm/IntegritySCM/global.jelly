@@ -1,0 +1,17 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+  <f:section title="MKS Integrity for Configuration Management">
+	
+	<!-- Example of a Text Box entry -->
+    <f:entry title="Integrity Global Options"
+      description="This is where Integrity Global Options will be defined!  However, this is not in use at this time!"
+      help="/plugin/integrity/help-GlobalOptions.html">
+      <f:textbox name="mks.globalOptions" 
+      			 value="${descriptor.globalOptions}" 
+      			 checkUrl="'${rootURL}/scm/IntegritySCM/globalOptionsCheck?value='+escape(this.value)"/>
+    </f:entry>
+
+  </f:section>
+
+</j:jelly>
+

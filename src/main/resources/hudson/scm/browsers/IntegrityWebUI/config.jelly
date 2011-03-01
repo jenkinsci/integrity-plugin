@@ -1,0 +1,12 @@
+<!-- 
+	This config.jelly file is used to obtain the optional URL information for producing links
+	to the MKS Integrity Configuration Management System
+-->
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  
+  <f:entry title="URL" field="url">
+    <f:textbox name="mks.url" value="${browser.url}"/>
+  </f:entry>
+  
+</j:jelly>
+ 

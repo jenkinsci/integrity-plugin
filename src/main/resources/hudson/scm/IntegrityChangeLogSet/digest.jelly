@@ -1,0 +1,23 @@
+<!-- 
+	The digest.jelly file is used to display the change log on the status page. 
+	The listing should be brief and most of the time only display the change message.
+-->
+
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <j:choose>
+    <j:when test="${it.emptySet}">
+      ${%No changes.}
+    </j:when>
+    <j:otherwise>
+      Summary of Changes (<a href="changes">detail view</a>)
+      <ol>
+        <j:forEach var="cs" items="${it.items}" varStatus="loop">
+          <li>
+            ${cs.date} ${cs.msg} 
+          </li>
+        </j:forEach>
+      </ol>
+    </j:otherwise>
+  </j:choose>
+</j:jelly>

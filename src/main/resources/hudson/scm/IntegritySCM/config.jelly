@@ -1,0 +1,54 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+    <f:entry title="Integrity Server Hostname" field="hostName">
+        <f:textbox name="mks.hostName" value="${scm.hostName}"
+        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
+    </f:entry>
+
+    <f:entry title="Integrity Server Port" field="port">
+        <f:textbox name="mks.port" value="${scm.port}"
+        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Port must be specified!'))}&amp;value='+encode(this.value)"/>        
+    </f:entry>
+
+    <f:entry title="Integrity Project" field="configPath">
+        <f:textbox name="mks.configPath" value="${scm.configPath}"
+        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Project must be specified!'))}&amp;value='+encode(this.value)"/>        
+    </f:entry>
+
+    <f:entry title="Integrity Username" field="userName">
+        <f:textbox name="mks.userName" value="${scm.userName}"
+        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
+    </f:entry>
+
+    <f:entry title="Integrity Password" field="password">
+        <f:password name="mks.password" value="${scm.password}"
+        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
+    </f:entry>
+
+    <f:advanced>
+
+        <f:entry title="Use Secure Connection?" field="secure">
+            <f:checkbox name="mks.secure" value="${scm.secure}"/>
+        </f:entry>
+
+        <f:entry title="Clean Workspace?" field="cleanCopy">
+            <f:checkbox name="mks.cleanCopy" checked="${scm.cleanCopy}"/>
+        </f:entry>
+
+        <f:entry title="Restore Timestamp?" field="restoreTimestamp">
+            <f:checkbox name="mks.restoreTimestamp" checked="${scm.restoreTimestamp}"/>
+        </f:entry>
+        
+        <f:entry title="Line Terminator" field="lineTerminator">
+          <select name="mks.lineTerminator">
+			<f:option value="native"  selected="${scm.lineTerminator.equals('native')}" >native</f:option>
+            <f:option value="lf"  selected="${scm.lineTerminator.equals('lf')}" >lf</f:option>
+            <f:option value="cr"  selected="${scm.lineTerminator.equals('cr')}" >cr</f:option>
+            <f:option value="crlf" selected="${scm.lineTerminator.equals('crlf')}">crlf</f:option>
+          </select>
+        </f:entry>
+        
+    </f:advanced>
+
+	<t:listScmBrowsers name="mks.browser" />    
+</j:jelly>
