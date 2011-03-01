@@ -33,7 +33,7 @@
   		<groupId>com.mks.api</groupId>
   		<artifactId>mksapi-jar</artifactId>
   		<version>4.10.5799</version>
-  		<scope>compile</scope>
+  		<scope>runtime</scope>
    	</dependency>
   </dependencies>
   <dependencyManagement>
