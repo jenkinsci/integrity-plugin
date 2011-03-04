@@ -175,12 +175,15 @@ public class IntegrityCMProject implements Serializable
 			WorkItem wi = wit.next();
 			if( wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT) )
 			{
+				// Save the configuration path for the current subproject, using the canonical path name
 				pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
 			}
 			else if( wi.getModelType().equals(SIModelTypeName.MEMBER) )
 			{
+				// Figure out this member's parent project's canonical path name
+				String parentProject = wi.getField("parent").getValueAsString();
 				// Instantiate our Integrity CM Member object
-				IntegrityCMMember iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(wi.getContext()), projectRoot);
+				IntegrityCMMember iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot);
 				// Set the line terminator for this file
 				iCMMember.setLineTerminator(lineTerminator);
 				// Set the restore timestamp option when checking out this file

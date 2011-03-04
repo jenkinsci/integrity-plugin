@@ -408,6 +408,7 @@ public class IntegritySCM extends SCM implements Serializable
 		siViewProjectCmd.addOption(new Option("project", siProject.getConfigurationPath()));
 		MultiValue mvFields = new MultiValue(",");
 		mvFields.add("name");
+		mvFields.add("context");
 		mvFields.add("memberrev");
 		mvFields.add("membertimestamp");
 		mvFields.add("memberdescription");

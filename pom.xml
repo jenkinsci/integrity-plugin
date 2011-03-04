@@ -3,7 +3,7 @@
   <parent>
 	<groupId>org.jenkins-ci.plugins</groupId>    
 	<artifactId>plugin</artifactId>    
-	<version>1.398</version>  
+	<version>1.399</version>  
   </parent>  
   
   <groupId>org.jenkins-ci.plugins</groupId>
@@ -18,7 +18,7 @@
     <developer>
       <id>cdsouza</id>
       <name>Cletus D'Souza</name>
-      <email>Cletus.D'Souza@mks.com</email>
+      <email>dsouza@mks.com</email>
     </developer>
   </developers>
 	
