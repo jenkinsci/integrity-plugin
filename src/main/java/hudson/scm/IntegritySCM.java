@@ -493,6 +493,12 @@ public class IntegritySCM extends SCM implements Serializable
 
 		// Lets start with creating an authenticated MKS API Session for various parts of this operation...
 		APISession api = createAPISession();
+		// Ensure we've successfully created an API Session
+		if( null == api )
+		{
+			listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+			return false;
+		}
 		// Lets also open the change log file for writing...
 		PrintWriter writer = new PrintWriter(new FileWriter(changeLogFile));		
 		try
@@ -666,43 +672,51 @@ public class IntegritySCM extends SCM implements Serializable
         			IntegrityCMProject oldProject = baseline.getSIProject();
         			// Next, load up the information for the current MKS Integrity Project
         			// Lets start with creating an authenticated MKS API Session for various parts of this operation...
-        			APISession api = createAPISession();        			
-        			try
+        			APISession api = createAPISession();
+        			if( null != api )
         			{
-        				listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-        				initializeCMProject(api);
-        				listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
-        				initializeCMProjectMembers(api);
-        				// Compare this project with the old project 
-        				siProject.compareBaseline(oldProject);		
-        				// Finally decide whether or not we need to build again
-        				if( siProject.hasProjectChanged() )
-        				{
-        					listener.getLogger().println("Project contains changes a total of " + siProject.getChangeCount() + " changes!");
-        					return PollingResult.SIGNIFICANT;
-        				}
-        				else
-        				{
-        					listener.getLogger().println("No new changes detected in project!");        					
-        					return PollingResult.NO_CHANGES;
-        				}
+	        			try
+	        			{
+	        				listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
+	        				initializeCMProject(api);
+	        				listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
+	        				initializeCMProjectMembers(api);
+	        				// Compare this project with the old project 
+	        				siProject.compareBaseline(oldProject);		
+	        				// Finally decide whether or not we need to build again
+	        				if( siProject.hasProjectChanged() )
+	        				{
+	        					listener.getLogger().println("Project contains changes a total of " + siProject.getChangeCount() + " changes!");
+	        					return PollingResult.SIGNIFICANT;
+	        				}
+	        				else
+	        				{
+	        					listener.getLogger().println("No new changes detected in project!");        					
+	        					return PollingResult.NO_CHANGES;
+	        				}
+	        			}
+	        		    catch(APIException aex)
+	        		    {
+	        	    		logger.error("API Exception caught...");
+	        	    		listener.getLogger().println("An API Exception was caught!"); 
+	        	    		ExceptionHandler eh = new ExceptionHandler(aex);
+	        	    		logger.error(eh.getMessage());
+	        	    		listener.getLogger().println(eh.getMessage());
+	        	    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	        	    		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	        	    		aex.printStackTrace();
+	        	    		return PollingResult.NO_CHANGES;
+	        		    }
+	        		    finally
+	        		    {
+	        				api.Terminate();
+	        		    }
         			}
-        		    catch(APIException aex)
-        		    {
-        	    		logger.error("API Exception caught...");
-        	    		listener.getLogger().println("An API Exception was caught!"); 
-        	    		ExceptionHandler eh = new ExceptionHandler(aex);
-        	    		logger.error(eh.getMessage());
-        	    		listener.getLogger().println(eh.getMessage());
-        	    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
-        	    		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
-        	    		aex.printStackTrace();
-        	    		return PollingResult.NO_CHANGES;
-        		    }
-        		    finally
-        		    {
-        				api.Terminate();
-        		    }
+        			else
+        			{
+        				listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+        				return PollingResult.NO_CHANGES;
+        			}        			
         		}
         		else
         		{

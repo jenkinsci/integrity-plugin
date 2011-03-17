@@ -162,8 +162,8 @@ public class IntegrityCheckpointAction extends Notifier
 		}
 		else
 		{
-			logger.error("An API Session could not be established!  Cannot perform checkout operation against MKS Integrity Server");
-			listener.getLogger().println("An API Session could not be established!  Cannot perform checkout operation against MKS Integrity Server");
+			logger.error("An API Session could not be established!  Cannot perform checkpoint operation against MKS Integrity Server");
+			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation against MKS Integrity Server");
 			return false;
 		}
 

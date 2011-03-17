@@ -50,7 +50,13 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		FilePath workspace = new FilePath(workspaceFile);
 		// Create a fresh API Session as we may/will be executing from another server
 		APISession api = scm.createAPISession();
-		
+		// Ensure we've successfully created an API Session
+		if( null == api )
+		{
+			listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+			return false;
+		}
+		// If we got here, then APISession was created successfully!
 		try
 		{
 			if( cleanCopy )
