@@ -28,6 +28,7 @@ public class IntegrityCMMember implements Serializable
 	private String memberName;
 	private Date memberTimestamp;
 	private String memberDescription;
+	private String author;
 	private String projectConfigPath;
 	private String memberRev;
 	private String priorRev;
@@ -46,8 +47,9 @@ public class IntegrityCMMember implements Serializable
 	 * @param wi A MKS API Response Work Item representing metadata related to a Integrity Member
 	 * @param configPath Configuration Path for this file's project/subproject
 	 * @param projectRoot Full path to the root location for this file's parent project
+	 * @param api The current MKS API Session to obtain the author associated with this member revision
 	 */
-	public IntegrityCMMember(WorkItem wi, String configPath, String projectRoot)
+	public IntegrityCMMember(WorkItem wi, String configPath, String projectRoot, APISession api) throws APIException
 	{
 		this.projectConfigPath = configPath;
 		this.memberID = wi.getId();
@@ -69,6 +71,8 @@ public class IntegrityCMMember implements Serializable
 		this.relativeFile = this.memberName.substring(projectRoot.length());
 		// At this point just initialize the target file to a relative path!
 		this.targetFile = new File(relativeFile);
+		// Initialize the author associated with this member revision
+		this.author = getAuthor(api);
 	}
 
 	/**
@@ -117,6 +121,22 @@ public class IntegrityCMMember implements Serializable
 	public String getDescription()
 	{
 		return memberDescription;
+	}
+	
+	/**
+	 * Returns the author for this member revision
+	 * @return
+	 */
+	public String getAuthor()
+	{
+		if( null != author )
+		{
+			return author;
+		}
+		else
+		{
+			return "unknown";
+		}
 	}
 	
 	/**
@@ -287,7 +307,7 @@ public class IntegrityCMMember implements Serializable
 	 * @return User responsible for making this change
 	 * @throws APIException
 	 */
-	public String getAuthor(APISession api) throws APIException
+	private String getAuthor(APISession api) throws APIException
 	{
 		// Construct the revision-info command
 		Command revInfoCMD = new Command(Command.SI, "revisioninfo");

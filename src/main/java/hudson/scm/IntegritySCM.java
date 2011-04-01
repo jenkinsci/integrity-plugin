@@ -416,7 +416,7 @@ public class IntegritySCM extends SCM implements Serializable
 		logger.info("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommand(siViewProjectCmd);
 		logger.info(viewRes.getCommandString() + " returned " + viewRes.getExitCode());
-		siProject.parseProject(viewRes.getWorkItems());
+		siProject.parseProject(viewRes.getWorkItems(), api);
 		return viewRes;
 	}
 	
