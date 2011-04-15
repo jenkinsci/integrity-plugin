@@ -509,19 +509,19 @@ public class IntegritySCM extends SCM implements Serializable
 			listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
 			initializeCMProjectMembers(api);
 					
-			// Figure out what our previous successful build was...
-			AbstractBuild<?,?> previousBuild = build.getPreviousSuccessfulBuild();
+			// Figure out what our previous build was...
+			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
 	    	// Check to see if we've had a previous build...
 	        if( null == previousBuild ) 
 	        {
 	            // Nothing worthwhile to compare against
-	        	logger.info("Previous build wasn't successful or no prior builds!");
+	        	logger.info("Cannot find a previous build!");
 	        }    	
 	
-	    	// If the previous build wasn't successful, lets probe a little further back to find the last successful build
-	        for( AbstractBuild<?,?> b = build.getPreviousSuccessfulBuild(); null != b; b = b.getPreviousSuccessfulBuild() ) 
+	    	// Now, we need to find the project state from the previous build.
+	        for( AbstractBuild<?,?> b = build.getPreviousBuild(); null != b; b = b.getPreviousBuild() ) 
 	        {
-	        	// For each previous successful build, lets make sure we've generated a project state
+	        	// For each previous build, lets make sure we can find a project state
 	            if( getViewProjectResponseFile(b).exists()) 
 	            {
 	            	logger.info("Found previous project state in build " + b.getNumber());

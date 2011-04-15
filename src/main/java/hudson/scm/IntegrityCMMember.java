@@ -60,6 +60,8 @@ public class IntegrityCMMember implements Serializable
 		if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
 		{
 			this.memberDescription = wi.getField("memberdescription").getValueAsString();
+			// Char 8211 which is a long dash causes problems for the change log XML, need to fix it!
+			this.memberDescription = this.memberDescription.replace((char)8211, '-');
 		}
 		else
 		{

@@ -1,6 +1,8 @@
 package hudson.scm;
 
+import java.io.IOException;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.Calendar;
 import java.util.Collections;
@@ -12,6 +14,18 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.ArrayList;
 import java.util.NoSuchElementException;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+ 
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -43,7 +57,9 @@ public class IntegrityCMProject implements Serializable
 	private List<IntegrityCMMember> newMemberList;
 	private List<IntegrityCMMember> updatedMemberList;
 	private List<IntegrityCMMember> deletedMemberList;
+	private Document xmlDoc;
 	private StringBuffer changeLog;
+	
 	
     // Create a custom comparator to compare project members
     public static final Comparator<IntegrityCMMember> FILES_ORDER = new Comparator<IntegrityCMMember>(){ 
@@ -262,77 +278,140 @@ public class IntegrityCMProject implements Serializable
 	 */
 	public String getChangeLog(String version, APISession api) throws APIException
 	{
-		changeLog = new StringBuffer();
-		writeChangeLog("<?xml version=\"1.0\" encoding=\"UTF-8\"?>");	
-		if( hasProjectChanged() )
+		try
 		{
-			writeChangeLog("<changelog>");
-			writeChangeLog(String.format("\t<items version=\"%s\">", version));
-			// Process the adds
-			for( Iterator<IntegrityCMMember> it = newMemberList.iterator(); it.hasNext(); )
+			// Initialize the XML document builder
+			DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			// Initialize the XML Document and change log
+			xmlDoc = docBuilder.newDocument();
+			changeLog = new StringBuffer();
+			// Create the root <changelog> element
+			Element changeLogElem = xmlDoc.createElement("changelog");
+			// Add the <changelog> to the xmlDoc
+			xmlDoc.appendChild(changeLogElem);
+
+			// Add the change log details, if the project has changed 
+			if( hasProjectChanged() )
 			{
-				writeChangeLog(String.format("\t\t<item action=\"%s\">", "add"));
-				writeChangeLog(it.next(), api);	
+				// Create the <items> element
+				Element items = xmlDoc.createElement("items");	
+				// Set the version attribute to the <items> element
+				items.setAttribute("version", version);
+				// Append the <items> to the root element <changelog>
+				changeLogElem.appendChild(items);
+				
+				// Process the adds
+				for( Iterator<IntegrityCMMember> it = newMemberList.iterator(); it.hasNext(); )
+				{
+					// Create the individual <item> element for the add
+					Element item = xmlDoc.createElement("item");
+					// Set the action attribute
+					item.setAttribute("action", "add");
+					// Append the <item> to the <items> element
+					items.appendChild(writeChangeLog(item, it.next(), api));	
+				}
+				// Process the updates
+				for( Iterator<IntegrityCMMember> it = updatedMemberList.iterator(); it.hasNext(); )
+				{
+					// Create the individual <item> element for the update
+					Element item = xmlDoc.createElement("item");
+					// Set the action attribute
+					item.setAttribute("action", "update");
+					// Append the <item> to the <items> element
+					items.appendChild(writeChangeLog(item, it.next(), api));	
+				}
+				// Process the drops
+				for( Iterator<IntegrityCMMember> it = deletedMemberList.iterator(); it.hasNext(); )
+				{
+					// Create the individual <item> element for the drops
+					Element item = xmlDoc.createElement("item");
+					// Set the action attribute
+					item.setAttribute("action", "delete");
+					// Append the <item> to the <items> element
+					items.appendChild(writeChangeLog(item, it.next(), api));
+				}			
 			}
-			// Process the updates
-			for( Iterator<IntegrityCMMember> it = updatedMemberList.iterator(); it.hasNext(); )
-			{
-				writeChangeLog(String.format("\t\t<item action=\"%s\">", "update"));
-				writeChangeLog(it.next(), api);	
-			}
-			// Process the drops
-			for( Iterator<IntegrityCMMember> it = deletedMemberList.iterator(); it.hasNext(); )
-			{
-				writeChangeLog(String.format("\t\t<item action=\"%s\">", "delete"));
-				writeChangeLog(it.next(), api);	
-			}			
-			writeChangeLog("\t</items>");				
-			writeChangeLog("</changelog>");
+		 
+			// Write the content into a String
+			TransformerFactory tfactory = TransformerFactory.newInstance();
+        	Transformer serializer = tfactory.newTransformer();
+            // Setup indenting for a readable output
+            serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+            serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+            StringWriter sw = new StringWriter();
+            serializer.transform(new DOMSource(xmlDoc), new StreamResult(sw));
+            changeLog.append(sw.toString());
+            sw.close();
 		}
-		else
+		catch(ParserConfigurationException pce)
 		{
-			writeChangeLog("<changelog/>");
+			logger.warn("Caught Parser Configuration Exception while generating Change Log!");
+			logger.warn(pce.getMessage());			
 		}
-		
+		catch(TransformerException tfe)
+		{
+			logger.warn("Caught Transformer Exception while generating Change Log!");
+			logger.warn(tfe.getMessage());			
+		}
+		catch(IOException ioe)
+		{
+			logger.warn("Caught IO Exception while generating Change Log!");
+			logger.warn(ioe.getMessage());			
+		}		
+				
 		return changeLog.toString();
 	}
 	
 	/**
-	 * Helper function to write details to the Change Log for each member
+	 * Helper function to append details to the Change Log for each member
 	 * Convenience method to wrap the details around adds, updates, and deletes
-	 * @param iMember
-	 * @param api
+	 * @param item  XML Element representing the item node
+	 * @param iMember Integrity CM Member
+	 * @param api MKS API Session
 	 * @throws APIException
 	 */
-	private void writeChangeLog(IntegrityCMMember iMember, APISession api) throws APIException
+	private Element writeChangeLog(Element item, IntegrityCMMember iMember, APISession api) throws APIException
 	{
-		// Write out the other details about the member...
-		writeChangeLog(String.format("\t\t\t<file>%s</file>", iMember.getMemberName()));
-		writeChangeLog(String.format("\t\t\t<user>%s</user>", iMember.getAuthor()));							
-		writeChangeLog(String.format("\t\t\t<revision>%s</revision>", iMember.getRevision()));						    
-		writeChangeLog(String.format("\t\t\t<date>%s</date>", IntegritySCM.SDF.format(iMember.getTimestamp())));
+		// Create and append the <file> element
+		Element file = xmlDoc.createElement("file");
+		file.appendChild(xmlDoc.createTextNode(iMember.getMemberName()));
+		item.appendChild(file);
+		// Create and append the <user> element
+		Element user = xmlDoc.createElement("user");
+		user.appendChild(xmlDoc.createTextNode(iMember.getAuthor()));
+		item.appendChild(user);
+		// Create and append the <revision> element
+		Element revision = xmlDoc.createElement("revision");
+		revision.appendChild(xmlDoc.createTextNode(iMember.getRevision()));
+		item.appendChild(revision);
+		// Create and append the <date> element
+		Element date = xmlDoc.createElement("date");
+		date.appendChild(xmlDoc.createTextNode(IntegritySCM.SDF.format(iMember.getTimestamp())));
+		item.appendChild(date);
+		// Create and append the annotation and differences links
 		try
 		{
-			writeChangeLog(String.format("\t\t\t<annotation><![CDATA[%s]]></annotation>", iMember.getAnnotatedLink()));
-			writeChangeLog(String.format("\t\t\t<differences><![CDATA[%s]]></differences>", iMember.getDifferencesLink()));
+			// Add the <annotation> element
+			Element annotation = xmlDoc.createElement("annotation");
+			annotation.appendChild(xmlDoc.createCDATASection(iMember.getAnnotatedLink()));
+			item.appendChild(annotation);
+			// Add the <differences> element
+			Element differences = xmlDoc.createElement("differences");
+			differences.appendChild(xmlDoc.createCDATASection(iMember.getDifferencesLink()));
+			item.appendChild(differences);
 		}
 		catch(UnsupportedEncodingException uee)
 		{
 			logger.warn("Caught Unsupported Encoding Exception while generating MKS Integrity Source links!");
 			logger.warn(uee.getMessage());			
 		}
-		writeChangeLog(String.format("\t\t\t<msg><![CDATA[%s]]></msg>", iMember.getDescription()));
-		writeChangeLog("\t\t</item>");																			
-	}
-	
-	/**
-	 * Helper function to append to the change log to 
-	 * avoid having to repeat the IntegritySCM.NL for every line
-	 * @param line
-	 */
-	private void writeChangeLog(String line)
-	{
-		changeLog.append(line + IntegritySCM.NL);
+		// Finally, create and append the <msg> element
+		Element msg = xmlDoc.createElement("msg");
+		msg.appendChild(xmlDoc.createTextNode(iMember.getDescription()));
+		item.appendChild(msg);
+		
+		// Return the updated <item> element
+		return item;
 	}
 	
 	/**
