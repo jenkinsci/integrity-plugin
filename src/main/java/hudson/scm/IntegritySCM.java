@@ -63,6 +63,7 @@ public class IntegritySCM extends SCM implements Serializable
     private String userName;
     private String password;
 	private boolean cleanCopy;
+	private boolean skipAuthorInfo = false;
 	private String lineTerminator = "native";
 	private boolean restoreTimestamp = true;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
@@ -74,7 +75,8 @@ public class IntegritySCM extends SCM implements Serializable
 	 */
     @DataBoundConstructor
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
-						String userName, String password, boolean cleanCopy, String lineTerminator, boolean restoreTimestamp)
+							String userName, String password, boolean cleanCopy, String lineTerminator, 
+							boolean restoreTimestamp, boolean skipAuthorInfo)
 	{
     	// Log the construction
     	logger.info("IntegritySCM constructor has been invoked!");
@@ -89,6 +91,7 @@ public class IntegritySCM extends SCM implements Serializable
     	this.cleanCopy = cleanCopy;
     	this.lineTerminator = lineTerminator;
     	this.restoreTimestamp = restoreTimestamp;
+    	this.skipAuthorInfo = skipAuthorInfo;
     	
     	// Initialize the Integrity URL
     	initIntegrityURL();
@@ -104,6 +107,7 @@ public class IntegritySCM extends SCM implements Serializable
     	logger.info("Line Terminator: " + this.lineTerminator);
     	logger.info("Restore Timestamp: " + this.restoreTimestamp);
     	logger.info("Clean: " + this.cleanCopy);
+    	logger.info("Skip Author Info: " + this.skipAuthorInfo);
 	}
 
     @Override
@@ -196,6 +200,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return restoreTimestamp; 
     }
+    
+    /**
+     * Returns true/false depending on whether or not to use 'si revisioninfo' to determine author information
+     * @return
+     */        
+    public boolean getSkipAuthorInfo()
+    {
+    	return skipAuthorInfo; 
+    }    
 
     /**
      * Sets the host name of the MKS Integrity Server
@@ -279,6 +292,15 @@ public class IntegritySCM extends SCM implements Serializable
     public void setRestoreTimestamp(boolean restoreTimestamp)
     {
     	this.restoreTimestamp = restoreTimestamp; 
+    }
+
+    /**
+     * Toggles whether or not to use 'si revisioninfo' to determine author information
+     * @return
+     */        
+    public void setSkipAuthorInfo(boolean skipAuthorInfo)
+    {
+    	this.skipAuthorInfo = skipAuthorInfo; 
     }
     
     /**
@@ -391,6 +413,7 @@ public class IntegritySCM extends SCM implements Serializable
 		// Set the project options
 		siProject.setLineTerminator(lineTerminator);
 		siProject.setRestoreTimestamp(restoreTimestamp);
+		siProject.setSkipAuthorInfo(skipAuthorInfo);
 		return infoRes;
 	}
 

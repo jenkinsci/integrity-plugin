@@ -53,6 +53,7 @@ public class IntegrityCMProject implements Serializable
 	private Date lastCheckpoint;
 	private String lineTerminator;
 	private boolean restoreTimestamp;
+	private boolean skipAuthorInfo;
 	private List<IntegrityCMMember> memberList;
 	private List<IntegrityCMMember> newMemberList;
 	private List<IntegrityCMMember> updatedMemberList;
@@ -81,6 +82,7 @@ public class IntegrityCMProject implements Serializable
 		// Initialize the project with default options
 		lineTerminator = "native";
 		restoreTimestamp = true;
+		skipAuthorInfo = false;
 		
 		// Initialize the full member list for this project
 		memberList = new ArrayList<IntegrityCMMember>();
@@ -167,6 +169,15 @@ public class IntegrityCMProject implements Serializable
 	{
 		this.restoreTimestamp = restoreTimestamp;
 	}
+
+	/**
+	 * Toggles whether or not to obtain the author using 'si revisioninfo'
+	 * @param skipAuthorInfo
+	 */
+	public void setSkipAuthorInfo(boolean skipAuthorInfo)
+	{
+		this.skipAuthorInfo = skipAuthorInfo;
+	}
 	
 	/**
 	 * Parses the output from the si viewproject command to get a list of members
@@ -200,7 +211,15 @@ public class IntegrityCMProject implements Serializable
 				// Figure out this member's parent project's canonical path name
 				String parentProject = wi.getField("parent").getValueAsString();
 				// Instantiate our Integrity CM Member object
-				IntegrityCMMember iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot, api);
+				IntegrityCMMember iCMMember;
+				if( skipAuthorInfo )
+				{
+					iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot, null);
+				}
+				else
+				{
+					iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot, api);
+				}
 				// Set the line terminator for this file
 				iCMMember.setLineTerminator(lineTerminator);
 				// Set the restore timestamp option when checking out this file

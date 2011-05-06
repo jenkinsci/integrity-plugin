@@ -47,6 +47,10 @@
             <f:option value="crlf" selected="${scm.lineTerminator.equals('crlf')}">crlf</f:option>
           </select>
         </f:entry>
+
+        <f:entry title="Omit Author in Change Log?" field="skipAuthorInfo">
+            <f:checkbox name="mks.skipAuthorInfo" checked="${scm.skipAuthorInfo}"/>
+        </f:entry>
         
     </f:advanced>
 

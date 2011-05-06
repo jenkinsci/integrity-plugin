@@ -74,7 +74,26 @@ public class IntegrityCMMember implements Serializable
 		// At this point just initialize the target file to a relative path!
 		this.targetFile = new File(relativeFile);
 		// Initialize the author associated with this member revision
-		this.author = getAuthor(api);
+		try
+		{
+			if( null != api )
+			{
+				this.author = getAuthor(api);
+			}
+			else
+			{
+				this.author = "unknown";
+			}
+		}
+		catch(APIException aex)
+		{
+			ExceptionHandler eh = new ExceptionHandler(aex);
+			logger.error("API Exception caught...");
+    		logger.error(eh.getMessage());
+    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		aex.printStackTrace();
+			this.author = "unknown";
+		}
 	}
 
 	/**
