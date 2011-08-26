@@ -9,7 +9,7 @@
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>integrity-plugin</artifactId>
   <name>MKS Integrity CM - Jenkins Plugin</name>
-  <version>1.9</version>
+  <version>1.10-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
   <url>http://wiki.jenkins-ci.org/display/JENKINS/MKS+Integrity+Plugin</url>
