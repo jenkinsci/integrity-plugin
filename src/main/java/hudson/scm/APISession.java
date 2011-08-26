@@ -28,6 +28,8 @@ public class APISession
 	private final Log logger = LogFactory.getLog(getClass());
 	
 	// Class variables used to create an API Session
+	private String ipHostName;
+	private int ipPort = 0;
 	private String hostName;
 	private int port;
 	private String userName;
@@ -42,12 +44,22 @@ public class APISession
 	 * Constructor for the API Session Object
 	 * @throws APIException
 	 */
-	public APISession(String host, int portNum, String user, String paswd, boolean secure) throws APIException
+	public APISession(String ipHost, int ipPortNum, 
+					String host, int portNum, String user, String paswd, boolean secure) throws APIException
 	{
 		// Initialize our termination flag...
 		terminated = false;
-		// Create a Server Integration Point
-		ip = IntegrationPointFactory.getInstance().createIntegrationPoint(host, portNum, secure, MAJOR_VERSION, MINOR_VERSION);
+		// Create a Server Integration Point to a client or the target server itself
+		if( null != ipHost && ipHost.length() > 0 && ipPortNum > 0 )
+		{
+			// Connect via the client, using "client as server"
+			ip = IntegrationPointFactory.getInstance().createIntegrationPoint(ipHost, ipPortNum, secure, MAJOR_VERSION, MINOR_VERSION);
+		}
+		else
+		{
+			// Directly to the server...
+			ip = IntegrationPointFactory.getInstance().createIntegrationPoint(host, portNum, secure, MAJOR_VERSION, MINOR_VERSION);
+		}
 		// Create the Session
 		session = ip.createSession(user, paswd);
 		// Test the connection to the MKS Integrity Server
@@ -58,9 +70,11 @@ public class APISession
 	    cmdRunner.setDefaultUsername(user);
 	    cmdRunner.setDefaultPassword(paswd);
 	    // Execute the connection
-		Response res = runCommand(ping);
+		Response res = cmdRunner.execute(ping);
 		logger.info(res.getCommandString() + " returned exit code " + res.getExitCode());
 		// Initialize class variables
+		ipHostName = ipHost;
+		ipPort = ipPortNum;
 		hostName = host;
 		port = portNum;
 		userName = user;
@@ -144,6 +158,24 @@ public class APISession
 			    ioe.printStackTrace();			
 			}
 		}
+	}
+	
+	/**
+	 * Returns the MKS Integration Point Hostname for this APISession
+	 * @return
+	 */
+	public String getIPHostName() 
+	{
+		return ipHostName;
+	}
+
+	/**
+	 * Returns the MKS Integration Point Port for this APISession
+	 * @return
+	 */
+	public String getIPPort()
+	{
+		return String.valueOf(ipPort);
 	}
 	
 	/**

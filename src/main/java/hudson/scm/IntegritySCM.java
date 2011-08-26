@@ -41,6 +41,7 @@ import com.mks.api.Option;
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
 import com.mks.api.util.Base64;
 
 /**
@@ -56,7 +57,9 @@ public class IntegritySCM extends SCM implements Serializable
 	private final Log logger = LogFactory.getLog(getClass()); 
 	private String integrityURL;
 	private IntegrityRepositoryBrowser browser;
+	private String ipHostName;
 	private String hostName;
+	private int ipPort = 0;
 	private int port;
 	private boolean secure;
 	private String configPath;
@@ -66,6 +69,8 @@ public class IntegritySCM extends SCM implements Serializable
 	private boolean skipAuthorInfo = false;
 	private String lineTerminator = "native";
 	private boolean restoreTimestamp = true;
+	private boolean checkpointBeforeBuild = false;
+	private String alternateWorkspace;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
 
 	/**
@@ -75,14 +80,17 @@ public class IntegritySCM extends SCM implements Serializable
 	 */
     @DataBoundConstructor
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
-							String userName, String password, boolean cleanCopy, String lineTerminator, 
-							boolean restoreTimestamp, boolean skipAuthorInfo)
+							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy, 
+							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild,
+							String alternateWorkspace)
 	{
     	// Log the construction
     	logger.info("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
     	this.browser = browser;
+    	this.ipHostName = ipHostName;
     	this.hostName = hostName;
+    	this.ipPort = ipPort;
     	this.port = port;
     	this.secure = secure;
     	this.configPath = configPath;
@@ -92,13 +100,17 @@ public class IntegritySCM extends SCM implements Serializable
     	this.lineTerminator = lineTerminator;
     	this.restoreTimestamp = restoreTimestamp;
     	this.skipAuthorInfo = skipAuthorInfo;
+    	this.checkpointBeforeBuild = checkpointBeforeBuild;
+    	this.alternateWorkspace = alternateWorkspace;
     	
     	// Initialize the Integrity URL
     	initIntegrityURL();
 
     	// Log the parameters received
     	logger.info("URL: " + this.integrityURL);
+    	logger.info("IP Host: " + this.ipHostName);
     	logger.info("Host: " + this.hostName);
+    	logger.info("IP Port: " + this.ipPort);
     	logger.info("Port: " + this.port);
     	logger.info("User: " + this.userName);
     	logger.info("Password: " + this.password);
@@ -108,6 +120,8 @@ public class IntegritySCM extends SCM implements Serializable
     	logger.info("Restore Timestamp: " + this.restoreTimestamp);
     	logger.info("Clean: " + this.cleanCopy);
     	logger.info("Skip Author Info: " + this.skipAuthorInfo);
+    	logger.info("Checkpoint Before Build: " + this.checkpointBeforeBuild);
+    	logger.info("Alternate Workspace Directory: " + this.alternateWorkspace);
 	}
 
     @Override
@@ -121,6 +135,15 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
+     * Returns the Integration Point host name of the MKS API Session
+     * @return
+     */
+    public String getipHostName()
+    {
+    	return ipHostName;
+    }
+
+    /**
      * Returns the host name of the MKS Integrity Server
      * @return
      */
@@ -128,7 +151,16 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return hostName;
     }
-
+    
+    /**
+     * Returns the Integration Point port of the MKS API Session
+     * @return
+     */    
+    public int getipPort()
+    {
+    	return ipPort;
+    }
+    
     /**
      * Returns the port of the MKS Integrity Server
      * @return
@@ -211,6 +243,33 @@ public class IntegritySCM extends SCM implements Serializable
     }    
 
     /**
+     * Returns true/false depending on whether or not perform a checkpoint before the build
+     * @return
+     */
+    public boolean getCheckpointBeforeBuild()
+    {
+    	return checkpointBeforeBuild;
+    }
+    
+    /**
+     * Returns the alternate workspace directory
+     * @return
+     */
+    public String getAlternateWorkspace()
+    {
+    	return alternateWorkspace;
+    }
+    
+    /**
+     * Sets the Integration Point host name of the MKS API Session
+     * @return
+     */
+    public void setipHostName(String ipHostName)
+    {
+    	this.ipHostName = ipHostName;
+    }
+    
+    /**
      * Sets the host name of the MKS Integrity Server
      * @return
      */
@@ -220,6 +279,15 @@ public class IntegritySCM extends SCM implements Serializable
     	initIntegrityURL();
     }
 
+    /**
+     * Sets the Integration Point port of the MKS API Session
+     * @return
+     */    
+    public void setipPort(int ipPort)
+    {
+    	this.ipPort = ipPort;
+    }
+    
     /**
      * Sets the port of the MKS Integrity Server
      * @return
@@ -280,7 +348,7 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the line terminator to apply when obtaining files from the MKS Integrity Server
      * @return
      */        
-    public void getLineTerminator(String lineTerminator)
+    public void setLineTerminator(String lineTerminator)
     {
     	this.lineTerminator = lineTerminator; 
     }
@@ -301,6 +369,24 @@ public class IntegritySCM extends SCM implements Serializable
     public void setSkipAuthorInfo(boolean skipAuthorInfo)
     {
     	this.skipAuthorInfo = skipAuthorInfo; 
+    }
+    
+    /**
+     * Toggles whether or not a checkpoint should be performed before the build
+     * @param checkpointBeforeBuild
+     */
+    public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild)
+    {
+    	this.checkpointBeforeBuild = checkpointBeforeBuild;
+    }
+    
+    /**
+     * Sets an alternate workspace for the checkout directory
+     * @param alternateWorkspace
+     */
+    public void setAlternateWorkspace(String alternateWorkspace)
+    {
+    	this.alternateWorkspace = alternateWorkspace;
     }
     
     /**
@@ -330,7 +416,7 @@ public class IntegritySCM extends SCM implements Serializable
     	try
     	{
     		logger.info("Creating MKS API Session...");
-    		return new APISession(hostName, port, userName, Base64.decode(password), secure);
+    		return new APISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
     	}
     	catch(APIException aex)
     	{
@@ -529,7 +615,33 @@ public class IntegritySCM extends SCM implements Serializable
 			// Next, load up the information for this MKS Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
 			initializeCMProject(api);
-			listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
+			// Check to see we need to checkpoint before the build
+			if( checkpointBeforeBuild )
+			{
+				// Make sure we don't have a build project configuration
+				if( ! siProject.isBuild() )
+				{
+					// Execute a pre-build checkpoint...
+    				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
+    				Response res = siProject.checkpoint(api, "");
+					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
+					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
+					String chkpt = wi.getResult().getField("resultant").getItem().getId();
+					listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
+													siProject.getConfigurationPath() + ", new revision is " + chkpt);
+					// Update the siProject to use the new checkpoint as the basis for this build
+					Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
+					siProjectInfoCmd.addOption(new Option("project", siProject.getProjectName()));	
+					siProjectInfoCmd.addOption(new Option("projectRevision", chkpt));
+					Response infoRes = api.runCommand(siProjectInfoCmd);
+					siProject.initializeProject(infoRes.getWorkItems().next());
+				}
+				else
+				{
+					listener.getLogger().println("Cannot perform a pre-build checkpoint for build project configuration!");
+				}
+			}
+			listener.getLogger().println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 			initializeCMProjectMembers(api);
 					
 			// Figure out what our previous build was...
@@ -673,22 +785,22 @@ public class IntegritySCM extends SCM implements Serializable
 		// Log the call for now...
 		logger.info("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
-        // Lets get the baseline from our last successful build
+        // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
         {
         	baseline = (IntegrityRevisionState)_baseline;
-        	// Get the baseline that contains the last successful build
-        	AbstractBuild<?,?> lastSuccessfulBuild = project.getLastSuccessfulBuild();
-        	if( null == lastSuccessfulBuild )
+        	// Get the baseline that contains the last build
+        	AbstractBuild<?,?> lastBuild = project.getLastBuild();
+        	if( null == lastBuild )
         	{
-        		// We've not no successful builds or may be the first one, build now!
+        		// We've got no previous builds, build now!
         		logger.info("No prior successful builds found!  Advice to build now!");
         		return PollingResult.BUILD_NOW;
         	}
         	else
         	{
-        		// Lets trying to get the baseline associated with the last successful build
-        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastSuccessfulBuild, launcher, listener);
+        		// Lets trying to get the baseline associated with the last build
+        		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, launcher, listener);
         		if( null != baseline && null != baseline.getSIProject() )
         		{
         			// Obtain the details on the old project configuration

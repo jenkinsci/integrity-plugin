@@ -30,7 +30,10 @@ import org.w3c.dom.Element;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.mks.api.Command;
+import com.mks.api.Option;
 import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
 import com.mks.api.response.WorkItem;
 import com.mks.api.response.Field;
@@ -49,11 +52,13 @@ public class IntegrityCMProject implements Serializable
 		
 	private String projectName;
 	private String projectType;
+	private String projectRevision;	
 	private String fullConfigSyntax;
 	private Date lastCheckpoint;
 	private String lineTerminator;
 	private boolean restoreTimestamp;
 	private boolean skipAuthorInfo;
+	private List<String> dirList;
 	private List<IntegrityCMMember> memberList;
 	private List<IntegrityCMMember> newMemberList;
 	private List<IntegrityCMMember> updatedMemberList;
@@ -84,6 +89,8 @@ public class IntegrityCMProject implements Serializable
 		restoreTimestamp = true;
 		skipAuthorInfo = false;
 		
+		// Initialize the list of directories in this project
+		dirList = new ArrayList<String>();
 		// Initialize the full member list for this project
 		memberList = new ArrayList<IntegrityCMMember>();
 		// Initialize the new members list, if we need to do a comparison
@@ -94,7 +101,12 @@ public class IntegrityCMProject implements Serializable
 		deletedMemberList = new ArrayList<IntegrityCMMember>();
 		// Initialize the change log report, if we need to compare with a baseline
 		changeLog = new StringBuffer();
-		
+		// Parse the current output from si projectinfo
+		initializeProject(wi);
+	}
+
+	public void initializeProject(WorkItem wi)
+	{
 		// Parse the current project information
 		try
 		{
@@ -119,6 +131,20 @@ public class IntegrityCMProject implements Serializable
 			if( null != pjTypeFld && null != pjTypeFld.getValueAsString() )
 			{
 				projectType = pjTypeFld.getValueAsString();
+				if( isBuild() )
+				{
+					// Next, we'll need to know the current build checkpoint for this configuration
+					Field pjRevFld = wi.getField("revision");
+					if( null != pjRevFld && null != pjRevFld.getItem() )
+					{
+						projectRevision = pjRevFld.getItem().getId();
+					}
+					else
+					{
+						projectRevision = "";
+						logger.warn("Project info did not provide a vale for the 'revision' field!");
+					}
+				}				
 			}
 			else
 			{
@@ -149,9 +175,9 @@ public class IntegrityCMProject implements Serializable
 		catch(NoSuchElementException nsee)
 		{
 			logger.error("Project info did not provide a value for field " + nsee.getMessage());
-		}
+		}		
 	}
-
+	
 	/**
 	 * Sets the optional line terminator option for this project
 	 * @param lineTerminator
@@ -205,6 +231,10 @@ public class IntegrityCMProject implements Serializable
 			{
 				// Save the configuration path for the current subproject, using the canonical path name
 				pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
+				// Save the relative directory path for this subproject
+				String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
+				pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));
+				if( !dirList.contains(pjDir) ){ dirList.add(pjDir); }
 			}
 			else if( wi.getModelType().equals(SIModelTypeName.MEMBER) )
 			{
@@ -434,6 +464,50 @@ public class IntegrityCMProject implements Serializable
 	}
 	
 	/**
+	 * Performs a checkpoint on this Integrity CM Project
+	 * @param api Authenticated MKS API Session
+	 * @param chkptLabel Checkpoint label string
+	 * @return MKS API Response object
+	 * @throws APIException
+	 */
+	public Response checkpoint(APISession api, String chkptLabel) throws APIException
+	{
+		// Construct the checkpoint command
+		Command siCheckpoint = new Command(Command.SI, "checkpoint");
+		// Set the project name
+		siCheckpoint.addOption(new Option("project", fullConfigSyntax));
+		// Set the label and description if applicable
+		if( null != chkptLabel && chkptLabel.length() > 0 )
+		{
+			// Set the label
+			siCheckpoint.addOption(new Option("label", chkptLabel));
+			// Set the description
+			siCheckpoint.addOption(new Option("description", chkptLabel));
+		}
+		return api.runCommand(siCheckpoint);
+	}
+	
+	/**
+	 * Applies a Project Label on this Integrity CM Project
+	 * @param api Authenticated MKS API Session
+	 * @param chkptLabel Checkpoint label string
+	 * @return MKS API Response object
+	 * @throws APIException
+	 */
+	public Response addProjectLabel(APISession api, String chkptLabel) throws APIException
+	{
+		// Construct the addprojectlabel command
+		Command siAddProjectLabel = new Command(Command.SI, "addprojectlabel");
+		// Set the project name
+		siAddProjectLabel.addOption(new Option("project", fullConfigSyntax));
+		// Set the label
+		siAddProjectLabel.addOption(new Option("label", chkptLabel));
+		// Move the label, if a previous one was applied
+		siAddProjectLabel.addOption(new Option("moveLabel"));
+		return api.runCommand(siAddProjectLabel);
+	}
+	
+	/**
 	 * Determines whether this project has changed based on a baseline comparison
 	 * This assumes that compareBaseline() has been called already
 	 * @return
@@ -458,6 +532,15 @@ public class IntegrityCMProject implements Serializable
 	public int getChangeCount()
 	{
 		return 	newMemberList.size() + updatedMemberList.size() + deletedMemberList.size();
+	}
+	
+	/**
+	 * Returns a string list of relative paths to all directories in this project
+	 * @return
+	 */
+	public List<String> getDirList()
+	{
+		return dirList;
 	}
 	
 	/**
@@ -503,6 +586,15 @@ public class IntegrityCMProject implements Serializable
 	public String getProjectName()
 	{
 		return projectName;
+	}
+	
+	/**
+	 * Returns the project revision for this Integrity SCM Project
+	 * @return
+	 */
+	public String getProjectRevision()
+	{
+		return projectRevision;
 	}
 	
 	/**

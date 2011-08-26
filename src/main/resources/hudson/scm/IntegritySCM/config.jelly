@@ -26,6 +26,14 @@
     </f:entry>
 
     <f:advanced>
+    
+        <f:entry title="Integration Point Server Hostname" field="ipHostName">
+        	<f:textbox name="mks.ipHostName" value="${scm.ipHostName}"/>
+    	</f:entry>
+
+    	<f:entry title="Integration Point Server Port" field="ipPort">
+        	<f:textbox name="mks.ipPort" value="${scm.ipPort}"/>        
+    	</f:entry>
 
         <f:entry title="Use Secure Connection?" field="secure">
             <f:checkbox name="mks.secure" value="${scm.secure}"/>
@@ -52,6 +60,14 @@
             <f:checkbox name="mks.skipAuthorInfo" checked="${scm.skipAuthorInfo}"/>
         </f:entry>
         
+        <f:entry title="Checkpoint Before Build?" field="checkpointBeforeBuild">
+            <f:checkbox name="mks.checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
+        </f:entry>
+        
+        <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
+            <f:textbox name="mks.alternateWorkspace" checked="${scm.alternateWorkspace}"/>
+        </f:entry>
+                
     </f:advanced>
 
 	<t:listScmBrowsers name="mks.browser" />    

@@ -30,8 +30,6 @@ import org.codehaus.groovy.control.CompilerConfiguration;
 
 import net.sf.json.JSONObject;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
@@ -119,25 +117,30 @@ public class IntegrityCheckpointAction extends Notifier
         			// Ensure this is not a build project configuration
         			if( ! siProject.isBuild() )
         			{
+    					// A checkpoint wasn't done before the build, so lets checkpoint this build now...
         				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
-        				// Construct the checkpoint command
-        				Command siCheckpoint = new Command(Command.SI, "checkpoint");
-        				// Set the project name
-        				siCheckpoint.addOption(new Option("project", siProject.getConfigurationPath()));
-        				// Set the label
-        				siCheckpoint.addOption(new Option("label", chkptLabel));
-        				// Set the description
-        				siCheckpoint.addOption(new Option("description", chkptLabel));
-        				Response res = api.runCommand(siCheckpoint);
+        				Response res = siProject.checkpoint(api, chkptLabel);
     					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
     					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
     					String chkpt = wi.getResult().getField("resultant").getItem().getId();
     					listener.getLogger().println("Successfully checkpointed project " + scm.getConfigPath() + 
-    												" with label '" + chkptLabel + "', new revision is " + chkpt);        			
+    												" with label '" + chkptLabel + "', new revision is " + chkpt);
         			}
         			else
         			{
-        				listener.getLogger().println("Cannot checkpoint a build project configuration: " + scm.getConfigPath() + "!");
+        				// Check to see if the user has requested a checkpoint before the build
+        				if( scm.getCheckpointBeforeBuild() )
+        				{
+        					// Looks like the checkpoint was done before the build, so lets apply the label now
+	        				listener.getLogger().println("Preparing to execute si addprojectlabel for " + siProject.getConfigurationPath());
+	        				Response res = siProject.addProjectLabel(api, chkptLabel);
+	    					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
+	    					listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + siProject.getProjectRevision());        					
+        				}
+        				else
+        				{
+        					listener.getLogger().println("Cannot checkpoint a build project configuration: " + scm.getConfigPath() + "!");
+        				}
         			}
         		}
         		catch(APIException aex)

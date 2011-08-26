@@ -18,6 +18,7 @@ import hudson.remoting.VirtualChannel;
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
 {
 	private static final long serialVersionUID = 1240357991626897900L;
+	private static final int CHECKOUT_TRESHOLD = 500;
 	private final Log logger = LogFactory.getLog(getClass());	
 	private final IntegritySCM scm;
 	private final IntegrityCMProject siProject;
@@ -42,12 +43,35 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	}
 	
 	/**
+	 * Creates the folder structure for the project's contents allowing empty folders to be created
+	 * @param workspace
+	 */
+	private void createFolderStructure(FilePath workspace)
+	{
+		Iterator<String> folders = siProject.getDirList().iterator();
+		while( folders.hasNext() )
+		{
+			File dir = new File(workspace + folders.next());
+			if( ! dir.isDirectory() )
+			{
+				logger.info("Creating folder: " + dir.getAbsolutePath());
+				dir.mkdirs();
+			}
+		}
+	}
+	
+	/**
 	 * This task wraps around the code necessary to checkout Integrity CM Members on remote machines
 	 */
 	public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException 
     {
+		// Figure out where we should be checking out this project
+		File checkOutDir = (null != scm.getAlternateWorkspace() && scm.getAlternateWorkspace().length() > 0) ? 
+						new File(scm.getAlternateWorkspace()) : workspaceFile;
 		// Convert the file object to a hudson FilePath (helps us with workspace.deleteContents())
-		FilePath workspace = new FilePath(workspaceFile);
+		FilePath workspace = new FilePath(checkOutDir.isAbsolute() ? checkOutDir : 
+						new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkOutDir.getPath()));
+		listener.getLogger().println("Checkout directory is " + workspace);
 		// Create a fresh API Session as we may/will be executing from another server
 		APISession api = scm.createAPISession();
 		// Ensure we've successfully created an API Session
@@ -56,46 +80,74 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 			listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
 			return false;
 		}
+		
 		// If we got here, then APISession was created successfully!
 		try
 		{
+			// Keep count of the open file handles generated on the server
+			int openFileHandles = 0;
 			if( cleanCopy )
 			{ 
 				listener.getLogger().println("A clean copy is requested; deleting contents of " + workspace); 
 				logger.info("Deleting contents of workspace " + workspace); 
 				workspace.deleteContents();
 				listener.getLogger().println("Populating clean workspace...");
+				// Create an empty folder structure first
+				createFolderStructure(workspace);
 				// Perform a fresh checkout of each file in the member list...
 				List<IntegrityCMMember> projectMembers = siProject.getProjectMembers(); 
 				for( Iterator<IntegrityCMMember> it = projectMembers.iterator(); it.hasNext(); )
 				{
+					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
 					logger.info("Attempting to checkout file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
 					siMember.checkout(api);
+					// Check to see if we need to release the APISession to clear some file handles
+					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
+					{
+						api.Terminate();
+						api = scm.createAPISession();
+					}
 				}
 				// Lets advice the user that we've checked out all the members
 				listener.getLogger().println("Successfully checked out " + projectMembers.size() + " files!");
 			}
 			else // We'll need to update the existing workspace...
 			{
+				// Create an empty folder structure first
+				createFolderStructure(workspace);
 				// First lets process the adds
 				List<IntegrityCMMember> newMembersList = siProject.getAddedMembers(); 
 				for( Iterator<IntegrityCMMember> it = newMembersList.iterator(); it.hasNext(); )
 				{
+					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
 					logger.info("Attempting to get new file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
-					siMember.checkout(api);				
+					siMember.checkout(api);
+					// Check to see if we need to release the APISession to clear some file handles
+					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
+					{
+						api.Terminate();
+						api = scm.createAPISession();
+					}					
 				}
 				// Next, lets process the updates
 				List<IntegrityCMMember> updatedMembersList = siProject.getUpdatedMembers();
 				for( Iterator<IntegrityCMMember> it = updatedMembersList.iterator(); it.hasNext(); )
 				{
+					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
 					logger.info("Attempting to update file: " + siMember.getTargetFilePath() + " to revision " + siMember.getRevision());
-					siMember.checkout(api);				
+					siMember.checkout(api);
+					// Check to see if we need to release the APISession to clear some file handles
+					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
+					{
+						api.Terminate();
+						api = scm.createAPISession();
+					}					
 				}				
 				// Finally, lets process the drops
 				List<IntegrityCMMember> memberDropList = siProject.getDroppedMembers();
