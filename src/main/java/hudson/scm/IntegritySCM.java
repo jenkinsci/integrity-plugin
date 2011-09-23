@@ -10,6 +10,8 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.IOException;
 import java.text.SimpleDateFormat;
+import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 
 import hudson.Extension;
@@ -85,7 +87,7 @@ public class IntegritySCM extends SCM implements Serializable
 							String alternateWorkspace)
 	{
     	// Log the construction
-    	logger.info("IntegritySCM constructor has been invoked!");
+    	logger.debug("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
     	this.browser = browser;
     	this.ipHostName = ipHostName;
@@ -107,21 +109,21 @@ public class IntegritySCM extends SCM implements Serializable
     	initIntegrityURL();
 
     	// Log the parameters received
-    	logger.info("URL: " + this.integrityURL);
-    	logger.info("IP Host: " + this.ipHostName);
-    	logger.info("Host: " + this.hostName);
-    	logger.info("IP Port: " + this.ipPort);
-    	logger.info("Port: " + this.port);
-    	logger.info("User: " + this.userName);
-    	logger.info("Password: " + this.password);
-    	logger.info("Secure: " + this.secure);
-    	logger.info("Project: " + this.configPath);
-    	logger.info("Line Terminator: " + this.lineTerminator);
-    	logger.info("Restore Timestamp: " + this.restoreTimestamp);
-    	logger.info("Clean: " + this.cleanCopy);
-    	logger.info("Skip Author Info: " + this.skipAuthorInfo);
-    	logger.info("Checkpoint Before Build: " + this.checkpointBeforeBuild);
-    	logger.info("Alternate Workspace Directory: " + this.alternateWorkspace);
+    	logger.debug("URL: " + this.integrityURL);
+    	logger.debug("IP Host: " + this.ipHostName);
+    	logger.debug("Host: " + this.hostName);
+    	logger.debug("IP Port: " + this.ipPort);
+    	logger.debug("Port: " + this.port);
+    	logger.debug("User: " + this.userName);
+    	logger.debug("Password: " + this.password);
+    	logger.debug("Secure: " + this.secure);
+    	logger.debug("Project: " + this.configPath);
+    	logger.debug("Line Terminator: " + this.lineTerminator);
+    	logger.debug("Restore Timestamp: " + this.restoreTimestamp);
+    	logger.debug("Clean: " + this.cleanCopy);
+    	logger.debug("Skip Author Info: " + this.skipAuthorInfo);
+    	logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
+    	logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
 	}
 
     @Override
@@ -415,7 +417,7 @@ public class IntegritySCM extends SCM implements Serializable
     	// Attempt to open a connection to the MKS Integrity Server
     	try
     	{
-    		logger.info("Creating MKS API Session...");
+    		logger.debug("Creating MKS API Session...");
     		return new APISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
     	}
     	catch(APIException aex)
@@ -423,7 +425,7 @@ public class IntegritySCM extends SCM implements Serializable
     		logger.error("API Exception caught...");
     		ExceptionHandler eh = new ExceptionHandler(aex);
     		logger.error(eh.getMessage());
-    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
     		return null;
     	}				
@@ -445,7 +447,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public void buildEnvVars(AbstractBuild<?, ?> build, Map<String, String> env)
 	{ 
 		super.buildEnvVars(build, env);
-		logger.info("buildEnvVars() invoked...!");		
+		logger.debug("buildEnvVars() invoked...!");		
 		env.put("MKSSI_PROJECT", configPath);
 		env.put("MKSSI_HOST", hostName);
 		env.put("MKSSI_PORT", String.valueOf(port));
@@ -461,7 +463,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException 
 	{
 		// Just logging the call for now
-		logger.info("calcRevisionsFromBuild() invoked...!");
+		logger.debug("calcRevisionsFromBuild() invoked...!");
 		Object obj = getIntegrityCMProjectState(build);
 		// Now that we've loaded the object, lets make sure it is an IntegrityCMProject!
 		if( obj instanceof IntegrityCMProject && null != obj )
@@ -474,7 +476,7 @@ public class IntegritySCM extends SCM implements Serializable
 		else
 		{
             // Not sure what object we've loaded, but its no IntegrityCMProject!
-			logger.info("Cannot construct project state for build " + build.getNumber() + "!");
+			logger.debug("Cannot construct project state for build " + build.getNumber() + "!");
 			// Returns the current Project Configuration for the requested build
 			return new IntegrityRevisionState(null);						
 		}		
@@ -491,9 +493,9 @@ public class IntegritySCM extends SCM implements Serializable
 		// Get the project information for this project
 		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
 		siProjectInfoCmd.addOption(new Option("project", configPath));	
-		logger.info("Preparing to execute si projectinfo for " + configPath);
+		logger.debug("Preparing to execute si projectinfo for " + configPath);
 		Response infoRes = api.runCommand(siProjectInfoCmd);
-		logger.info(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
+		logger.debug(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
 		// Initialize our siProject class variable
 		siProject = new IntegrityCMProject(infoRes.getWorkItems().next());
 		// Set the project options
@@ -518,13 +520,14 @@ public class IntegritySCM extends SCM implements Serializable
 		MultiValue mvFields = new MultiValue(",");
 		mvFields.add("name");
 		mvFields.add("context");
+		mvFields.add("cpid");		
 		mvFields.add("memberrev");
 		mvFields.add("membertimestamp");
 		mvFields.add("memberdescription");
 		siViewProjectCmd.addOption(new Option("fields", mvFields));
-		logger.info("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+		logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommand(siViewProjectCmd);
-		logger.info(viewRes.getCommandString() + " returned " + viewRes.getExitCode());
+		logger.debug(viewRes.getCommandString() + " returned " + viewRes.getExitCode());
 		siProject.parseProject(viewRes.getWorkItems(), api);
 		return viewRes;
 	}
@@ -550,13 +553,13 @@ public class IntegritySCM extends SCM implements Serializable
 	        if( ! viewProjectFile.exists() )
 	        {
 	        	// There is no project state for this build!
-	        	logger.info("Project state not found for build " + build.getNumber() + "!");
+	        	logger.debug("Project state not found for build " + build.getNumber() + "!");
 	        	return null;
 	        }
 	        else
 	        {
 	        	// We've found a build that contains the project state...  load it up!			
-				logger.info("Attempting to load up project state for build " + build.getNumber() + "...");
+				logger.debug("Attempting to load up project state for build " + build.getNumber() + "...");
 				FileInputStream fis = new FileInputStream(viewProjectFile);
 				ObjectInputStream ois = new ObjectInputStream(fis);							
 				Object obj = null;
@@ -564,13 +567,13 @@ public class IntegritySCM extends SCM implements Serializable
 				{
 					// Read the serialized Project object				
 					obj = ois.readObject();
-					logger.info("Project state re-constructed successfully for build " + build.getNumber() + "!");		
+					logger.debug("Project state re-constructed successfully for build " + build.getNumber() + "!");		
 				}
 				catch( ClassNotFoundException cne )
 				{
 		            // Not sure what we've found, but its no good...
-					logger.info("Caught Exception: " + cne.getMessage());
-					logger.info("Cannot construct project state for build" + build.getNumber() + "!");		
+					logger.debug("Caught Exception: " + cne.getMessage());
+					logger.debug("Cannot construct project state for build" + build.getNumber() + "!");		
 				}
 				finally
 				{
@@ -598,7 +601,7 @@ public class IntegritySCM extends SCM implements Serializable
 							BuildListener listener, File changeLogFile) throws IOException, InterruptedException 
 	{
 		// Log the invocation... 
-		logger.info("Start execution of checkout() routine...!");
+		logger.debug("Start execution of checkout() routine...!");
 
 		// Lets start with creating an authenticated MKS API Session for various parts of this operation...
 		APISession api = createAPISession();
@@ -624,7 +627,7 @@ public class IntegritySCM extends SCM implements Serializable
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
     				Response res = siProject.checkpoint(api, "");
-					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
+					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
 					listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
@@ -644,27 +647,18 @@ public class IntegritySCM extends SCM implements Serializable
 			listener.getLogger().println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 			initializeCMProjectMembers(api);
 					
-			// Figure out what our previous build was...
-			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
-	    	// Check to see if we've had a previous build...
-	        if( null == previousBuild ) 
-	        {
-	            // Nothing worthwhile to compare against
-	        	logger.info("Cannot find a previous build!");
-	        }    	
-	
 	    	// Now, we need to find the project state from the previous build.
+			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
 	        for( AbstractBuild<?,?> b = build.getPreviousBuild(); null != b; b = b.getPreviousBuild() ) 
 	        {
-	        	// For each previous build, lets make sure we can find a project state
+	        	// Go back through each previous build to find a useful project state
 	            if( getViewProjectResponseFile(b).exists()) 
 	            {
-	            	logger.info("Found previous project state in build " + b.getNumber());
+	            	logger.debug("Found previous project state in build " + b.getNumber());
 	            	previousBuild = b;
 	                break;
 	            }
 	        }
-	        
 	        // Load up the project state for this previous build...
 			Object obj = getIntegrityCMProjectState(previousBuild);
 			// Now that we've loaded the object, lets make sure it is an IntegrityCMProject!
@@ -673,12 +667,22 @@ public class IntegritySCM extends SCM implements Serializable
 				// Cast object to an IntegrityCMProject
 				IntegrityCMProject oldProject = (IntegrityCMProject) obj;
 				// Compare this project with the old 
-				siProject.compareBaseline(oldProject);		
+				siProject.compareBaseline(oldProject, api);		
 			}
 			else
 			{
 	            // Not sure what object we've loaded, but its no IntegrityCMProject!
-				logger.info("Cannot construct project state for any of the pevious builds!");
+				logger.debug("Cannot construct project state for any of the pevious builds!");
+
+				// Prime the author information for the current build as this could be the first build
+				if( ! skipAuthorInfo )
+				{
+					List<IntegrityCMMember> memberList = siProject.getProjectMembers();
+					for(Iterator<IntegrityCMMember> it = memberList.iterator(); it.hasNext();)
+					{
+						it.next().setAuthor(api);
+					}
+				}
 			}
 			
 	        // After all that insane interrogation, we have the current Project state that is
@@ -721,7 +725,7 @@ public class IntegritySCM extends SCM implements Serializable
     		ExceptionHandler eh = new ExceptionHandler(aex);
     		logger.error(eh.getMessage());
     		listener.getLogger().println(eh.getMessage());
-    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
     		return false;
@@ -783,7 +787,7 @@ public class IntegritySCM extends SCM implements Serializable
 													final TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException	
 	{
 		// Log the call for now...
-		logger.info("compareRemoteRevisionWith() invoked...!");
+		logger.debug("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
         // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
@@ -794,7 +798,7 @@ public class IntegritySCM extends SCM implements Serializable
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
-        		logger.info("No prior successful builds found!  Advice to build now!");
+        		logger.debug("No prior successful builds found!  Advice to build now!");
         		return PollingResult.BUILD_NOW;
         	}
         	else
@@ -817,7 +821,7 @@ public class IntegritySCM extends SCM implements Serializable
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
 	        				initializeCMProjectMembers(api);
 	        				// Compare this project with the old project 
-	        				siProject.compareBaseline(oldProject);		
+	        				siProject.compareBaseline(oldProject, api);		
 	        				// Finally decide whether or not we need to build again
 	        				if( siProject.hasProjectChanged() )
 	        				{
@@ -837,7 +841,7 @@ public class IntegritySCM extends SCM implements Serializable
 	        	    		ExceptionHandler eh = new ExceptionHandler(aex);
 	        	    		logger.error(eh.getMessage());
 	        	    		listener.getLogger().println(eh.getMessage());
-	        	    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	        	    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		aex.printStackTrace();
 	        	    		return PollingResult.NO_CHANGES;
@@ -856,7 +860,7 @@ public class IntegritySCM extends SCM implements Serializable
         		else
         		{
         			// Can't construct a previous project state, lets build now!
-        			logger.info("No prior MKS Integrity Project state can be found!  Advice to build now!");
+        			logger.debug("No prior MKS Integrity Project state can be found!  Advice to build now!");
         			return PollingResult.BUILD_NOW;
         		}
         	}
@@ -878,7 +882,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public ChangeLogParser createChangeLogParser() 
 	{
 		// Log the call
-		logger.info("createChangeLogParser() invoked...!");
+		logger.debug("createChangeLogParser() invoked...!");
 		return new IntegrityChangeLogParser(integrityURL);
 	}
 	
@@ -890,7 +894,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public SCMDescriptor<IntegritySCM> getDescriptor() 
 	{
 		// Log the call
-		logger.info("IntegritySCM.getDescriptor() invoked...!");		
+		logger.debug("IntegritySCM.getDescriptor() invoked...!");		
 	    return DescriptorImpl.INTEGRITY_DESCRIPTOR;
 	}
 
@@ -913,7 +917,7 @@ public class IntegritySCM extends SCM implements Serializable
         	super(IntegritySCM.class, IntegrityRepositoryBrowser.class);        	
             load();
         	// Log the construction...
-        	desLogger.info("IntegritySCM DescriptorImpl() constructed!");        	            
+        	desLogger.debug("IntegritySCM DescriptorImpl() constructed!");        	            
         }
         
         @Override
@@ -944,7 +948,7 @@ public class IntegritySCM extends SCM implements Serializable
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException 
         {
         	// Log the request to configure
-        	desLogger.info("Request to configure IntegritySCM invoked...");
+        	desLogger.debug("Request to configure IntegritySCM invoked...");
 			// This is where we can get any global settings...
 			// Can't thing of any integrity globals to define, so we'll just save() and return true!
 		    globalOptions = Util.fixEmpty(req.getParameter("mks.globalOptions").trim());        	

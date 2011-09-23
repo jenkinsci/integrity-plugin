@@ -241,15 +241,7 @@ public class IntegrityCMProject implements Serializable
 				// Figure out this member's parent project's canonical path name
 				String parentProject = wi.getField("parent").getValueAsString();
 				// Instantiate our Integrity CM Member object
-				IntegrityCMMember iCMMember;
-				if( skipAuthorInfo )
-				{
-					iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot, null);
-				}
-				else
-				{
-					iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot, api);
-				}
+				IntegrityCMMember iCMMember = new IntegrityCMMember(wi, pjConfigHash.get(parentProject), projectRoot);
 				// Set the line terminator for this file
 				iCMMember.setLineTerminator(lineTerminator);
 				// Set the restore timestamp option when checking out this file
@@ -265,15 +257,15 @@ public class IntegrityCMProject implements Serializable
 
 		// Sort the files list...
 		Collections.sort(memberList, FILES_ORDER);		
-		logger.info("Parsing project " + fullConfigSyntax + " complete!");		
+		logger.debug("Parsing project " + fullConfigSyntax + " complete!");		
 	}
 
 	/**
-	 * Compares this version of the project to a previous/new version
-	 * to determine what are the updates and what was deleted
-	 * @param baselineProject
+	 * Compares this version of the project to a previous/new version to determine what are the updates and what was deleted
+	 * @param baselineProject The previous baseline (build) for this Integrity CM Project
+	 * @param api The current MKS API Session to obtain the author information
 	 */
-	public void compareBaseline(IntegrityCMProject baselineProject)
+	public void compareBaseline(IntegrityCMProject baselineProject, APISession api)
 	{
 		List<IntegrityCMMember> oldMemberList = baselineProject.getProjectMembers();
 	
@@ -299,14 +291,24 @@ public class IntegrityCMProject implements Serializable
 				{
 					// Initialize the prior revision
 					iMember.setPriorRevision(oldMember.getRevision());
+					// Initialize the author information as requested
+					if( ! skipAuthorInfo ){ iMember.setAuthor(api); }
 					// Save this member to the changed list
 					updatedMemberList.add(iMember);
 				}
+				else
+				{
+					// This member did not change, so lets copy its author information
+					iMember.setAuthor(oldMember.getAuthor());
+				}
+				
 				// Remove this member from the old member hashtable, so we'll be left with items that are dropped
 				oldMemberHash.remove(oldMember.getMemberName());
 			}
 			else // We've found a new file
 			{
+				// Initialize the author information as requested
+				if( ! skipAuthorInfo ){ iMember.setAuthor(api); }				
 				// Save this member to the new members list
 				newMemberList.add(iMember);
 			}
@@ -429,8 +431,8 @@ public class IntegrityCMProject implements Serializable
 		Element user = xmlDoc.createElement("user");
 		user.appendChild(xmlDoc.createTextNode(iMember.getAuthor()));
 		item.appendChild(user);
-		// Create and append the <revision> element
-		Element revision = xmlDoc.createElement("revision");
+		// Create and append the <rev> element
+		Element revision = xmlDoc.createElement("rev");
 		revision.appendChild(xmlDoc.createTextNode(iMember.getRevision()));
 		item.appendChild(revision);
 		// Create and append the <date> element

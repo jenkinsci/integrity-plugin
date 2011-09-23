@@ -120,7 +120,7 @@ public class IntegrityCheckpointAction extends Notifier
     					// A checkpoint wasn't done before the build, so lets checkpoint this build now...
         				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
         				Response res = siProject.checkpoint(api, chkptLabel);
-    					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
+    					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
     					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
     					String chkpt = wi.getResult().getField("resultant").getItem().getId();
     					listener.getLogger().println("Successfully checkpointed project " + scm.getConfigPath() + 
@@ -134,7 +134,7 @@ public class IntegrityCheckpointAction extends Notifier
         					// Looks like the checkpoint was done before the build, so lets apply the label now
 	        				listener.getLogger().println("Preparing to execute si addprojectlabel for " + siProject.getConfigurationPath());
 	        				Response res = siProject.addProjectLabel(api, chkptLabel);
-	    					logger.info(res.getCommandString() + " returned " + res.getExitCode());        					
+	    					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 	    					listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + siProject.getProjectRevision());        					
         				}
         				else
@@ -148,7 +148,7 @@ public class IntegrityCheckpointAction extends Notifier
             		logger.error("API Exception caught...");
             		ExceptionHandler eh = new ExceptionHandler(aex);
             		logger.error(eh.getMessage());
-            		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+            		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
             		throw new Exception(eh.getMessage());
         		}
         		finally
@@ -215,7 +215,7 @@ public class IntegrityCheckpointAction extends Notifier
     		super(IntegrityCheckpointAction.class);
 			this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
 			load();    		
-        	desLogger.info("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
+        	desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
@@ -223,7 +223,7 @@ public class IntegrityCheckpointAction extends Notifier
 		{
 			IntegrityCheckpointAction chkptAction = new IntegrityCheckpointAction();
 			chkptAction.setTagName(formData.getString("tagName"));
-			desLogger.info("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
+			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
 			return chkptAction;
 		}    	
     	
@@ -238,13 +238,13 @@ public class IntegrityCheckpointAction extends Notifier
 		{
 			this.defaultTagName = req.getParameter("tagName");
 			save();
-			desLogger.info("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
+			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			desLogger.info("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
+			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 

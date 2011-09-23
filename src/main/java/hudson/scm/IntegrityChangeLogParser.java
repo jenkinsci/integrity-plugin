@@ -46,7 +46,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 		digester.addSetProperties("*/items/item");
 		digester.addBeanPropertySetter("*/items/item/file");
 		digester.addBeanPropertySetter("*/items/item/user");
-		digester.addBeanPropertySetter("*/items/item/revision");
+		digester.addBeanPropertySetter("*/items/item/rev");
 		digester.addBeanPropertySetter("*/items/item/date");
 		digester.addBeanPropertySetter("*/items/item/annotation");
 		digester.addBeanPropertySetter("*/items/item/differences");

@@ -39,7 +39,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		this.siProject = siProject;
 		this.cleanCopy = cleanCopy;
 		this.listener = listener;
-		logger.info("Integrity Checkout Task Created!");
+		logger.debug("Integrity Checkout Task Created!");
 	}
 	
 	/**
@@ -54,7 +54,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 			File dir = new File(workspace + folders.next());
 			if( ! dir.isDirectory() )
 			{
-				logger.info("Creating folder: " + dir.getAbsolutePath());
+				logger.debug("Creating folder: " + dir.getAbsolutePath());
 				dir.mkdirs();
 			}
 		}
@@ -89,7 +89,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 			if( cleanCopy )
 			{ 
 				listener.getLogger().println("A clean copy is requested; deleting contents of " + workspace); 
-				logger.info("Deleting contents of workspace " + workspace); 
+				logger.debug("Deleting contents of workspace " + workspace); 
 				workspace.deleteContents();
 				listener.getLogger().println("Populating clean workspace...");
 				// Create an empty folder structure first
@@ -101,7 +101,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
-					logger.info("Attempting to checkout file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
+					logger.debug("Attempting to checkout file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
 					siMember.checkout(api);
 					// Check to see if we need to release the APISession to clear some file handles
 					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
@@ -124,7 +124,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
-					logger.info("Attempting to get new file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
+					logger.debug("Attempting to get new file: " + siMember.getTargetFilePath() + " at revision " + siMember.getRevision());
 					siMember.checkout(api);
 					// Check to see if we need to release the APISession to clear some file handles
 					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
@@ -140,7 +140,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 					openFileHandles++;
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
-					logger.info("Attempting to update file: " + siMember.getTargetFilePath() + " to revision " + siMember.getRevision());
+					logger.debug("Attempting to update file: " + siMember.getTargetFilePath() + " to revision " + siMember.getRevision());
 					siMember.checkout(api);
 					// Check to see if we need to release the APISession to clear some file handles
 					if( openFileHandles % CHECKOUT_TRESHOLD == 0 )
@@ -155,7 +155,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 				{
 					IntegrityCMMember siMember = it.next();
 					siMember.setWorkspaceDir(""+workspace);
-					logger.info("Attempting to drop file: " + siMember.getTargetFilePath() + " was at revision " + siMember.getRevision());
+					logger.debug("Attempting to drop file: " + siMember.getTargetFilePath() + " was at revision " + siMember.getRevision());
 					File dropFile = new File(siMember.getTargetFilePath());
 					if( dropFile.exists() && !dropFile.delete() )
 					{
@@ -175,7 +175,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     		ExceptionHandler eh = new ExceptionHandler(aex);
     		logger.error(eh.getMessage());
     		listener.getLogger().println(eh.getMessage());
-    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
     		return false;			

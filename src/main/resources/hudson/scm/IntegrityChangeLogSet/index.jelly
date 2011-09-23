@@ -27,7 +27,7 @@
 	</j:choose>			
   	<td>${cs.author}</td>
   	<td>${cs.file}</td>
-  	<td><a href="${browser.getChangeSetLink(cs)}" target="_blank">${cs.revision}</a></td>
+  	<td><a href="${browser.getChangeSetLink(cs)}" target="_blank">${cs.rev}</a></td>
   	<td>${cs.date}</td>
   	<td>${cs.msg}</td>
   </tr>

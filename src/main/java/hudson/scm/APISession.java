@@ -71,7 +71,7 @@ public class APISession
 	    cmdRunner.setDefaultPassword(paswd);
 	    // Execute the connection
 		Response res = cmdRunner.execute(ping);
-		logger.info(res.getCommandString() + " returned exit code " + res.getExitCode());
+		logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
 		// Initialize class variables
 		ipHostName = ipHost;
 		ipPort = ipPortNum;
@@ -80,7 +80,7 @@ public class APISession
 		userName = user;
 		password = paswd;
 		cmdRunner.release();
-		logger.info("Successfully established connection " + userName + "@" + hostName + ":" + port);
+		logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port);
 	}
 	
 	/**
@@ -145,7 +145,7 @@ public class APISession
 					ip.release();
 				}
 				terminated = true;
-				logger.info("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
+				logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
 			}
 			catch(APIException aex)
 			{

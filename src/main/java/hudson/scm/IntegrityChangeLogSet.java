@@ -84,7 +84,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		private String action;
 		private String file;
 		private String author;
-		private String revision;
+		private String rev;
 		private String date;
 		private String annotation;
 		private String differences;
@@ -193,23 +193,23 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		 * Returns the revision number associated with the change
 		 */
 		@Exported
-		public String getRevision()
+		public String getRev()
 		{ 
-			return revision; 
+			return rev; 
 		} 
 
 		/**
 		 * Provides the mechanism to populate the revision string for this Entry
-		 * @param revision
+		 * @param rev
 		 */
-		public void setRevision(String revision) 
+		public void setRev(String rev) 
 		{ 
-			this.revision = revision; 
+			this.rev = rev; 
 		} 
 
 		/**
 		 * Returns the modification timestamp for this Entry
-		 * @param revision
+		 * @param rev
 		 */
 		@Exported
 		public String getDate()

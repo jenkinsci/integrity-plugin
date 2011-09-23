@@ -47,9 +47,8 @@ public class IntegrityCMMember implements Serializable
 	 * @param wi A MKS API Response Work Item representing metadata related to a Integrity Member
 	 * @param configPath Configuration Path for this file's project/subproject
 	 * @param projectRoot Full path to the root location for this file's parent project
-	 * @param api The current MKS API Session to obtain the author associated with this member revision
 	 */
-	public IntegrityCMMember(WorkItem wi, String configPath, String projectRoot, APISession api) throws APIException
+	public IntegrityCMMember(WorkItem wi, String configPath, String projectRoot) throws APIException
 	{
 		this.projectConfigPath = configPath;
 		this.memberID = wi.getId();
@@ -73,27 +72,8 @@ public class IntegrityCMMember implements Serializable
 		this.relativeFile = this.memberName.substring(projectRoot.length());
 		// At this point just initialize the target file to a relative path!
 		this.targetFile = new File(relativeFile);
-		// Initialize the author associated with this member revision
-		try
-		{
-			if( null != api )
-			{
-				this.author = getAuthor(api);
-			}
-			else
-			{
-				this.author = "unknown";
-			}
-		}
-		catch(APIException aex)
-		{
-			ExceptionHandler eh = new ExceptionHandler(aex);
-			logger.error("API Exception caught...");
-    		logger.error(eh.getMessage());
-    		logger.info(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
-			this.author = "unknown";
-		}
+		// Initialize the author associated with this member revision to unknown for now
+		this.author = "unknown";
 	}
 
 	/**
@@ -281,6 +261,47 @@ public class IntegrityCMMember implements Serializable
 	}
 	
 	/**
+	 * Initializes the author associated with this member revision
+	 * This is a convenience function used to avoid another command execution
+	 * This can be used when the author information is known, perhaps from a previous build.
+	 * @param author The string representation of this author's name/id
+	 */
+	public void setAuthor(String author)
+	{
+		this.author = author;
+	}
+	
+	/**
+	 * Initializes the author associated with this member revision
+	 * Author is set to "unknown", if the APISession is null indicating that
+	 * the user wishes to skip author information
+	 * @param api The current MKS API Session to obtain the author information
+	 */
+	public void setAuthor(APISession api)
+	{
+		try
+		{
+			if( null != api )
+			{
+				this.author = getAuthor(api);
+			}
+			else
+			{
+				this.author = "unknown";
+			}
+		}
+		catch(APIException aex)
+		{
+			ExceptionHandler eh = new ExceptionHandler(aex);
+			logger.error("API Exception caught...");
+    		logger.error(eh.getMessage());
+    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		aex.printStackTrace();
+			this.author = "unknown";
+		}
+	}
+	
+	/**
 	 * Performs a checkout of this MKS Integrity Source File to a 
 	 * working file location on the build server represented by targetFile
 	 * @param api MKS API Session
@@ -308,7 +329,7 @@ public class IntegrityCMMember implements Serializable
 		
 		// Execute the checkout command
 		Response res = api.runCommand(coCMD);
-		logger.info("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
+		logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
 		
 		// Return true if we were successful
 		if( res.getExitCode() == 0 )
@@ -338,7 +359,7 @@ public class IntegrityCMMember implements Serializable
 		revInfoCMD.addSelection(memberID);
 		// Execute the revision-info command
 		Response res = api.runCommand(revInfoCMD);
-		logger.info("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
+		logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
 		// Return the author associated with this update
 		if( res.getExitCode() == 0 )
 		{
