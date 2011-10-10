@@ -20,6 +20,7 @@ import hudson.Launcher;
 import hudson.Util;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.model.Hudson;
 import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 import hudson.scm.ChangeLogParser;
@@ -47,16 +48,19 @@ import com.mks.api.response.WorkItem;
 import com.mks.api.util.Base64;
 
 /**
- * This class provides an integration between Hudson for Continuous Builds and 
- * MKS Integrity for Configuration Management
+ * This class provides an integration between Hudson/Jenkins for Continuous Builds and 
+ * PTC Integrity for Configuration Management
  */
 public class IntegritySCM extends SCM implements Serializable
 {
 	private static final long serialVersionUID = 7559894846609712683L;
 	public static final String NL = System.getProperty("line.separator");
 	public static final String FS = System.getProperty("file.separator");
+	public static final int MIN_PORT_VALUE = 1;
+	public static final int MAX_PORT_VALUE = 65535;	
 	public static final SimpleDateFormat SDF = new SimpleDateFormat("MMM dd, yyyy h:mm:ss a");	
-	private final Log logger = LogFactory.getLog(getClass()); 
+	private final Log logger = LogFactory.getLog(getClass());
+	private String ciServerURL;
 	private String integrityURL;
 	private IntegrityRepositoryBrowser browser;
 	private String ipHostName;
@@ -89,6 +93,7 @@ public class IntegritySCM extends SCM implements Serializable
     	// Log the construction
     	logger.debug("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
+    	this.ciServerURL = Hudson.getInstance().getRootUrlFromRequest();
     	this.browser = browser;
     	this.ipHostName = ipHostName;
     	this.hostName = hostName;
@@ -109,6 +114,7 @@ public class IntegritySCM extends SCM implements Serializable
     	initIntegrityURL();
 
     	// Log the parameters received
+    	logger.debug("CI Server URL: " + this.ciServerURL);
     	logger.debug("URL: " + this.integrityURL);
     	logger.debug("IP Host: " + this.ipHostName);
     	logger.debug("Host: " + this.hostName);
@@ -129,7 +135,7 @@ public class IntegritySCM extends SCM implements Serializable
     @Override
     @Exported
     /**
-     * Returns the MKS Integrity Repository Browser
+     * Returns the Integrity Repository Browser
      */
     public IntegrityRepositoryBrowser getBrowser() 
     {
@@ -137,25 +143,34 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
-     * Returns the Integration Point host name of the MKS API Session
-     * @return
-     */
-    public String getipHostName()
-    {
-    	return ipHostName;
-    }
-
-    /**
-     * Returns the host name of the MKS Integrity Server
+     * Returns the host name of the Integrity Server
      * @return
      */
     public String getHostName()
     {
     	return hostName;
     }
+
+    /**
+     * Returns the Integration Point host name of the API Session
+     * @return
+     */
+    public String getipHostName()
+    {
+    	return ipHostName;
+    }
     
     /**
-     * Returns the Integration Point port of the MKS API Session
+     * Returns the port of the Integrity Server
+     * @return
+     */    
+    public int getPort()
+    {
+    	return port;
+    }
+    
+    /**
+     * Returns the Integration Point port of the API Session
      * @return
      */    
     public int getipPort()
@@ -163,15 +178,6 @@ public class IntegritySCM extends SCM implements Serializable
     	return ipPort;
     }
     
-    /**
-     * Returns the port of the MKS Integrity Server
-     * @return
-     */    
-    public int getPort()
-    {
-    	return port;
-    }
-
     /**
      * Returns true/false depending on secure sockets are enabled
      * @return
@@ -182,7 +188,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Returns the Project or Configuration Path for a MKS Integrity Source Project
+     * Returns the Project or Configuration Path for a Integrity Source Project
      * @return
      */        
     public String getConfigPath()
@@ -191,7 +197,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Returns the User connecting to the MKS Integrity Server
+     * Returns the User connecting to the Integrity Server
      * @return
      */    
     public String getUserName()
@@ -200,7 +206,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
-     * Returns the clear password of the user connecting to the MKS Integrity Server
+     * Returns the clear password of the user connecting to the Integrity Server
      * @return
      */        
     public String getPassword()
@@ -218,7 +224,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Returns the line terminator to apply when obtaining files from the MKS Integrity Server
+     * Returns the line terminator to apply when obtaining files from the Integrity Server
      * @return
      */        
     public String getLineTerminator()
@@ -263,16 +269,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
-     * Sets the Integration Point host name of the MKS API Session
-     * @return
-     */
-    public void setipHostName(String ipHostName)
-    {
-    	this.ipHostName = ipHostName;
-    }
-    
-    /**
-     * Sets the host name of the MKS Integrity Server
+     * Sets the host name of the Integrity Server
      * @return
      */
     public void setHostName(String hostName)
@@ -282,16 +279,16 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Sets the Integration Point port of the MKS API Session
+     * Sets the Integration Point host name of the API Session
      * @return
-     */    
-    public void setipPort(int ipPort)
+     */
+    public void setipHostName(String ipHostName)
     {
-    	this.ipPort = ipPort;
+    	this.ipHostName = ipHostName;
     }
     
     /**
-     * Sets the port of the MKS Integrity Server
+     * Sets the port of the Integrity Server
      * @return
      */    
     public void setPort(int port)
@@ -300,6 +297,15 @@ public class IntegritySCM extends SCM implements Serializable
     	initIntegrityURL();
     }
 
+    /**
+     * Sets the Integration Point port of the API Session
+     * @return
+     */    
+    public void setipPort(int ipPort)
+    {
+    	this.ipPort = ipPort;
+    }
+    
     /**
      * Toggles whether or not secure sockets are enabled
      * @return
@@ -311,7 +317,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Sets the Project or Configuration Path for a MKS Integrity Source Project
+     * Sets the Project or Configuration Path for an Integrity Source Project
      * @return
      */        
     public void setConfigPath(String configPath)
@@ -320,7 +326,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Sets the User connecting to the MKS Integrity Server
+     * Sets the User connecting to the Integrity Server
      * @return
      */    
     public void setUserName(String userName)
@@ -329,7 +335,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
-     * Sets the encrypted Password of the user connecting to the MKS Integrity Server
+     * Sets the encrypted Password of the user connecting to the Integrity Server
      * @return
      */        
     public void setPassword(String password)
@@ -347,7 +353,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Sets the line terminator to apply when obtaining files from the MKS Integrity Server
+     * Sets the line terminator to apply when obtaining files from the Integrity Server
      * @return
      */        
     public void setLineTerminator(String lineTerminator)
@@ -409,15 +415,15 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
-     * Creates an authenticated API Session against the MKS Integrity Server
+     * Creates an authenticated API Session against the Integrity Server
      * @return An authenticated API Session
      */
     public APISession createAPISession()
     {
-    	// Attempt to open a connection to the MKS Integrity Server
+    	// Attempt to open a connection to the Integrity Server
     	try
     	{
-    		logger.debug("Creating MKS API Session...");
+    		logger.debug("Creating Integrity API Session...");
     		return new APISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
     	}
     	catch(APIException aex)
@@ -432,7 +438,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
 
     /**
-     * Returns the MKS Integrity Configuration Management Project
+     * Returns the Integrity Configuration Management Project
      * @return
      */
     public IntegrityCMProject getIntegrityProject()
@@ -441,7 +447,7 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
 	/**
-	 * Adds MKS Integrity CM Project info to the build variables  
+	 * Adds Integrity CM Project info to the build variables  
 	 */
 	@Override 
 	public void buildEnvVars(AbstractBuild<?, ?> build, Map<String, String> env)
@@ -483,9 +489,9 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 
 	/**
-	 * Primes the MKS Integrity Project metadata information
-	 * @param api MKS API Session
-	 * @return response MKS API Response
+	 * Primes the Integrity Project metadata information
+	 * @param api Integrity API Session
+	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
 	private Response initializeCMProject(APISession api) throws APIException
@@ -506,9 +512,9 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 
 	/**
-	 * Primes the MKS Integrity Project Member metadata information
-	 * @param api MKS API Session
-	 * @return response MKS API Response
+	 * Primes the Integrity Project Member metadata information
+	 * @param api Integrity API Session
+	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
 	private Response initializeCMProjectMembers(APISession api) throws APIException
@@ -534,7 +540,7 @@ public class IntegritySCM extends SCM implements Serializable
 	
     /**
      * Toggles whether or not a workspace is required for polling
-     * Since, we're using a Server Integration Point in the MKS API, 
+     * Since, we're using a Server Integration Point in the Integrity API, 
      * we do not require a workspace.
      */
     @Override
@@ -602,20 +608,23 @@ public class IntegritySCM extends SCM implements Serializable
 	{
 		// Log the invocation... 
 		logger.debug("Start execution of checkout() routine...!");
-
-		// Lets start with creating an authenticated MKS API Session for various parts of this operation...
+		// Provide links to the Change and Build logs for easy access from Integrity
+		listener.getLogger().println("Change Log: " + ciServerURL + build.getUrl() + "changes");
+		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
+		
+		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
 		APISession api = createAPISession();
 		// Ensure we've successfully created an API Session
 		if( null == api )
 		{
-			listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+			listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
 			return false;
 		}
 		// Lets also open the change log file for writing...
 		PrintWriter writer = new PrintWriter(new FileWriter(changeLogFile));		
 		try
 		{
-			// Next, load up the information for this MKS Integrity Project's configuration
+			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
 			initializeCMProject(api);
 			// Check to see we need to checkpoint before the build
@@ -705,7 +714,7 @@ public class IntegritySCM extends SCM implements Serializable
 			if( workspace.act(coTask) )
 			{ 
 				// Now that the workspace is updated, lets save the current project state for future comparisons
-				listener.getLogger().println("Saving current MKS Integrity Project configuration...");
+				listener.getLogger().println("Saving current Integrity Project configuration...");
 				printViewProjectResponse(build, listener, siProject);
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
@@ -744,7 +753,7 @@ public class IntegritySCM extends SCM implements Serializable
      * Called from checkout to save the current state of the project for this build
      * @param build Hudson AbstractBuild
      * @param listener Hudson Build Listener
-     * @param response MKS API Response
+     * @param response Integrity API Response
      * @throws IOException
      */
     private void printViewProjectResponse(AbstractBuild<?,?> build, BuildListener listener, IntegrityCMProject pj) throws IOException
@@ -763,11 +772,11 @@ public class IntegritySCM extends SCM implements Serializable
     		pjOut.close();
     		fos.close();
     	}
-    	listener.getLogger().println("Successfully saved current MKS Integrity Project configuration to " + viewProjectFile.getAbsolutePath());    	
+    	listener.getLogger().println("Successfully saved current Integrity Project configuration to " + viewProjectFile.getAbsolutePath());    	
     }
     
     /**
-     * Returns the MKS API Response xml file for the specified build 
+     * Returns the Integrity API Response xml file for the specified build 
      * @param build Hudson AbstractBuild Object
      * @return
      */
@@ -809,8 +818,8 @@ public class IntegritySCM extends SCM implements Serializable
         		{
         			// Obtain the details on the old project configuration
         			IntegrityCMProject oldProject = baseline.getSIProject();
-        			// Next, load up the information for the current MKS Integrity Project
-        			// Lets start with creating an authenticated MKS API Session for various parts of this operation...
+        			// Next, load up the information for the current Integrity Project
+        			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
         			APISession api = createAPISession();
         			if( null != api )
         			{
@@ -853,14 +862,14 @@ public class IntegritySCM extends SCM implements Serializable
         			}
         			else
         			{
-        				listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+        				listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
         				return PollingResult.NO_CHANGES;
         			}        			
         		}
         		else
         		{
         			// Can't construct a previous project state, lets build now!
-        			logger.debug("No prior MKS Integrity Project state can be found!  Advice to build now!");
+        			logger.debug("No prior Integrity Project state can be found!  Advice to build now!");
         			return PollingResult.BUILD_NOW;
         		}
         	}
@@ -909,12 +918,25 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	private static Log desLogger = LogFactory.getLog(DescriptorImpl.class);
     	@Extension
-    	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl(); 
-		private String globalOptions;
+    	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
+    	private String defaultHostName;
+    	private String defaultIPHostName;    	
+    	private int defaultPort;
+    	private int defaultIPPort;    	    	
+    	private boolean defaultSecure;
+        private String defaultUserName;
+        private String defaultPassword;
 		
         protected DescriptorImpl() 
         {
-        	super(IntegritySCM.class, IntegrityRepositoryBrowser.class);        	
+        	super(IntegritySCM.class, IntegrityRepositoryBrowser.class);
+    		defaultHostName = Util.getHostName();
+    		defaultIPHostName = "";    		
+    		defaultPort = 7001;
+    		defaultIPPort = 0;
+    		defaultSecure = false;
+    		defaultUserName = "";
+    		defaultPassword = "";
             load();
         	// Log the construction...
         	desLogger.debug("IntegritySCM DescriptorImpl() constructed!");        	            
@@ -924,7 +946,7 @@ public class IntegritySCM extends SCM implements Serializable
         public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException 
         {
         	IntegritySCM scm = (IntegritySCM) super.newInstance(req, formData);
-            scm.browser = RepositoryBrowsers.createInstance(IntegrityRepositoryBrowser.class, req, formData, "browser");
+        	scm.browser = RepositoryBrowsers.createInstance(IntegrityRepositoryBrowser.class, req, formData, "browser");
             return scm;
         }
         
@@ -935,7 +957,7 @@ public class IntegritySCM extends SCM implements Serializable
 		@Override
 		public String getDisplayName() 
 		{
-			return "MKS Integrity - CM";
+			return "Integrity - CM";
 		}
 		
 		/**
@@ -948,44 +970,190 @@ public class IntegritySCM extends SCM implements Serializable
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException 
         {
         	// Log the request to configure
-        	desLogger.debug("Request to configure IntegritySCM invoked...");
-			// This is where we can get any global settings...
-			// Can't thing of any integrity globals to define, so we'll just save() and return true!
-		    globalOptions = Util.fixEmpty(req.getParameter("mks.globalOptions").trim());        	
-            save();
+        	desLogger.debug("Request to configure IntegritySCM (SCMDescriptor) invoked...");
+			
+        	desLogger.debug("mks.defaultHostName = " + req.getParameter("mks.defaultHostName"));
+        	defaultHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultHostName"));
+			desLogger.debug("defaultHostName = " + defaultHostName);
+			
+			desLogger.debug("mks.defaultIPHostName = " + req.getParameter("mks.defaultIPHostName"));
+			defaultIPHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultIPHostName"));
+			desLogger.debug("defaultIPHostName = " + defaultIPHostName);
+			
+			desLogger.debug("mks.defaultPort = " + req.getParameter("mks.defaultPort"));
+			defaultPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultPort")));
+			desLogger.debug("defaultPort = " + defaultPort);
+			
+			desLogger.debug("mks.defaultIPPort = " + req.getParameter("mks.defaultIPPort"));
+			defaultIPPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultIPPort")));
+			desLogger.debug("defaultIPPort = " + defaultIPPort);
+			
+			desLogger.debug("mks.defaultSecure = " + req.getParameter("mks.defaultSecure"));
+			defaultSecure = "on".equalsIgnoreCase(Util.fixEmptyAndTrim(req.getParameter("mks.defaultSecure"))) ? true : false;
+			desLogger.debug("defaultSecure = " + defaultSecure);
+			
+			desLogger.debug("mks.defaultUserName = " + req.getParameter("mks.defaultUserName"));
+			defaultUserName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultUserName"));
+			desLogger.debug("defaultUserName = " + defaultUserName);
+			
+			defaultPassword =  Base64.encode(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
+			desLogger.debug("defaultPassword = " + defaultPassword);
+
+			save();
             return true;
         }
 		
-		/**
-		 * Returns the MKS Integrity global options configured for this plugin 
-		 */
-		public String getGlobalOptions() 
-		{
-			return globalOptions;
-		}
+	    /**
+	     * Returns the default host name for the Integrity Server 
+	     * @return defaultHostName
+	     */
+	    public String getDefaultHostName()
+	    {
+	    	return defaultHostName;
+	    }
 
-		/**
-		 * Sets the MKS Integrity global options configured for this plugin 
-		 */
-		public void setGlobalOptions(String globalOptions) 
-		{
-			this.globalOptions = globalOptions;
-		}
+	    /**
+	     * Returns the default Integration Point host name 
+	     * @return defaultIPHostName
+	     */
+	    public String getDefaultIPHostName()
+	    {
+	    	return defaultIPHostName;
+	    }
+	    
+	    /**
+	     * Returns the default port for the Integrity Server
+	     * @return defaultPort
+	     */    
+	    public int getDefaultPort()
+	    {
+	    	return defaultPort;
+	    }
 
-		/**
-		 * The field mks.globalOptions will be validated through the checkUrl. 
-		 * When the user has entered some information and moves the focus away from field,
-		 * Hudson will call DescriptorImpl.doGlobalOptionsCheck to validate that data entered.
-		 */
-		public FormValidation doGlobalOptionsCheck(@QueryParameter String value)
-		{
-			// This is where we can validate the entry of the Global Options field
-            // If there is an error, we return:
-			//	return FormValidation.error("This is an error!");
-			// If we want to throw a warning:
-			//	return FormValidation.warning("This is a warning!");
+	    /**
+	     * Returns the default Integration Point port
+	     * @return defaultIPPort
+	     */    
+	    public int getDefaultIPPort()
+	    {
+	    	return defaultIPPort;
+	    }
+	    
+	    /**
+	     * Returns the default secure setting for the Integrity Server
+	     * @return defaultSecure
+	     */        
+	    public boolean getDefaultSecure()
+	    {
+	    	return defaultSecure;
+	    }
 
-			// Nothing to validate, so we'll return all good!
+	    /**
+	     * Returns the default User connecting to the Integrity Server
+	     * @return defaultUserName
+	     */    
+	    public String getDefaultUserName()
+	    {
+	    	return defaultUserName;
+	    }
+	    
+	    /**
+	     * Returns the default user's password connecting to the Integrity Server
+	     * @return defaultPassword
+	     */        
+	    public String getDefaultPassword()
+	    {
+	    	return Base64.decode(defaultPassword);
+	    }
+
+	    /**
+	     * Sets the default host name for the Integrity Server
+	     * @param defaultHostName
+	     */
+	    public void setDefaultHostName(String defaultHostName)
+	    {
+	    	this.defaultHostName = defaultHostName;
+	    }
+
+	    /**
+	     * Sets the default host name for the Integration Point
+	     * @param defaultIPHostName
+	     */
+	    public void setDefaultIPHostName(String defaultIPHostName)
+	    {
+	    	this.defaultIPHostName = defaultIPHostName;
+	    }
+	    
+	    /**
+	     * Sets the default port for the Integrity Server
+	     * @param defaultPort
+	     */    
+	    public void setDefaultPort(int defaultPort)
+	    {
+	    	this.defaultPort = defaultPort;
+	    }
+
+	    /**
+	     * Sets the default port for the Integration Point
+	     * @param defaultIPPort
+	     */    
+	    public void setDefaultIPPort(int defaultIPPort)
+	    {
+	    	this.defaultIPPort = defaultIPPort;
+	    }
+	    
+	    /**
+	     * Toggles whether or not secure sockets are enabled
+	     * @param defaultSecure
+	     */        
+	    public void setDefaultSecure(boolean defaultSecure)
+	    {
+	    	this.defaultSecure = defaultSecure;
+	    }
+
+	    /**
+	     * Sets the default User connecting to the Integrity Server
+	     * @param defaultUserName
+	     */    
+	    public void setDefaultUserName(String defaultUserName)
+	    {
+	    	this.defaultUserName = defaultUserName;
+	    }
+	    
+	    /**
+	     * Sets the encrypted Password of the default user connecting to the Integrity Server
+	     * @param defaultPassword
+	     */        
+	    public void setDefaultPassword(String defaultPassword)
+	    {
+	    	this.defaultPassword = Base64.encode(defaultPassword);
+	    }
+
+	    /**
+	     * Validates that the port number is numeric and within a valid range 
+	     * @param value Integer value for Port or IP Port
+	     * @return
+	     */
+		public FormValidation doValidPortCheck(@QueryParameter String value)
+		{
+			// The field mks.port and mks.ipport will be validated through the checkUrl. 
+			// When the user has entered some information and moves the focus away from field,
+			// Hudson/Jenkins will call DescriptorImpl.doValidPortCheck to validate that data entered.
+			try
+			{
+				int intValue = Integer.parseInt(value);
+				// Adding plus 1 to the min value in case the default is left unchanged
+				if( (intValue+1) < MIN_PORT_VALUE || intValue > MAX_PORT_VALUE )
+				{
+					return FormValidation.error("Value must be between " + MIN_PORT_VALUE + " and " + MAX_PORT_VALUE + "!");
+				}
+			}
+			catch(NumberFormatException nfe)
+			{
+				return FormValidation.error("Value must be numeric!");
+			}
+			
+			// Validation was successful if we got here, so we'll return all good!
 		    return FormValidation.ok();
 		}		
     }

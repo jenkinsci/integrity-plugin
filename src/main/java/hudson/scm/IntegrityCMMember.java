@@ -40,11 +40,11 @@ public class IntegrityCMMember implements Serializable
 	private final Log logger = LogFactory.getLog(getClass());
 	
 	/**
-	 * This class represents an MKS Integrity Source File
+	 * This class represents an Integrity Source File
 	 * It needs the Member Name (relative path to pj), Full Member Path, Project Configuration Path, Revision,
 	 * Project's Root Path, and the current Workspace directory (to compute the working file path) for its
 	 * instantiation.  This helper class will be used to then perform a project checkout from the repository 
-	 * @param wi A MKS API Response Work Item representing metadata related to a Integrity Member
+	 * @param wi An Integrity API Response Work Item representing metadata related to a Integrity Member
 	 * @param configPath Configuration Path for this file's project/subproject
 	 * @param projectRoot Full path to the root location for this file's parent project
 	 */
@@ -275,7 +275,7 @@ public class IntegrityCMMember implements Serializable
 	 * Initializes the author associated with this member revision
 	 * Author is set to "unknown", if the APISession is null indicating that
 	 * the user wishes to skip author information
-	 * @param api The current MKS API Session to obtain the author information
+	 * @param api The current Integrity API Session to obtain the author information
 	 */
 	public void setAuthor(APISession api)
 	{
@@ -302,9 +302,9 @@ public class IntegrityCMMember implements Serializable
 	}
 	
 	/**
-	 * Performs a checkout of this MKS Integrity Source File to a 
+	 * Performs a checkout of this Integrity Source File to a 
 	 * working file location on the build server represented by targetFile
-	 * @param api MKS API Session
+	 * @param api Integrity API Session
 	 * @return true if the operation succeeded or false if failed
 	 * @throws APIException
 	 */
@@ -344,8 +344,8 @@ public class IntegrityCMMember implements Serializable
 	}
 	
 	/**
-	 * Performs a revision info on this MKS Integrity Source File
-	 * @param api MKS API Session
+	 * Performs a revision info on this Integrity Source File
+	 * @param api Integrity API Session
 	 * @return User responsible for making this change
 	 * @throws APIException
 	 */

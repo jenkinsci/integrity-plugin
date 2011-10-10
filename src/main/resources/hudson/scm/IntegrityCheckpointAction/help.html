@@ -1,0 +1,15 @@
+<div>
+Provides tagging functionality for Integrity CM. 
+<p>	
+A 'tag' translates to an Integrity CM Project Checkpoint with a project label and without cascading the label to all members.  The Integrity CM plug-in supports tagging with a user defined tag name/pattern. For example:
+</p>
+<p> 
+&nbsp;&nbsp;&nbsp;&nbsp;${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat("yyyy_MM_dd").format(new Date())}
+</p>
+<p> 
+The following characters are not allowed within a "Tag Name":
+</p> 
+<p>
+&nbsp;&nbsp;&nbsp;&nbsp;$&nbsp;&nbsp;,&nbsp;&nbsp;.&nbsp;&nbsp;:&nbsp;&nbsp;;&nbsp;&nbsp;/&nbsp;&nbsp;\&nbsp;&nbsp;@
+</p> 
+</div>

@@ -1,16 +1,51 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-  <f:section title="MKS Integrity for Configuration Management">
+  <f:section title="Integrity CM">
 	
-	<!-- Example of a Text Box entry -->
-    <f:entry title="Integrity Global Options"
-      description="This is where Integrity Global Options will be defined!  However, this is not in use at this time!"
-      help="/plugin/integrity/help-GlobalOptions.html">
-      <f:textbox name="mks.globalOptions" 
-      			 value="${descriptor.globalOptions}" 
-      			 checkUrl="'${rootURL}/scm/IntegritySCM/globalOptionsCheck?value='+escape(this.value)"/>
-    </f:entry>
-
+	<f:entry title="Default Integrity Server Hostname" field="hostName"
+		description="This default hostname will be re-used for all connections, unless overidden for specific actions">
+		<f:textbox name="mks.defaultHostName" value="${descriptor.defaultHostName}"
+	        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+	    		    	  
+	<f:entry title="Default Integrity Server Port" field="port"
+		description="This default port will be re-used for all connections, unless overidden for specific actions">
+		<f:textbox name="mks.defaultPort" value="${descriptor.defaultPort}"
+			checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>        
+	</f:entry>
+		
+	<f:entry title="Default Integrity Server Username" field="userName"
+		description="This default username will be re-used for all connections, unless overidden for specific actions">
+		<f:textbox name="mks.defaultUserName" value="${descriptor.defaultUserName}"
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
+	</f:entry>
+		
+	<f:entry title="Default Integrity Server Password" field="password"
+		description="This default password will be re-used for all connections, unless overidden for specific actions">
+		<f:password name="mks.defaultPassword" value="${descriptor.defaultPassword}"
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
+	</f:entry>
+		
+	<f:advanced>
+		
+		<f:entry title="Default Integration Point Server Hostname" field="ipHostName"
+			description="Default Integration Point hostname used for CM related connections, unless overidden for specific actions">
+			<f:textbox name="mks.defaultIPHostName" value="${descriptor.defaultIPHostName}"/>
+		</f:entry>
+			
+		<f:entry title="Default Integration Point Server Port" field="ipPort"
+			description="Default Integration Point port used for CM related connections, unless overidden for specific actions">
+			<f:textbox name="mks.defaultIPPort" value="${descriptor.defaultIPPort}" 
+				checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>
+		</f:entry>
+	
+		<f:entry title="Use Secure Connections?" field="secure"
+			description="Default setting for secure connections, unless overidden for specific actions">
+			<f:checkbox name="mks.defaultSecure" checked="${descriptor.defaultSecure}"/>
+		</f:entry>
+			
+	</f:advanced>
+	
   </f:section>
 
 </j:jelly>

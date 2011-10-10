@@ -1,18 +1,20 @@
-<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+		 xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+		 xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <parent>
 	<groupId>org.jenkins-ci.plugins</groupId>    
 	<artifactId>plugin</artifactId>    
-	<version>1.427</version>  
+	<version>1.432</version>  
   </parent>  
   
   <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>integrity-plugin</artifactId>
-  <name>MKS Integrity CM - Jenkins Plugin</name>
+  <name>PTC Integrity CM - Jenkins Plugin</name>
   <version>1.11-SNAPSHOT</version>
   <packaging>hpi</packaging>
 
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/MKS+Integrity+Plugin</url>
+  <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>
 
   <developers>
     <developer>
@@ -32,7 +34,7 @@
    	<dependency>
   		<groupId>com.mks.api</groupId>
   		<artifactId>mksapi-jar</artifactId>
-  		<version>4.10.5799</version>
+  		<version>4.10.9049</version>
   		<scope>compile</scope>
    	</dependency>
   </dependencies>

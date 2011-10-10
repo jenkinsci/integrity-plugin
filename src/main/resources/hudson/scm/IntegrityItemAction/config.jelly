@@ -1,0 +1,80 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Query Definition" field="queryDefinition">
+		<j:set var="queryDefinition" value="${instance.getQueryDefinition()}"/>
+		<j:if test="${instance.getQueryDefinition() == null}">
+			<j:set var="queryDefinition" value="${descriptor.getDefaultQueryDefinition()}"/>
+		</j:if>
+		<f:textbox name="mks.queryDefinition" value="${queryDefinition}" 
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Query Definition expression must be specified to locate an Integrity Build Item!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+	
+	<f:entry title="Status Field Name" field="stateField">
+		<f:textbox name="mks.stateField" value="${instance.getStateField()}"
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Status/State field name must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+	
+	<f:entry title="Success Value" field="successValue">
+		<f:textbox name="mks.successValue" value="${instance.getSuccessValue()}"
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A success value must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+
+	<f:entry title="Failure Value" field="failureValue">
+		<f:textbox name="mks.failureValue" value="${instance.getFailureValue()}"
+			checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A failure value must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+
+	<f:entry title="Log Field Name (Rich Content)" field="logField">
+		<f:textbox name="mks.logField" value="${instance.getLogField()}"/>
+	</f:entry>	
+
+	<f:advanced>
+	
+		<f:entry title="Integrity (Workflow) Server Hostname" field="hostName">
+			<j:set var="hostName" value="${instance.getHostName()}"/>
+			<j:if test="${instance.getHostName() == null}">
+				<j:set var="hostName" value="${descriptor.getDefaultHostName()}"/>
+			</j:if>
+	        <f:textbox name="mks.hostName" value="${hostName}"
+	        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
+	    </f:entry>
+	    	
+	    <f:entry title="Integrity (Workflow) Server Port" field="port">
+			<j:set var="port" value="${instance.getPort()}"/>
+			<j:if test="${instance.getPort() == null}">
+				<j:set var="port" value="${descriptor.getDefaultPort()}"/>
+			</j:if>	    
+	        <f:textbox name="mks.port" value="${port}"
+	        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Port must be specified!'))}&amp;value='+encode(this.value)"/>        
+	    </f:entry>
+	    	    	
+	    <f:entry title="Integrity (Workflow) Username" field="userName">
+			<j:set var="userName" value="${instance.getUserName()}"/>
+			<j:if test="${instance.getUserName() == null}">
+				<j:set var="userName" value="${descriptor.getDefaultUserName()}"/>
+			</j:if>	    	    
+	        <f:textbox name="mks.userName" value="${userName}"
+	        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
+	    </f:entry>
+	
+	    <f:entry title="Integrity (Workflow) Password" field="password">
+			<j:set var="password" value="${instance.getPassword()}"/>
+			<j:if test="${instance.getPassword() == null}">
+				<j:set var="password" value="${descriptor.getDefaultPassword()}"/>
+			</j:if>	    	    
+	        <f:password name="mks.password" value="${password}"
+	        	checkUrl="'/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
+	    </f:entry>
+	    	    		    	    	
+		<f:entry title="Use Secure Connection?" field="secure">
+			<j:set var="secure" value="${instance.getSecure()}"/>
+			<j:if test="${instance.getSecure() == null}">
+				<j:set var="secure" value="${descriptor.getDefaultSecure()}"/>
+			</j:if>	    		
+			<f:checkbox name="mks.secure" checked="${secure}"/>
+		</f:entry>
+	
+	</f:advanced>
+	
+</j:jelly>
+

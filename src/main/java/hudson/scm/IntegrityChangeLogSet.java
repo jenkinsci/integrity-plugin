@@ -41,7 +41,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
         this.version = String.valueOf(build.getNumber());
         this.author = "user";
         this.date = IntegritySCM.SDF.format(new Date());
-        this.msg = "MKS Integrity Change Log";
+        this.msg = "Integrity Change Log";
         for (IntegrityChangeLog log : logs)
         {
         	log.setParent(this);
@@ -267,7 +267,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		}
 		
 		/**
-		 * Returns the MKS Integrity Project Member path for this change
+		 * Returns the Integrity Project Member path for this change
 		 * @return
 		 */
 		public String getFile()
@@ -276,7 +276,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		}
 		
 		/**
-		 * Sets the MKS Integrity Project Member path for this change
+		 * Sets the Integrity Project Member path for this change
 		 * @param file
 		 */
 		public void setFile(String file)
@@ -286,7 +286,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		
 		/**
 		 * Returns a string url representation containing the link to 
-		 * the MKS Integrity Annotated Member view
+		 * the Integrity Annotated Member view
 		 * @return
 		 */
 		public String getAnnotation()
@@ -296,7 +296,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		
 		/**
 		 * Sets a string url representation containing the link to 
-		 * the MKS Integrity Annotated Member view
+		 * the Integrity Annotated Member view
 		 * @param annotation
 		 */
 		public void setAnnotation(String annotation)
@@ -306,7 +306,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		
 		/**
 		 * Returns a string representation containing the link to
-		 * the MKS Integrity Member differences view
+		 * the Integrity Member differences view
 		 * @return
 		 */
 		public String getDifferences()
@@ -316,7 +316,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		
 		/**
 		 * Sets a string url representation containing the link to
-		 * the MKS Integrity Member differences view
+		 * the Integrity Member differences view
 		 * @param differences
 		 */
 		public void setDifferences(String differences)

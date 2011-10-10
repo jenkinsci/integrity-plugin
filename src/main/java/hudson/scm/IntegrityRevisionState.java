@@ -3,7 +3,7 @@ package hudson.scm;
 import java.io.Serializable;
 
 /**
- * Contains the state of the current MKS Integrity Configuration Management Project
+ * Contains the state of the current Integrity Configuration Management Project
  */
 public final class IntegrityRevisionState extends SCMRevisionState implements Serializable 
 {

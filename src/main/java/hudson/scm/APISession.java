@@ -62,7 +62,7 @@ public class APISession
 		}
 		// Create the Session
 		session = ip.createSession(user, paswd);
-		// Test the connection to the MKS Integrity Server
+		// Test the connection to the Integrity Server
 		Command ping = new Command("api", "ping");
 	    CmdRunner cmdRunner = session.createCmdRunner();
 	    cmdRunner.setDefaultHostname(host);
@@ -85,8 +85,8 @@ public class APISession
 	
 	/**
 	 * This function executes a generic API/CLI Command
-	 * @param cmd MKS API Command Object representing a CLI command
-	 * @return MKS API Response Object
+	 * @param cmd Integrity API Command Object representing a CLI command
+	 * @return Integrity API Response Object
 	 * @throws APIException
 	 */
 	public Response runCommand(Command cmd) throws APIException
@@ -105,9 +105,9 @@ public class APISession
 
 	/**
 	 * This function executes a generic API/CLI Command impersonating another user
-	 * @param cmd MKS API Command Object representing a CLI command
+	 * @param cmd Integrity API Command Object representing a CLI command
 	 * @param impersonateUser The user to impersonate
-	 * @return MKS API Response Object
+	 * @return Integrity API Response Object
 	 * @throws APIException
 	 */
 	public Response runCommandAs(Command cmd, String impersonateUser) throws APIException
@@ -161,7 +161,7 @@ public class APISession
 	}
 	
 	/**
-	 * Returns the MKS Integration Point Hostname for this APISession
+	 * Returns the Integrity Integration Point Hostname for this APISession
 	 * @return
 	 */
 	public String getIPHostName() 
@@ -170,7 +170,7 @@ public class APISession
 	}
 
 	/**
-	 * Returns the MKS Integration Point Port for this APISession
+	 * Returns the Integrity Integration Point Port for this APISession
 	 * @return
 	 */
 	public String getIPPort()
@@ -179,7 +179,7 @@ public class APISession
 	}
 	
 	/**
-	 * Returns the MKS Integrity Hostname for this APISession
+	 * Returns the Integrity Hostname for this APISession
 	 * @return
 	 */
 	public String getHostName() 
@@ -188,7 +188,7 @@ public class APISession
 	}
 
 	/**
-	 * Returns the MKS Integrity Port for this APISession
+	 * Returns the Integrity Port for this APISession
 	 * @return
 	 */
 	public String getPort()
@@ -197,7 +197,7 @@ public class APISession
 	}
 	
 	/**
-	 * Returns the MKS Integrity User for this APISession
+	 * Returns the Integrity User for this APISession
 	 * @return
 	 */
 	public String getUserName()

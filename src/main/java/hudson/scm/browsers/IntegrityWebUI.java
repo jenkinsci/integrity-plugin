@@ -14,7 +14,7 @@ import hudson.scm.RepositoryBrowser;
 public class IntegrityWebUI extends IntegrityRepositoryBrowser 
 {
     /**
-     * The URL of the MKS Integrity Configuration Management Server
+     * The URL of the Integrity Configuration Management Server
      * For example: <tt>http://hostname:7001</tt>
      * 
      * NOTE: This is optional and is used as an override to the URL
@@ -119,7 +119,7 @@ public class IntegrityWebUI extends IntegrityRepositoryBrowser
     	@Override
         public String getDisplayName() 
         {
-            return "MKS Integrity CM - Web Interface";
+            return "Integrity CM - Web Interface";
         }
     }	
 }

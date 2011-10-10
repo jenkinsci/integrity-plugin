@@ -77,7 +77,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		// Ensure we've successfully created an API Session
 		if( null == api )
 		{
-			listener.getLogger().println("Failed to establish an API connection to the MKS Integrity Server!");
+			listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
 			return false;
 		}
 		

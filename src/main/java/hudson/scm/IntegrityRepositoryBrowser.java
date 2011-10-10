@@ -10,7 +10,7 @@ public abstract class IntegrityRepositoryBrowser extends RepositoryBrowser<Integ
 	private static final long serialVersionUID = 4745105100520040559L;
 
     /**
-     * Constructs the differences link between two MKS Integrity Member Revisions.
+     * Constructs the differences link between two Integrity Member Revisions.
      * @return
      * 		URL containing the link to difference two revisions 
      */

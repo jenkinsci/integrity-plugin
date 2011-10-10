@@ -83,13 +83,13 @@ public class IntegrityCheckpointAction extends Notifier
 	}
 	
 	/**
-	 * Executes the actual MKS Integrity Checkpoint operation
+	 * Executes the actual Integrity Checkpoint operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
 		if( ! Result.SUCCESS.equals(build.getResult()) )
 		{
-			listener.getLogger().println("Build failed!  Skipping MKS Integrity Checkpoint step!");
+			listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
 			return true;
 		}
 
@@ -165,8 +165,8 @@ public class IntegrityCheckpointAction extends Notifier
 		}
 		else
 		{
-			logger.error("An API Session could not be established!  Cannot perform checkpoint operation against MKS Integrity Server");
-			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation against MKS Integrity Server");
+			logger.error("An API Session could not be established!  Cannot perform checkpoint operation!");
+			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation!");
 			return false;
 		}
 
@@ -230,7 +230,7 @@ public class IntegrityCheckpointAction extends Notifier
 		@Override    	
         public String getDisplayName() 
         {
-            return "MKS Integrity - CM Checkpoint";
+            return "Integrity - CM Checkpoint";
         }
 
 		@Override
@@ -290,7 +290,7 @@ public class IntegrityCheckpointAction extends Notifier
 		}
 
 		/**
-		 * Checks if the given value is a valid MKS Integrity Label.
+		 * Checks if the given value is a valid Integrity Label.
 		 * If it's invalid, this method gives you the reason as string.
 		 * @param tagName The checkpoint label name
 		 * @return the error message, or null if label is valid

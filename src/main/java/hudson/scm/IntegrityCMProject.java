@@ -40,7 +40,7 @@ import com.mks.api.response.Field;
 import com.mks.api.si.SIModelTypeName;
 
 /**
- * This class represents a MKS Integrity Configuration Management Project
+ * This class represents an Integrity Configuration Management Project
  * Provides metadata information about a Project
  */
 public class IntegrityCMProject implements Serializable
@@ -208,7 +208,7 @@ public class IntegrityCMProject implements Serializable
 	/**
 	 * Parses the output from the si viewproject command to get a list of members
 	 * @param wit WorkItemIterator
-	 * @param api The current MKS API Session
+	 * @param api The current Integrity API Session
 	 * @throws APIException
 	 * @return The list of IntegrityCMMember objects for this project 
 	 */
@@ -263,7 +263,7 @@ public class IntegrityCMProject implements Serializable
 	/**
 	 * Compares this version of the project to a previous/new version to determine what are the updates and what was deleted
 	 * @param baselineProject The previous baseline (build) for this Integrity CM Project
-	 * @param api The current MKS API Session to obtain the author information
+	 * @param api The current Integrity API Session to obtain the author information
 	 */
 	public void compareBaseline(IntegrityCMProject baselineProject, APISession api)
 	{
@@ -418,7 +418,7 @@ public class IntegrityCMProject implements Serializable
 	 * Convenience method to wrap the details around adds, updates, and deletes
 	 * @param item  XML Element representing the item node
 	 * @param iMember Integrity CM Member
-	 * @param api MKS API Session
+	 * @param api Integrity API Session
 	 * @throws APIException
 	 */
 	private Element writeChangeLog(Element item, IntegrityCMMember iMember, APISession api) throws APIException
@@ -453,7 +453,7 @@ public class IntegrityCMProject implements Serializable
 		}
 		catch(UnsupportedEncodingException uee)
 		{
-			logger.warn("Caught Unsupported Encoding Exception while generating MKS Integrity Source links!");
+			logger.warn("Caught Unsupported Encoding Exception while generating Integrity Source links!");
 			logger.warn(uee.getMessage());			
 		}
 		// Finally, create and append the <msg> element
@@ -467,9 +467,9 @@ public class IntegrityCMProject implements Serializable
 	
 	/**
 	 * Performs a checkpoint on this Integrity CM Project
-	 * @param api Authenticated MKS API Session
+	 * @param api Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
-	 * @return MKS API Response object
+	 * @return Integrity API Response object
 	 * @throws APIException
 	 */
 	public Response checkpoint(APISession api, String chkptLabel) throws APIException
@@ -491,9 +491,9 @@ public class IntegrityCMProject implements Serializable
 	
 	/**
 	 * Applies a Project Label on this Integrity CM Project
-	 * @param api Authenticated MKS API Session
+	 * @param api Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
-	 * @return MKS API Response object
+	 * @return Integrity API Response object
 	 * @throws APIException
 	 */
 	public Response addProjectLabel(APISession api, String chkptLabel) throws APIException
