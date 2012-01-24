@@ -4,6 +4,8 @@ import hudson.model.AbstractBuild;
 import hudson.model.User;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 
+import java.util.AbstractList;
+import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
@@ -14,7 +16,7 @@ import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
 
 /**
- * This class is a representation of all the Changes that were performed between builds
+ * This class is a representation of all the Changes that were performed between builds.
  * At this point we're essentially skipping the Change Set part and only working with the
  * entries within the Change Set, i.e. Change Logs.  I suspect at some future time when
  * we've got better API access to the actual Change Packages that went into a particular
@@ -36,51 +38,51 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 	public IntegrityChangeLogSet(AbstractBuild<?, ?> build, List<IntegrityChangeLog> logs, String integrityURL) 
 	{
 		super(build);
-        this.logs = Collections.unmodifiableList(logs);
-        this.url = integrityURL;
-        this.version = String.valueOf(build.getNumber());
-        this.author = "user";
-        this.date = IntegritySCM.SDF.format(new Date());
-        this.msg = "Integrity Change Log";
-        for (IntegrityChangeLog log : logs)
-        {
-        	log.setParent(this);
-        }
+		this.logs = Collections.unmodifiableList(logs);
+		this.url = integrityURL;
+		this.version = String.valueOf(build.getNumber());
+		this.author = "user";
+		this.date = IntegritySCM.SDF.format(new Date());
+		this.msg = "Integrity Change Log";
+		for (IntegrityChangeLog log : logs)
+		{
+			log.setParent(this);
+		}
 	}
-	
-    /**
-     * Returns the list of Change Logs
-     */
-    public List<IntegrityChangeLog> getLogs() 
-    {
-        return logs;
-    }
-    
-    /**
-     * Returns the type of this Change Log Set
-     */
-    @Override
-    public String getKind() 
-    {
-        return "integrity";
-    }
-    
-    /**
-     * Provides the Integrity URL for this Change Log Set
-     * @return
-     */
-    public String getIntegrityURL()
-    {
-    	return url;
-    }
-    
+
+	/**
+	 * Returns the list of Change Logs
+	 */
+	public List<IntegrityChangeLog> getLogs() 
+	{
+		return logs;
+	}
+
+	/**
+	 * Returns the type of this Change Log Set
+	 */
+	@Override
+	public String getKind()
+	{
+		return "integrity";
+	}
+
+	/**
+	 * Provides the Integrity URL for this Change Log Set
+	 * @return
+	 */
+	public String getIntegrityURL()
+	{
+		return url;
+	}
+
 	/**
 	 * The Entry class defines the metadata related to an individual file change
 	 */
-	@ExportedBean(defaultVisibility=999)
-	public static class IntegrityChangeLog extends ChangeLogSet.Entry  
-	{ 
-		private Collection<String> affectedPaths; 
+	@ExportedBean(defaultVisibility = 999)
+	public static class IntegrityChangeLog extends ChangeLogSet.Entry 
+	{
+		private List<IntegrityChangeLogPath> affectedPaths = new ArrayList<IntegrityChangeLogPath>();
 		private String action;
 		private String file;
 		private String author;
@@ -88,15 +90,15 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		private String date;
 		private String annotation;
 		private String differences;
-		private String msg; 
-         
+		private String msg;
+
 		/**
 		 * Default constructor for the Digester
 		 */
-		public IntegrityChangeLog()
-		{	
+		public IntegrityChangeLog() 
+		{
 		}
-		
+
 		/**
 		 * IntegrityChangeLog Class Constructor
 		 * @param parent
@@ -104,81 +106,114 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		 * @param author
 		 * @param msg
 		 */
-		public IntegrityChangeLog(ChangeLogSet<IntegrityChangeLog> parent, Collection<String> affectedPaths, String author, String msg)  
-		{ 
-			super(); 
-			setParent(parent); 
-			this.affectedPaths = affectedPaths; 
-			this.author = author; 
-			this.msg = msg; 
-		} 
-		
-        /**
-         * Gets the IntegrityChangeLogSet to which this change set belongs.
-         */
-        public IntegrityChangeLogSet getParent() 
-        {
-            return (IntegrityChangeLogSet)super.getParent();
-        }
-	    
-	    /**
-	     * Because of the class loader difference, we need to extend this method
-	     * to make it accessible to the rest of IntegritySCM 
-	     */
-	    @Override
-	    protected void setParent(@SuppressWarnings("rawtypes") ChangeLogSet changeLogSet) 
-	    {
-	        super.setParent(changeLogSet);
-	    }
-	    
-		/**
-		 * Returns a collection of all affected paths
-		 */
-		public Collection<String> getAffectedPaths()
-		{ 
-			return affectedPaths; 
-		} 
+		public IntegrityChangeLog(ChangeLogSet<IntegrityChangeLog> parent, List<IntegrityChangeLogPath> affectedPaths, String author, String msg)
+		{
+			super();
+			setParent(parent);
+			this.affectedPaths = affectedPaths;
+			this.author = author;
+			this.msg = msg;
+		}
 
 		/**
-		 * Returns the author responsible for the change
-		 * Note: This user must be defined in Hudson!
+		 * Gets the IntegrityChangeLogSet to which this change set belongs.
+		 */
+		public IntegrityChangeLogSet getParent() 
+		{
+			return (IntegrityChangeLogSet) super.getParent();
+		}
+
+		/**
+		 * Because of the class loader difference, we need to extend this method
+		 * to make it accessible to the rest of IntegritySCM
+		 */
+		@Override
+		protected void setParent(@SuppressWarnings("rawtypes") ChangeLogSet changeLogSet)
+		{
+			super.setParent(changeLogSet);
+		}
+
+		public void addPath(IntegrityChangeLogPath p) 
+		{
+			p.entry = this;
+			this.affectedPaths.add(p);
+		}
+
+		/**
+		 * Gets the files that are changed in this commit.
+		 * @return can be empty but never null.
 		 */
 		@Exported
-		public User getAuthor()
-		{ 
-			if( author == null )
+		public List<IntegrityChangeLogPath> getPaths()
+		{
+			return this.affectedPaths;
+		}
+
+		/**
+		 * {@inheritDoc}
+		 */
+		public Collection<String> getAffectedPaths() 
+		{
+			return new AbstractList<String>() 
+			{
+				public String get(int index)
+				{
+					return affectedPaths.get(index).value;
+				}
+
+				public int size()
+				{
+					return affectedPaths.size();
+				}
+			};
+		}
+
+		@Override
+		public Collection<IntegrityChangeLogPath> getAffectedFiles()
+		{
+			return this.affectedPaths;
+		}
+
+		/**
+		 * Returns the author responsible for the change 
+		 * Note: This user must be defined in Hudson/Jenkins!
+		 */
+		@Exported
+		public User getAuthor() 
+		{
+			if (author == null) 
 			{
 				return User.getUnknown();
 			}
 			return User.get(author);
-		} 
+		}
 
 		/**
 		 * Gets the user responsible for the change
 		 */
 		@Exported
-		public String getUser()
+		public String getUser() 
 		{
 			return author;
 		}
-		
+
 		/**
 		 * Sets the user responsible for the change
 		 * @param user
 		 */
-		public void setUser(String user)
+		public void setUser(String user) 
 		{
 			this.author = user;
 		}
-				
+
 		/**
 		 * Returns the comments associated with the change
 		 */
 		@Exported
 		public String getMsg()
-		{ 
-			return msg; 
-		} 
+		{
+			return msg;
+		}
 
 		/**
 		 * Setter method to initialize the comments for this change
@@ -188,24 +223,24 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			this.msg = msg;
 		}
-		
+
 		/**
 		 * Returns the revision number associated with the change
 		 */
 		@Exported
 		public String getRev()
-		{ 
-			return rev; 
-		} 
+		{
+			return rev;
+		}
 
 		/**
 		 * Provides the mechanism to populate the revision string for this Entry
 		 * @param rev
 		 */
-		public void setRev(String rev) 
-		{ 
-			this.rev = rev; 
-		} 
+		public void setRev(String rev)
+		{
+			this.rev = rev;
+		}
 
 		/**
 		 * Returns the modification timestamp for this Entry
@@ -213,19 +248,19 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		 */
 		@Exported
 		public String getDate()
-		{ 
-			return date; 
-		} 
+		{
+			return date;
+		}
 
 		/**
 		 * Sets the date stamp for when this change was made
 		 * @param date
 		 */
-		public void setDate(String date)
-		{ 
-			 this.date = date; 
-		} 
-	
+		public void setDate(String date) 
+		{
+			this.date = date;
+		}
+
 		/**
 		 * Returns the action associated with this change, i.e. add, update, or delete
 		 * @return
@@ -235,16 +270,17 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			return action;
 		}
-		
+
 		/**
 		 * Sets the action associated with this change, i.e. add, update, or delete
+		 * 
 		 * @param action
 		 */
 		public void setAction(String action)
 		{
 			this.action = action;
 		}
-		
+
 		/**
 		 * Used by the stapler class to display an appropriate icon associated with the change
 		 * @return
@@ -252,20 +288,20 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		@Exported
 		public EditType getEditType() 
 		{
-		    if( action.equalsIgnoreCase("delete") ) 
-		    {
-		        return EditType.DELETE;
-		    }
-		    else if( action.equalsIgnoreCase("add") ) 
-		    {
-		        return EditType.ADD;
-		    }
-		    else
-		    {
-		    	return EditType.EDIT;
-		    }
+			if (action.equalsIgnoreCase("delete")) 
+			{
+				return EditType.DELETE;
+			} 
+			else if (action.equalsIgnoreCase("add"))
+			{
+				return EditType.ADD;
+			} 
+			else
+			{
+				return EditType.EDIT;
+			}
 		}
-		
+
 		/**
 		 * Returns the Integrity Project Member path for this change
 		 * @return
@@ -274,7 +310,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			return file;
 		}
-		
+
 		/**
 		 * Sets the Integrity Project Member path for this change
 		 * @param file
@@ -283,19 +319,19 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			this.file = file;
 		}
-		
+
 		/**
-		 * Returns a string url representation containing the link to 
+		 * Returns a string url representation containing the link to
 		 * the Integrity Annotated Member view
 		 * @return
 		 */
-		public String getAnnotation()
+		public String getAnnotation() 
 		{
 			return annotation;
 		}
-		
+
 		/**
-		 * Sets a string url representation containing the link to 
+		 * Sets a string url representation containing the link to
 		 * the Integrity Annotated Member view
 		 * @param annotation
 		 */
@@ -303,19 +339,20 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			this.annotation = annotation;
 		}
-		
+
 		/**
 		 * Returns a string representation containing the link to
 		 * the Integrity Member differences view
+		 * 
 		 * @return
 		 */
 		public String getDifferences()
 		{
 			return differences;
 		}
-		
+
 		/**
-		 * Sets a string url representation containing the link to
+		 * Sets a string url representation containing the link to 
 		 * the Integrity Member differences view
 		 * @param differences
 		 */
@@ -323,10 +360,81 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		{
 			this.differences = differences;
 		}
-	} 
-	
+	}
+
+	/**
+	 * A file in a commit.
+	 * Setter methods are public only so that the objects can be constructed
+	 * from Digester. So please consider this object read-only.
+	 */
+	@ExportedBean(defaultVisibility = 999)
+	public static class IntegrityChangeLogPath implements AffectedFile
+	{
+		private IntegrityChangeLog entry;
+		private char action;
+		private String value;
+
+		/**
+		 * Gets the {@link LogEntry} of which this path is a member.
+		 */
+		public IntegrityChangeLog getLogEntry() 
+		{
+			return entry;
+		}
+
+		/**
+		 * Sets the {@link LogEntry} of which this path is a member.
+		 */
+		public void setLogEntry(IntegrityChangeLog entry) 
+		{
+			this.entry = entry;
+		}
+
+		public void setAction(String action) 
+		{
+			this.action = action.charAt(0);
+		}
+
+		/**
+		 * Path in the repository.
+		 */
+		@Exported(name = "file")
+		public String getValue() 
+		{
+			return value;
+		}
+
+		/**
+		 * Inherited from AffectedFile
+		 */
+		public String getPath() 
+		{
+			return getValue();
+		}
+
+		public void setValue(String value) 
+		{
+			this.value = value;
+		}
+
+		@Exported
+		public EditType getEditType() 
+		{
+			if (action == 'A') 
+			{
+				return EditType.ADD;
+			}
+			if (action == 'D') 
+			{
+				return EditType.DELETE;
+			}
+			return EditType.EDIT;
+		}
+	}
+
 	/**
 	 * Overridden Iterator implementation for the Integrity Change Logs in this Integrity Change Log Set
+	 * 
 	 * @see java.lang.Iterable#iterator()
 	 */
 	public Iterator<IntegrityChangeLog> iterator() 
@@ -335,7 +443,8 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 	}
 
 	/**
-	 * Overridden isEmptySet() implementation for the Change Log Set 
+	 * Overridden isEmptySet() implementation for the Change Log Set
+	 * 
 	 * @see hudson.scm.ChangeLogSet#isEmptySet()
 	 */
 	@Override
@@ -343,94 +452,94 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 	{
 		return logs.isEmpty();
 	}
-	
-	/** 
-	 * Adds an entry to the change set. 
-	 */ 
-	public void addEntry(Collection<String> affectedPaths, String user, String msg) 
-	{ 
-		logs.add(addNewEntry(affectedPaths, user, msg)); 
-	} 
 
-	/** 
-	 * Returns a new IntegrityChangeLog, which is already added to the list. 
-	 * @return new IntegrityChangeLog instance 
-	 */ 
-	public IntegrityChangeLog addNewEntry(Collection<String> affectedPaths, String user, String msg) 
-	{ 
-		IntegrityChangeLog log = new IntegrityChangeLog(this, affectedPaths, user, msg); 
-		logs.add(log); 
-		return log; 
-	} 
-	
+	/**
+	 * Adds an entry to the change set.
+	 */
+	public void addEntry(List<IntegrityChangeLogPath> affectedPaths, String user, String msg)
+	{
+		logs.add(addNewEntry(affectedPaths, user, msg));
+	}
+
+	/**
+	 * Returns a new IntegrityChangeLog, which is already added to the list.
+	 * @return new IntegrityChangeLog instance
+	 */
+	public IntegrityChangeLog addNewEntry(List<IntegrityChangeLogPath> affectedPaths, String user, String msg)
+	{
+		IntegrityChangeLog log = new IntegrityChangeLog(this, affectedPaths, user, msg);
+		logs.add(log);
+		return log;
+	}
+
 	/**
 	 * Returns the version information associated with this Change Set
 	 * @return
 	 */
-	public String getVersion()
+	public String getVersion() 
 	{
 		return version;
 	}
-	
+
 	/**
 	 * Sets the version information associated with this Change Set
 	 * @param version
 	 */
-	public void setVersion(String version)
+	public void setVersion(String version) 
 	{
 		this.version = version;
 	}
-	
+
 	/**
 	 * Returns the date/time information of when this Change Set was created
 	 * @return
 	 */
-	public String getDate()
+	public String getDate() 
 	{
 		return date;
 	}
-	
+
 	/**
 	 * Sets the date/time information of when this Change Set was created
 	 * @param date
 	 */
-	public void setDate(String date)
+	public void setDate(String date) 
 	{
 		this.date = date;
 	}
-	
+
 	/**
 	 * Returns the author responsible for creating this Change Set
 	 * @return
 	 */
-	public String getAuthor()
+	public String getAuthor() 
 	{
 		return author;
 	}
-	
+
 	/**
 	 * Sets the author responsible for creating this Change Set
 	 * @param author
 	 */
-	public void setAuthor(String author)
+	public void setAuthor(String author) 
 	{
 		this.author = author;
 	}
-	
+
 	/**
 	 * Returns the comments associated with this Change Set
 	 * @return
 	 */
-	public String getMsg()
+	public String getMsg() 
 	{
 		return msg;
 	}
-	
+
 	/**
 	 * Sets the comments associated this Change Set
 	 * @param msg
 	 */
-	public void setMsg(String msg)
+	public void setMsg(String msg) 
 	{
 		this.msg = msg;
 	}
