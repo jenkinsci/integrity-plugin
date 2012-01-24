@@ -4,6 +4,7 @@ import hudson.model.AbstractBuild;
 import hudson.util.Digester2;
 import hudson.util.IOException2;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
+import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
 
 import java.io.File;
 import java.io.IOException;
@@ -53,7 +54,12 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 		digester.addBeanPropertySetter("*/items/item/msg");		
 		// The digested node/item is added to the change set through {{java.util.List.add()}}
 		digester.addSetNext("*/items/item", "add");
-		        
+		// Additional informaion about the affected paths
+		digester.addObjectCreate("*/items/item/paths/path", IntegrityChangeLogPath.class);
+		digester.addSetProperties("*/items/item/paths/path");
+		digester.addBeanPropertySetter("*/items/item/paths/path", "value");	
+		digester.addSetNext("*/items/item/paths/path", "addPath");
+		
 		// Do the actual parsing
         try 
         {
@@ -66,10 +72,10 @@ public class IntegrityChangeLogParser extends ChangeLogParser
         catch( SAXException e ) 
         {
             throw new IOException2("Failed to parse " + changeLogFile, e);
-        }		
-		
-		// Create a new Integrity Change Log Set populated with a list of Entries...
-		return new IntegrityChangeLogSet(build, changeSetList, integrityURL);
+        }
+        		
+        // Create a new Integrity Change Log Set populated with a list of Entries...
+        return new IntegrityChangeLogSet(build, changeSetList, integrityURL);
 	}
 
 }

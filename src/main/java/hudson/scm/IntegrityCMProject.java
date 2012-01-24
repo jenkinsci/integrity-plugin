@@ -49,7 +49,7 @@ public class IntegrityCMProject implements Serializable
 	public static final String NORMAL_PROJECT = "Normal";
 	public static final String VARIANT_PROJECT = "Variant";
 	public static final String BUILD_PROJECT = "Build";
-		
+	
 	private String projectName;
 	private String projectType;
 	private String projectRevision;	
@@ -287,7 +287,7 @@ public class IntegrityCMProject implements Serializable
 			if( null != oldMember )
 			{
 				// Did it change? Either by an update or roll back (update member revision)?
-				if( iMember.getTimestamp().after(oldMember.getTimestamp()) || iMember.getTimestamp().before(oldMember.getTimestamp()))
+				if( ! iMember.getRevision().equals(oldMember.getRevision()) )
 				{
 					// Initialize the prior revision
 					iMember.setPriorRevision(oldMember.getRevision());
