@@ -1,7 +1,6 @@
 package hudson.scm;
 
 import hudson.model.AbstractBuild;
-import hudson.util.Digester2;
 import hudson.util.IOException2;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
@@ -11,12 +10,12 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 
-import org.apache.commons.digester.Digester;
+import org.apache.commons.digester3.Digester;
 import org.xml.sax.SAXException;
 
 /**
- * At this point, this 
- *
+ * This class provides the parser to read the changelog.xml
+ * that is generated at the end of a build listing the SCM changes 
  */
 public class IntegrityChangeLogParser extends ChangeLogParser 
 {
@@ -39,7 +38,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 	public IntegrityChangeLogSet parse(@SuppressWarnings("rawtypes") AbstractBuild build, File changeLogFile) throws IOException, SAXException 
 	{
 		List<IntegrityChangeLog> changeSetList = new ArrayList<IntegrityChangeLog>();
-		Digester digester = new Digester2();
+		Digester digester = new Digester();
 		digester.push(changeSetList);
 
 		// When digester reads a {{<items>}} child node of {{<changelog>}} it will create a {{IntegrityChangeLog}} object
@@ -54,7 +53,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 		digester.addBeanPropertySetter("*/items/item/msg");		
 		// The digested node/item is added to the change set through {{java.util.List.add()}}
 		digester.addSetNext("*/items/item", "add");
-		// Additional informaion about the affected paths
+		// Additional information about the affected paths
 		digester.addObjectCreate("*/items/item/paths/path", IntegrityChangeLogPath.class);
 		digester.addSetProperties("*/items/item/paths/path");
 		digester.addBeanPropertySetter("*/items/item/paths/path", "value");	

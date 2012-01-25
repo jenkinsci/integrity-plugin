@@ -30,6 +30,12 @@
   
   <dependencies>
    	<dependency>
+  		<groupId>org.apache.commons</groupId>
+  		<artifactId>commons-digester3</artifactId>
+  		<version>3.0</version>
+  		<scope>compile</scope>
+   	</dependency>  
+   	<dependency>
   		<groupId>com.mks.api</groupId>
   		<artifactId>mksapi-jar</artifactId>
   		<version>4.10.9049</version>
