@@ -1,16 +1,13 @@
 package hudson.scm;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileOutputStream;
 import java.io.FileWriter;
-import java.io.ObjectInputStream;
-import java.io.ObjectOutputStream;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.io.IOException;
+import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.Iterator;
+import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 
@@ -32,8 +29,7 @@ import hudson.util.FormValidation;
 
 import net.sf.json.JSONObject;
 
-import org.apache.commons.logging.Log; 
-import org.apache.commons.logging.LogFactory; 
+import org.apache.commons.codec.digest.DigestUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -59,7 +55,6 @@ public class IntegritySCM extends SCM implements Serializable
 	public static final int MIN_PORT_VALUE = 1;
 	public static final int MAX_PORT_VALUE = 65535;	
 	public static final SimpleDateFormat SDF = new SimpleDateFormat("MMM dd, yyyy h:mm:ss a");	
-	private final Log logger = LogFactory.getLog(getClass());
 	private String ciServerURL;
 	private String integrityURL;
 	private IntegrityRepositoryBrowser browser;
@@ -77,6 +72,7 @@ public class IntegritySCM extends SCM implements Serializable
 	private boolean restoreTimestamp = true;
 	private boolean checkpointBeforeBuild = false;
 	private String alternateWorkspace;
+	private boolean fetchChangedWorkspaceFiles = false;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
 
 	/**
@@ -88,10 +84,10 @@ public class IntegritySCM extends SCM implements Serializable
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
 							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy, 
 							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild,
-							String alternateWorkspace)
+							String alternateWorkspace, boolean fetchChangedWorkspaceFiles)
 	{
     	// Log the construction
-    	logger.debug("IntegritySCM constructor has been invoked!");
+    	Logger.debug("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
     	this.ciServerURL = Hudson.getInstance().getRootUrlFromRequest();
     	this.browser = browser;
@@ -109,27 +105,29 @@ public class IntegritySCM extends SCM implements Serializable
     	this.skipAuthorInfo = skipAuthorInfo;
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
     	this.alternateWorkspace = alternateWorkspace;
-    	
+    	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
+
     	// Initialize the Integrity URL
     	initIntegrityURL();
 
     	// Log the parameters received
-    	logger.debug("CI Server URL: " + this.ciServerURL);
-    	logger.debug("URL: " + this.integrityURL);
-    	logger.debug("IP Host: " + this.ipHostName);
-    	logger.debug("Host: " + this.hostName);
-    	logger.debug("IP Port: " + this.ipPort);
-    	logger.debug("Port: " + this.port);
-    	logger.debug("User: " + this.userName);
-    	logger.debug("Password: " + this.password);
-    	logger.debug("Secure: " + this.secure);
-    	logger.debug("Project: " + this.configPath);
-    	logger.debug("Line Terminator: " + this.lineTerminator);
-    	logger.debug("Restore Timestamp: " + this.restoreTimestamp);
-    	logger.debug("Clean: " + this.cleanCopy);
-    	logger.debug("Skip Author Info: " + this.skipAuthorInfo);
-    	logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
-    	logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
+    	Logger.debug("CI Server URL: " + this.ciServerURL);
+    	Logger.debug("URL: " + this.integrityURL);
+    	Logger.debug("IP Host: " + this.ipHostName);
+    	Logger.debug("Host: " + this.hostName);
+    	Logger.debug("IP Port: " + this.ipPort);
+    	Logger.debug("Port: " + this.port);
+    	Logger.debug("User: " + this.userName);
+    	Logger.debug("Password: " + DigestUtils.md5Hex(this.password));
+    	Logger.debug("Secure: " + this.secure);
+    	Logger.debug("Project: " + this.configPath);
+    	Logger.debug("Line Terminator: " + this.lineTerminator);
+    	Logger.debug("Restore Timestamp: " + this.restoreTimestamp);
+    	Logger.debug("Clean: " + this.cleanCopy);
+    	Logger.debug("Skip Author Info: " + this.skipAuthorInfo);
+    	Logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
+    	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
+    	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
 	}
 
     @Override
@@ -267,6 +265,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return alternateWorkspace;
     }
+
+    /**
+     * Returns the true/false depending on whether or not to synchronize changed workspace files
+     * @return
+     */
+    public boolean getFetchChangedWorkspaceFiles()
+    {
+    	return fetchChangedWorkspaceFiles;
+    }
     
     /**
      * Sets the host name of the Integrity Server
@@ -396,6 +403,15 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	this.alternateWorkspace = alternateWorkspace;
     }
+
+    /**
+     * Toggles whether or not changed workspace files should be synchronized
+     * @param fetchChangedWorkspaceFiles
+     */
+    public void setFetchChangedWorkspaceFiles(boolean fetchChangedWorkspaceFiles)
+    {
+    	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
+    }
     
     /**
      * Provides a mechanism to update the Integrity URL, based on updates
@@ -423,15 +439,15 @@ public class IntegritySCM extends SCM implements Serializable
     	// Attempt to open a connection to the Integrity Server
     	try
     	{
-    		logger.debug("Creating Integrity API Session...");
+    		Logger.debug("Creating Integrity API Session...");
     		return new APISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
     	}
     	catch(APIException aex)
     	{
-    		logger.error("API Exception caught...");
+    		Logger.error("API Exception caught...");
     		ExceptionHandler eh = new ExceptionHandler(aex);
-    		logger.error(eh.getMessage());
-    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		Logger.error(eh.getMessage());
+    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
     		return null;
     	}				
@@ -453,7 +469,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public void buildEnvVars(AbstractBuild<?, ?> build, Map<String, String> env)
 	{ 
 		super.buildEnvVars(build, env);
-		logger.debug("buildEnvVars() invoked...!");		
+		Logger.debug("buildEnvVars() invoked...!");		
 		env.put("MKSSI_PROJECT", configPath);
 		env.put("MKSSI_HOST", hostName);
 		env.put("MKSSI_PORT", String.valueOf(port));
@@ -468,24 +484,10 @@ public class IntegritySCM extends SCM implements Serializable
 	@Override
 	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException 
 	{
-		// Just logging the call for now
-		logger.debug("calcRevisionsFromBuild() invoked...!");
-		Object obj = getIntegrityCMProjectState(build);
-		// Now that we've loaded the object, lets make sure it is an IntegrityCMProject!
-		if( obj instanceof IntegrityCMProject && null != obj )
-		{
-			// Cast object to an IntegrityCMProject
-			IntegrityCMProject cmProject = (IntegrityCMProject) obj;
-			// Returns the current Project Configuration for the requested build
-			return new IntegrityRevisionState(cmProject);			
-		}
-		else
-		{
-            // Not sure what object we've loaded, but its no IntegrityCMProject!
-			logger.debug("Cannot construct project state for build " + build.getNumber() + "!");
-			// Returns the current Project Configuration for the requested build
-			return new IntegrityRevisionState(null);						
-		}		
+		// Log the call for debug purposes
+		Logger.debug("calcRevisionsFromBuild() invoked...!");
+		File projectDB = getIntegrityCMProjectDB(build);
+		return new IntegrityRevisionState(projectDB);
 	}
 
 	/**
@@ -494,16 +496,16 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
-	private Response initializeCMProject(APISession api) throws APIException
+	private Response initializeCMProject(APISession api, File projectDB) throws APIException
 	{
 		// Get the project information for this project
 		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
 		siProjectInfoCmd.addOption(new Option("project", configPath));	
-		logger.debug("Preparing to execute si projectinfo for " + configPath);
+		Logger.debug("Preparing to execute si projectinfo for " + configPath);
 		Response infoRes = api.runCommand(siProjectInfoCmd);
-		logger.debug(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
+		Logger.debug(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
 		// Initialize our siProject class variable
-		siProject = new IntegrityCMProject(infoRes.getWorkItems().next());
+		siProject = new IntegrityCMProject(infoRes.getWorkItems().next(), projectDB);
 		// Set the project options
 		siProject.setLineTerminator(lineTerminator);
 		siProject.setRestoreTimestamp(restoreTimestamp);
@@ -516,8 +518,9 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @param api Integrity API Session
 	 * @return response Integrity API Response
 	 * @throws APIException
+	 * @throws SQLException 
 	 */
-	private Response initializeCMProjectMembers(APISession api) throws APIException
+	private Response initializeCMProjectMembers(APISession api) throws APIException, SQLException
 	{
 		// Lets parse this project
 		Command siViewProjectCmd = new Command(Command.SI, "viewproject");
@@ -531,10 +534,9 @@ public class IntegritySCM extends SCM implements Serializable
 		mvFields.add("membertimestamp");
 		mvFields.add("memberdescription");
 		siViewProjectCmd.addOption(new Option("fields", mvFields));
-		logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-		Response viewRes = api.runCommand(siViewProjectCmd);
-		logger.debug(viewRes.getCommandString() + " returned " + viewRes.getExitCode());
-		siProject.parseProject(viewRes.getWorkItems(), api);
+		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
+		siProject.parseProject(viewRes.getWorkItems());
 		return viewRes;
 	}
 	
@@ -549,48 +551,21 @@ public class IntegritySCM extends SCM implements Serializable
         return false;
     }
     
-    private Object getIntegrityCMProjectState(AbstractBuild<?,?> build) throws IOException
+    private File getIntegrityCMProjectDB(AbstractBuild<?,?> build)
     {
     	// Make sure this build is not null, before processing it!
+    	File projectDB = null;
     	if( null != build )
     	{
 	        // Lets make absolutely certain we've found a useful build, 
-	        File viewProjectFile = getViewProjectResponseFile(build);
-	        if( ! viewProjectFile.exists() )
+	        projectDB = new File(build.getRootDir(), DerbyUtils.DERBY_DB_FOLDER);
+	        if( ! projectDB.isDirectory() )
 	        {
 	        	// There is no project state for this build!
-	        	logger.debug("Project state not found for build " + build.getNumber() + "!");
-	        	return null;
+	        	Logger.debug("Integrity SCM Project DB not found for build " + build.getNumber() + "!");
 	        }
-	        else
-	        {
-	        	// We've found a build that contains the project state...  load it up!			
-				logger.debug("Attempting to load up project state for build " + build.getNumber() + "...");
-				FileInputStream fis = new FileInputStream(viewProjectFile);
-				ObjectInputStream ois = new ObjectInputStream(fis);							
-				Object obj = null;
-				try
-				{
-					// Read the serialized Project object				
-					obj = ois.readObject();
-					logger.debug("Project state re-constructed successfully for build " + build.getNumber() + "!");		
-				}
-				catch( ClassNotFoundException cne )
-				{
-		            // Not sure what we've found, but its no good...
-					logger.debug("Caught Exception: " + cne.getMessage());
-					logger.debug("Cannot construct project state for build" + build.getNumber() + "!");		
-				}
-				finally
-				{
-					ois.close();
-					fis.close();
-				}
-				
-				return obj;
-			}
     	}
-    	return null;
+    	return projectDB;
     }
     
 	/**
@@ -607,7 +582,7 @@ public class IntegritySCM extends SCM implements Serializable
 							BuildListener listener, File changeLogFile) throws IOException, InterruptedException 
 	{
 		// Log the invocation... 
-		logger.debug("Start execution of checkout() routine...!");
+		Logger.debug("Start execution of checkout() routine...!");
 		// Provide links to the Change and Build logs for easy access from Integrity
 		listener.getLogger().println("Change Log: " + ciServerURL + build.getUrl() + "changes");
 		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
@@ -626,7 +601,7 @@ public class IntegritySCM extends SCM implements Serializable
 		{
 			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-			initializeCMProject(api);
+			initializeCMProject(api, build.getRootDir());
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
 			{
@@ -636,7 +611,7 @@ public class IntegritySCM extends SCM implements Serializable
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
     				Response res = siProject.checkpoint(api, "");
-					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+    				Logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
 					listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
@@ -661,64 +636,63 @@ public class IntegritySCM extends SCM implements Serializable
 	        for( AbstractBuild<?,?> b = build.getPreviousBuild(); null != b; b = b.getPreviousBuild() ) 
 	        {
 	        	// Go back through each previous build to find a useful project state
-	            if( getViewProjectResponseFile(b).exists()) 
+	        	File prevProjectDB = new File(build.getRootDir(), DerbyUtils.DERBY_DB_FOLDER);
+	            if( prevProjectDB.isDirectory() ) 
 	            {
-	            	logger.debug("Found previous project state in build " + b.getNumber());
+	            	Logger.debug("Found previous project state in build " + b.getNumber());
 	            	previousBuild = b;
 	                break;
 	            }
 	        }
+	        
 	        // Load up the project state for this previous build...
-			Object obj = getIntegrityCMProjectState(previousBuild);
+			File prevProjectDB = getIntegrityCMProjectDB(previousBuild);
 			// Now that we've loaded the object, lets make sure it is an IntegrityCMProject!
-			if( obj instanceof IntegrityCMProject && null != obj )
+			if( null != prevProjectDB && prevProjectDB.isDirectory() )
 			{
-				// Cast object to an IntegrityCMProject
-				IntegrityCMProject oldProject = (IntegrityCMProject) obj;
 				// Compare this project with the old 
-				siProject.compareBaseline(oldProject, api);		
+				siProject.compareBaseline(prevProjectDB.getParentFile(), api);		
 			}
 			else
 			{
 	            // Not sure what object we've loaded, but its no IntegrityCMProject!
-				logger.debug("Cannot construct project state for any of the pevious builds!");
-
+				Logger.debug("Cannot construct project state for any of the pevious builds!");
 				// Prime the author information for the current build as this could be the first build
-				if( ! skipAuthorInfo )
-				{
-					List<IntegrityCMMember> memberList = siProject.getProjectMembers();
-					for(Iterator<IntegrityCMMember> it = memberList.iterator(); it.hasNext();)
-					{
-						it.next().setAuthor(api);
-					}
-				}
+				if( ! skipAuthorInfo ){ siProject.primeAuthorInformation(api); }
 			}
 			
 	        // After all that insane interrogation, we have the current Project state that is
 	        // correctly initialized and either compared against its baseline or is a fresh baseline itself
 	        // Now, lets figure out how to populate the workspace...
+			List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
+			List<String> dirList = siProject.getDirList();
 			IntegrityCheckoutTask coTask = null;
-			if( null == obj )
+			if( null == prevProjectDB )
 			{ 
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
-			    coTask = new IntegrityCheckoutTask(this, siProject, true, listener);
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
+													restoreTimestamp, true, fetchChangedWorkspaceFiles, listener);
 			}
 			else 
 			{
 				// Otherwise, update the workspace in accordance with the user's cleanCopy option				
-				coTask = new IntegrityCheckoutTask(this, siProject, cleanCopy, listener);
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
+													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, listener);
 			}
+			
+			// Initialize the API Session connection settings for the check out task
+			coTask.initAPIVariables(ipHostName, ipPort, hostName, port, secure, userName, password);
 			
 			// Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
 			if( workspace.act(coTask) )
 			{ 
 				// Now that the workspace is updated, lets save the current project state for future comparisons
 				listener.getLogger().println("Saving current Integrity Project configuration...");
-				printViewProjectResponse(build, listener, siProject);
+				if( fetchChangedWorkspaceFiles ){ siProject.updateChecksum(coTask.getChecksumUpdates()); }
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
-				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), api));				
+				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), projectMembersList));				
 				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
 			}
 			else
@@ -729,62 +703,36 @@ public class IntegritySCM extends SCM implements Serializable
 		}
 	    catch(APIException aex)
 	    {
-    		logger.error("API Exception caught...");
+	    	Logger.error("API Exception caught...");
     		listener.getLogger().println("An API Exception was caught!"); 
     		ExceptionHandler eh = new ExceptionHandler(aex);
-    		logger.error(eh.getMessage());
+    		Logger.error(eh.getMessage());
     		listener.getLogger().println(eh.getMessage());
-    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
+    		Logger.fatal(aex);
     		return false;
 	    }
+		catch(SQLException sqlex)
+		{
+	    	Logger.error("SQL Exception caught...");
+    		listener.getLogger().println("A SQL Exception was caught!"); 
+    		listener.getLogger().println(sqlex.getMessage());
+    		Logger.fatal(sqlex);
+    		return false;			
+		}
 	    finally
 	    {
 	    	writer.close();
-			api.Terminate();
+	    	siProject.closeProjectDB();
+	    	api.Terminate();
+			
 	    }
 
 	    //If we got here, everything is good on the checkout...
 	    return true;
 	}
 
-    /**
-     * Called from checkout to save the current state of the project for this build
-     * @param build Hudson AbstractBuild
-     * @param listener Hudson Build Listener
-     * @param response Integrity API Response
-     * @throws IOException
-     */
-    private void printViewProjectResponse(AbstractBuild<?,?> build, BuildListener listener, IntegrityCMProject pj) throws IOException
-    {
-    	// For every build we will basically save our view project output, so it can be compared build over build
-    	File viewProjectFile = new File(build.getRootDir(), "viewproject.dat");
-    	FileOutputStream fos = new FileOutputStream(viewProjectFile);
-    	ObjectOutputStream pjOut = new ObjectOutputStream(fos);
-    	try
-    	{
-        	pjOut.writeObject(pj);    		
-        	listener.getLogger().println("API Response for si viewproject successfully saved to file!");    		
-    	}
-    	finally
-    	{
-    		pjOut.close();
-    		fos.close();
-    	}
-    	listener.getLogger().println("Successfully saved current Integrity Project configuration to " + viewProjectFile.getAbsolutePath());    	
-    }
-    
-    /**
-     * Returns the Integrity API Response xml file for the specified build 
-     * @param build Hudson AbstractBuild Object
-     * @return
-     */
-    public static File getViewProjectResponseFile(AbstractBuild<?,?> build) 
-    {
-        return new File(build.getRootDir(),"viewproject.dat");
-    }
-    
 	/**
 	 * Overridden compareRemoteRevisionWith function
 	 * Loads up the previous project configuration and compares 
@@ -796,7 +744,7 @@ public class IntegritySCM extends SCM implements Serializable
 													final TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException	
 	{
 		// Log the call for now...
-		logger.debug("compareRemoteRevisionWith() invoked...!");
+		Logger.debug("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
         // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
@@ -807,17 +755,17 @@ public class IntegritySCM extends SCM implements Serializable
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
-        		logger.debug("No prior successful builds found!  Advice to build now!");
+        		Logger.debug("No prior successful builds found!  Advice to build now!");
         		return PollingResult.BUILD_NOW;
         	}
         	else
         	{
         		// Lets trying to get the baseline associated with the last build
         		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, launcher, listener);
-        		if( null != baseline && null != baseline.getSIProject() )
+        		if( null != baseline && null != baseline.getProjectDB() )
         		{
         			// Obtain the details on the old project configuration
-        			IntegrityCMProject oldProject = baseline.getSIProject();
+        			File projectDB = baseline.getProjectDB().getParentFile();
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
         			APISession api = createAPISession();
@@ -826,15 +774,15 @@ public class IntegritySCM extends SCM implements Serializable
 	        			try
 	        			{
 	        				listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-	        				initializeCMProject(api);
+	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"));
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
 	        				initializeCMProjectMembers(api);
 	        				// Compare this project with the old project 
-	        				siProject.compareBaseline(oldProject, api);		
+	        				int changeCount = siProject.compareBaseline(projectDB, api);		
 	        				// Finally decide whether or not we need to build again
-	        				if( siProject.hasProjectChanged() )
+	        				if( changeCount > 0 )
 	        				{
-	        					listener.getLogger().println("Project contains changes a total of " + siProject.getChangeCount() + " changes!");
+	        					listener.getLogger().println("Project contains changes a total of " + changeCount + " changes!");
 	        					return PollingResult.SIGNIFICANT;
 	        				}
 	        				else
@@ -845,19 +793,29 @@ public class IntegritySCM extends SCM implements Serializable
 	        			}
 	        		    catch(APIException aex)
 	        		    {
-	        	    		logger.error("API Exception caught...");
+	        		    	Logger.error("API Exception caught...");
 	        	    		listener.getLogger().println("An API Exception was caught!"); 
 	        	    		ExceptionHandler eh = new ExceptionHandler(aex);
-	        	    		logger.error(eh.getMessage());
+	        	    		Logger.error(eh.getMessage());
 	        	    		listener.getLogger().println(eh.getMessage());
-	        	    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	        	    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		aex.printStackTrace();
 	        	    		return PollingResult.NO_CHANGES;
 	        		    }
+	        			catch(SQLException sqlex)
+	        			{
+	        		    	Logger.error("SQL Exception caught...");
+	        	    		listener.getLogger().println("A SQL Exception was caught!"); 
+	        	    		listener.getLogger().println(sqlex.getMessage());
+	        	    		Logger.fatal(sqlex);
+	        	    		return PollingResult.NO_CHANGES;		
+	        			}
 	        		    finally
 	        		    {
 	        				api.Terminate();
+	        				DerbyUtils.shutdownDB(projectDB);
+	        				siProject.closeProjectDB();
 	        		    }
         			}
         			else
@@ -869,7 +827,7 @@ public class IntegritySCM extends SCM implements Serializable
         		else
         		{
         			// Can't construct a previous project state, lets build now!
-        			logger.debug("No prior Integrity Project state can be found!  Advice to build now!");
+        			Logger.debug("No prior Integrity Project state can be found!  Advice to build now!");
         			return PollingResult.BUILD_NOW;
         		}
         	}
@@ -877,7 +835,7 @@ public class IntegritySCM extends SCM implements Serializable
         else
         {
         	// This must be an error, no changes to report
-        	logger.error("This method was called with the wrong SCMRevisionState class!");
+        	Logger.error("This method was called with the wrong SCMRevisionState class!");
         	return PollingResult.NO_CHANGES;
         }
 	}
@@ -891,7 +849,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public ChangeLogParser createChangeLogParser() 
 	{
 		// Log the call
-		logger.debug("createChangeLogParser() invoked...!");
+		Logger.debug("createChangeLogParser() invoked...!");
 		return new IntegrityChangeLogParser(integrityURL);
 	}
 	
@@ -903,7 +861,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public SCMDescriptor<IntegritySCM> getDescriptor() 
 	{
 		// Log the call
-		logger.debug("IntegritySCM.getDescriptor() invoked...!");		
+		Logger.debug("IntegritySCM.getDescriptor() invoked...!");		
 	    return DescriptorImpl.INTEGRITY_DESCRIPTOR;
 	}
 
@@ -915,8 +873,7 @@ public class IntegritySCM extends SCM implements Serializable
 	 * just like the SCM class contains the configurations options for a job.
 	 */
     public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> 
-    {
-    	private static Log desLogger = LogFactory.getLog(DescriptorImpl.class);
+    {    	
     	@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
     	private String defaultHostName;
@@ -938,8 +895,13 @@ public class IntegritySCM extends SCM implements Serializable
     		defaultUserName = "";
     		defaultPassword = "";
             load();
-        	// Log the construction...
-        	desLogger.debug("IntegritySCM DescriptorImpl() constructed!");        	            
+
+            // Initialize our derby environment
+            DerbyUtils.setDerbySystemDir(Hudson.getInstance().getRootDir());
+            DerbyUtils.loadDerbyDriver();
+            
+            // Log the construction...
+        	Logger.debug("IntegritySCM DescriptorImpl() constructed!");
         }
         
         @Override
@@ -970,34 +932,34 @@ public class IntegritySCM extends SCM implements Serializable
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException 
         {
         	// Log the request to configure
-        	desLogger.debug("Request to configure IntegritySCM (SCMDescriptor) invoked...");
+        	Logger.debug("Request to configure IntegritySCM (SCMDescriptor) invoked...");
 			
-        	desLogger.debug("mks.defaultHostName = " + req.getParameter("mks.defaultHostName"));
+        	Logger.debug("mks.defaultHostName = " + req.getParameter("mks.defaultHostName"));
         	defaultHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultHostName"));
-			desLogger.debug("defaultHostName = " + defaultHostName);
+        	Logger.debug("defaultHostName = " + defaultHostName);
 			
-			desLogger.debug("mks.defaultIPHostName = " + req.getParameter("mks.defaultIPHostName"));
+        	Logger.debug("mks.defaultIPHostName = " + req.getParameter("mks.defaultIPHostName"));
 			defaultIPHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultIPHostName"));
-			desLogger.debug("defaultIPHostName = " + defaultIPHostName);
+			Logger.debug("defaultIPHostName = " + defaultIPHostName);
 			
-			desLogger.debug("mks.defaultPort = " + req.getParameter("mks.defaultPort"));
+			Logger.debug("mks.defaultPort = " + req.getParameter("mks.defaultPort"));
 			defaultPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultPort")));
-			desLogger.debug("defaultPort = " + defaultPort);
+			Logger.debug("defaultPort = " + defaultPort);
 			
-			desLogger.debug("mks.defaultIPPort = " + req.getParameter("mks.defaultIPPort"));
+			Logger.debug("mks.defaultIPPort = " + req.getParameter("mks.defaultIPPort"));
 			defaultIPPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultIPPort")));
-			desLogger.debug("defaultIPPort = " + defaultIPPort);
+			Logger.debug("defaultIPPort = " + defaultIPPort);
 			
-			desLogger.debug("mks.defaultSecure = " + req.getParameter("mks.defaultSecure"));
+			Logger.debug("mks.defaultSecure = " + req.getParameter("mks.defaultSecure"));
 			defaultSecure = "on".equalsIgnoreCase(Util.fixEmptyAndTrim(req.getParameter("mks.defaultSecure"))) ? true : false;
-			desLogger.debug("defaultSecure = " + defaultSecure);
+			Logger.debug("defaultSecure = " + defaultSecure);
 			
-			desLogger.debug("mks.defaultUserName = " + req.getParameter("mks.defaultUserName"));
+			Logger.debug("mks.defaultUserName = " + req.getParameter("mks.defaultUserName"));
 			defaultUserName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultUserName"));
-			desLogger.debug("defaultUserName = " + defaultUserName);
+			Logger.debug("defaultUserName = " + defaultUserName);
 			
 			defaultPassword =  Base64.encode(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
-			desLogger.debug("defaultPassword = " + defaultPassword);
+			Logger.debug("defaultPassword = " + DigestUtils.md5Hex(defaultPassword));
 
 			save();
             return true;

@@ -94,7 +94,11 @@
         
         <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
             <f:textbox name="mks.alternateWorkspace" value="${scm.alternateWorkspace}"/>
-        </f:entry>        
+        </f:entry>
+        
+        <f:entry title="Synchronize Changed Workspace Files" field="fetchChangedWorkspaceFiles">
+            <f:checkbox name="mks.fetchChangedWorkspaceFiles" checked="${scm.fetchChangedWorkspaceFiles}"/>
+        </f:entry>                        
                 
     </f:advanced>
 

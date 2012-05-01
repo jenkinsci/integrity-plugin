@@ -9,11 +9,8 @@ import com.mks.api.response.Response;
 import com.mks.api.Session;
 import java.io.IOException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
-
 /**
- * This class represents the Integration Point to a server.  
+ * This class represents an Integration Point to a server.  
  * It also contains a Session object
  */
 public class APISession
@@ -23,9 +20,6 @@ public class APISession
 											IntegrationPointFactory.getAPIVersion().indexOf(' '));
 	public static final int MAJOR_VERSION = Integer.parseInt(VERSION.substring(0, VERSION.indexOf('.')));	
 	public static final int MINOR_VERSION = Integer.parseInt(VERSION.substring(VERSION.indexOf('.')+1, VERSION.length()));
-	
-	// Logs all API work...
-	private final Log logger = LogFactory.getLog(getClass());
 	
 	// Class variables used to create an API Session
 	private String ipHostName;
@@ -38,6 +32,7 @@ public class APISession
 	// API Specific Objects
 	private IntegrationPoint ip;
 	private Session session;
+	private CmdRunner icr;	
 	private boolean terminated;
 	
 	/**
@@ -71,7 +66,7 @@ public class APISession
 	    cmdRunner.setDefaultPassword(paswd);
 	    // Execute the connection
 		Response res = cmdRunner.execute(ping);
-		logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
+		Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
 		// Initialize class variables
 		ipHostName = ipHost;
 		ipPort = ipPortNum;
@@ -80,7 +75,7 @@ public class APISession
 		userName = user;
 		password = paswd;
 		cmdRunner.release();
-		logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port);
+		Logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port);
 	}
 	
 	/**
@@ -91,18 +86,41 @@ public class APISession
 	 */
 	public Response runCommand(Command cmd) throws APIException
 	{
-	    
 	    CmdRunner cmdRunner = session.createCmdRunner();
 	    cmdRunner.setDefaultHostname(hostName);
 	    cmdRunner.setDefaultPort(port);
 	    cmdRunner.setDefaultUsername(userName);
 	    cmdRunner.setDefaultPassword(password);
 	    Response res = cmdRunner.execute(cmd);
-	    logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());	    
+	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());	    
 	    cmdRunner.release();
 	    return res;
 	}
-
+	
+	/**
+	 * This function executes a generic API/CLI Command with interim
+	 * @param cmd Integrity API Command Object representing a CLI command
+	 * @return Integrity API Response Object
+	 * @throws APIException
+	 */
+	public Response runCommandWithInterim(Command cmd) throws APIException
+	{
+		// Terminate the previous command runner, if applicable
+		if( null != icr )
+		{
+			icr.interrupt();
+			icr.release();
+		}
+		icr = session.createCmdRunner();
+		icr.setDefaultHostname(hostName);
+		icr.setDefaultPort(port);
+		icr.setDefaultUsername(userName);
+		icr.setDefaultPassword(password);
+	    Response res = icr.executeWithInterim(cmd, false);
+	    Logger.debug("Executed " + res.getCommandString() + " with interim");
+	    return res;
+	}
+	
 	/**
 	 * This function executes a generic API/CLI Command impersonating another user
 	 * @param cmd Integrity API Command Object representing a CLI command
@@ -112,7 +130,6 @@ public class APISession
 	 */
 	public Response runCommandAs(Command cmd, String impersonateUser) throws APIException
 	{
-	    
 	    CmdRunner cmdRunner = session.createCmdRunner();
 	    cmdRunner.setDefaultHostname(hostName);
 	    cmdRunner.setDefaultPort(port);
@@ -120,7 +137,7 @@ public class APISession
 	    cmdRunner.setDefaultPassword(password);
 	    cmdRunner.setDefaultImpersonationUser(impersonateUser);
 	    Response res = cmdRunner.execute(cmd);
-	    logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
+	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
 	    cmdRunner.release();
 	    return res;
 	}
@@ -135,6 +152,12 @@ public class APISession
 		{
 			try
 			{
+				if( null != icr )
+				{
+					icr.interrupt();
+					icr.release();
+				}
+				
 				if( null != session )
 				{
 					session.release();
@@ -144,17 +167,18 @@ public class APISession
 				{
 					ip.release();
 				}
+				
 				terminated = true;
-				logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
+				Logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
 			}
 			catch(APIException aex)
 			{
-			    logger.debug("Caught API Exception when releasing session!");
+			    Logger.debug("Caught API Exception when releasing session!");
 			    aex.printStackTrace();
 			}
 			catch(IOException ioe)
 			{
-			    logger.debug("Caught IO Exception when releasing session!");
+			    Logger.debug("Caught IO Exception when releasing session!");
 			    ioe.printStackTrace();			
 			}
 		}

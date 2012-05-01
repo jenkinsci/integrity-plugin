@@ -1,159 +1,37 @@
 package hudson.scm;
 
-import java.util.Date;
 import java.io.File;
-import java.io.Serializable;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
+import org.apache.commons.codec.digest.DigestUtils;
 
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.FileOption;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
-import com.mks.api.response.WorkItem;
 
 /**
- * This class represents an Integrity CM Member
- * It contains all the necessary metadata to check this file out individually
+ * This class is intended to represent an Integrity CM Member
+ * However, due to scalability constraints, the bulk of the member metadata
+ * will be stored in an embedded database.  The purpose of this class is to
+ * statically assist with various Integrity member operations, like co.
  */
-public class IntegrityCMMember implements Serializable
+public final class IntegrityCMMember
 {
-	private static final long serialVersionUID = 880318565064448175L;
 	private static final String ENCODING = "UTF-8"; 
-	private String memberID;
-	private String memberName;
-	private Date memberTimestamp;
-	private String memberDescription;
-	private String author;
-	private String projectConfigPath;
-	private String memberRev;
-	private String priorRev;
-	private File targetFile;
-	private String relativeFile;
-	private String lineTerminator;
-	private String overwriteExisting;
-	private String restoreTimestamp;
-	private final Log logger = LogFactory.getLog(getClass());
 	
-	/**
-	 * This class represents an Integrity Source File
-	 * It needs the Member Name (relative path to pj), Full Member Path, Project Configuration Path, Revision,
-	 * Project's Root Path, and the current Workspace directory (to compute the working file path) for its
-	 * instantiation.  This helper class will be used to then perform a project checkout from the repository 
-	 * @param wi An Integrity API Response Work Item representing metadata related to a Integrity Member
-	 * @param configPath Configuration Path for this file's project/subproject
-	 * @param projectRoot Full path to the root location for this file's parent project
-	 */
-	public IntegrityCMMember(WorkItem wi, String configPath, String projectRoot) throws APIException
-	{
-		this.projectConfigPath = configPath;
-		this.memberID = wi.getId();
-		this.memberName = wi.getField("name").getValueAsString();
-		this.memberRev = wi.getField("memberrev").getItem().getId();
-		this.priorRev = ""; // This will be empty until a baseline comparison is performed!
-		this.memberTimestamp = wi.getField("membertimestamp").getDateTime();
-		if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
-		{
-			this.memberDescription = wi.getField("memberdescription").getValueAsString();
-			// Char 8211 which is a long dash causes problems for the change log XML, need to fix it!
-			this.memberDescription = this.memberDescription.replace((char)8211, '-');
-		}
-		else
-		{
-			this.memberDescription = new String("");
-		}
-		this.lineTerminator = "native";
-		this.overwriteExisting = "overwriteExisting";
-		this.restoreTimestamp = "restoreTimestamp";
-		this.relativeFile = this.memberName.substring(projectRoot.length());
-		// At this point just initialize the target file to a relative path!
-		this.targetFile = new File(relativeFile);
-		// Initialize the author associated with this member revision to unknown for now
-		this.author = "unknown";
-	}
-
-	/**
-	 * Constructs an absolute path for the target file based on the workspace it will be checked out to
-	 * @param workspaceDir Full path to the root location where this file will be checked out
-	 */
-	public void setWorkspaceDir(String workspaceDir)
-	{
-		// Construct the targetFilePath based on the previously established relative path and workspace directory
-		targetFile = new File(workspaceDir + relativeFile);		
-	}
-	
-	/**
-	 * Returns a string representation of this file's full path name,
-	 * where it will checked out to disk for the build.
-	 * NOTE: This assumes that setWorkspaceDir() was called prior to making this call!
-	 * @return
-	 */
-	public String getTargetFilePath()
-	{
-		return targetFile.getAbsolutePath();
-	}
-
-	/**
-	 * Returns a string representation of this member's revision
-	 * @return
-	 */
-	public String getRevision()
-	{
-		return memberRev;
-	}
-	
-	/**
-	 * Returns the date/time associated with this member revision
-	 * @return
-	 */
-	public Date getTimestamp()
-	{
-		return memberTimestamp;
-	}
-	
-	/**
-	 * Returns any check-in comments associated with this revision
-	 * @return
-	 */
-	public String getDescription()
-	{
-		return memberDescription;
-	}
-	
-	/**
-	 * Returns the author for this member revision
-	 * @return
-	 */
-	public String getAuthor()
-	{
-		if( null != author )
-		{
-			return author;
-		}
-		else
-		{
-			return "unknown";
-		}
-	}
-	
-	/**
-	 * Returns the full server-side member path for this member
-	 * @return
-	 */
-	public String getMemberName()
-	{
-		return memberName;
-	}
-
 	/**
 	 * Returns only the file name portion for this full server-side member path
+	 * @param memberID The full server side path for the Integrity member
 	 * @return
 	 */
-	public String getName()
+	public static final String getName(String memberID)
 	{
 		if( memberID.indexOf('/') > 0 )
 		{
@@ -171,14 +49,17 @@ public class IntegrityCMMember implements Serializable
 	
 	/**
 	 * Returns an URL encoded string representation for invoking this Integrity member's annotated view
+	 * @param configPath Full server side path for this Integrity member's project/subproject
+	 * @param memberID Full server side path for this Integrity member
+	 * @param memberRev Member revision string for this Integrity member
 	 * @return
 	 * @throws UnsupportedEncodingException
 	 */
-	public String getAnnotatedLink() throws UnsupportedEncodingException
+	public static final String getAnnotatedLink(String configPath, String memberID, String memberRev) throws UnsupportedEncodingException
 	{
 		StringBuilder sb = new StringBuilder();
 		sb.append("annotate?projectName=");
-		sb.append(URLEncoder.encode(projectConfigPath, ENCODING));
+		sb.append(URLEncoder.encode(configPath, ENCODING));
 		sb.append("&revision=");
 		sb.append(memberRev);
 		sb.append("&selection=");
@@ -189,126 +70,41 @@ public class IntegrityCMMember implements Serializable
 	/**
 	 * Returns an URL encoded string representation for invoking this Integrity member's differences view
 	 * This assumes that IntegrityCMProject.compareBaseline() was invoked!
+	 * @param configPath Full server side path for this Integrity member's project/subproject
+	 * @param memberID Full server side path for this Integrity member
+	 * @param memberRev Member revision string for this Integrity member
+	 * @param oldMemberRev Revision string representing the previous or next revision
 	 * @return
 	 */
-	public String getDifferencesLink() throws UnsupportedEncodingException
+	public static final String getDifferencesLink(String configPath, String memberID, String memberRev, String oldMemberRev) throws UnsupportedEncodingException
 	{
-		if( null != priorRev && priorRev.length() > 0 )
-		{
-			StringBuilder sb = new StringBuilder();
-			sb.append("diff?projectName=");
-			sb.append(URLEncoder.encode(projectConfigPath, ENCODING));
-			sb.append("&oldRevision=");
-			sb.append(priorRev);
-			sb.append("&newRevision=");
-			sb.append(memberRev);		
-			sb.append("&selection=");
-			sb.append(URLEncoder.encode(memberID, ENCODING));		
-			return sb.toString();
-		}
-		else
-		{
-			return new String("");
-		}
-	}
-	
-	/**
-	 * Access function to initialize the prior revision, used for differences view
-	 * This will be invoked from the IntegrityCMProject.compareBaseline() function
-	 * @param revision
-	 */
-	public void setPriorRevision(String revision)
-	{
-		priorRev = revision;
-	}
-	
-	/**
-	 * Optionally, one may set a line terminator, if the default is not desired.
-	 * Configured under advanced options for the SCM plugin
-	 * @param lineTerminator
-	 */
-	public void setLineTerminator(String lineTerminator)
-	{
-		this.lineTerminator = lineTerminator;
-	}
-	
-	/**
-	 * Optionally, one may choose not to overwrite existing files, this may speed
-	 * up the synchronization process if a clear copy is not requested.
-	 * @param overwriteExisting
-	 */
-	public void setOverwriteExisting(String overwriteExisting)
-	{
-		this.overwriteExisting = overwriteExisting; 
-	}
-	
-	/**
-	 * Optionally, one might want to restore the timestamp, if the build
-	 * is smart not to recompile files that were not touched.
-	 * This option is configured under advanced options for the SCM plugin
-	 * @param restoreTimestamp
-	 */
-	public void setRestoreTimestamp(boolean restoreTime)
-	{
-		if( restoreTime )
-		{
-			this.restoreTimestamp = "restoreTimestamp";
-		}
-		else
-		{
-			this.restoreTimestamp = "norestoreTimestamp";
-		}
-	}
-	
-	/**
-	 * Initializes the author associated with this member revision
-	 * This is a convenience function used to avoid another command execution
-	 * This can be used when the author information is known, perhaps from a previous build.
-	 * @param author The string representation of this author's name/id
-	 */
-	public void setAuthor(String author)
-	{
-		this.author = author;
-	}
-	
-	/**
-	 * Initializes the author associated with this member revision
-	 * Author is set to "unknown", if the APISession is null indicating that
-	 * the user wishes to skip author information
-	 * @param api The current Integrity API Session to obtain the author information
-	 */
-	public void setAuthor(APISession api)
-	{
-		try
-		{
-			if( null != api )
-			{
-				this.author = getAuthor(api);
-			}
-			else
-			{
-				this.author = "unknown";
-			}
-		}
-		catch(APIException aex)
-		{
-			ExceptionHandler eh = new ExceptionHandler(aex);
-			logger.error("API Exception caught...");
-    		logger.error(eh.getMessage());
-    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
-			this.author = "unknown";
-		}
+		StringBuilder sb = new StringBuilder();
+		sb.append("diff?projectName=");
+		sb.append(URLEncoder.encode(configPath, ENCODING));
+		sb.append("&oldRevision=");
+		sb.append(oldMemberRev);
+		sb.append("&newRevision=");
+		sb.append(memberRev);		
+		sb.append("&selection=");
+		sb.append(URLEncoder.encode(memberID, ENCODING));		
+		return sb.toString();
 	}
 	
 	/**
 	 * Performs a checkout of this Integrity Source File to a 
 	 * working file location on the build server represented by targetFile
 	 * @param api Integrity API Session
+	 * @param configPath Full server side path for this Integrity member's project/subproject
+	 * @param memberID Full server side path for this Integrity member
+	 * @param memberRev Member revision string for this Integrity member
+	 * @param targetFile File object representing the target location for this file
+	 * @param restoreTimestamp Toggles whether or not the original timestamp should be used
+	 * @param lineTerminator Sets the line terminator for this file (native, crlf, or lf)
 	 * @return true if the operation succeeded or false if failed
 	 * @throws APIException
 	 */
-	public boolean checkout(APISession api) throws APIException
+	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, 
+							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
 		// Make sure the directory is created
 		if( ! targetFile.getParentFile().isDirectory() )
@@ -317,11 +113,11 @@ public class IntegrityCMMember implements Serializable
 		}
 		// Construct the project check-co command
 		Command coCMD = new Command(Command.SI, "projectco");
-		coCMD.addOption(new Option(overwriteExisting));
+		coCMD.addOption(new Option("overwriteExisting"));
 		coCMD.addOption(new Option("nolock"));
-		coCMD.addOption(new Option("project", projectConfigPath));
+		coCMD.addOption(new Option("project", configPath));
 		coCMD.addOption(new FileOption("targetFile", targetFile));
-		coCMD.addOption(new Option(restoreTimestamp));
+		coCMD.addOption(new Option(restoreTimestamp ? "restoreTimestamp" : "norestoreTimestamp"));
 		coCMD.addOption(new Option("lineTerminator", lineTerminator));
 		coCMD.addOption(new Option("revision", memberRev));
 		// Add the member selection
@@ -329,7 +125,7 @@ public class IntegrityCMMember implements Serializable
 		
 		// Execute the checkout command
 		Response res = api.runCommand(coCMD);
-		logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
+		Logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
 		
 		// Return true if we were successful
 		if( res.getExitCode() == 0 )
@@ -346,42 +142,70 @@ public class IntegrityCMMember implements Serializable
 	/**
 	 * Performs a revision info on this Integrity Source File
 	 * @param api Integrity API Session
+	 * @param configPath Full project configuration path
+	 * @param memberID Member ID for this file
+	 * @param memberRev Member Revision for this file
 	 * @return User responsible for making this change
-	 * @throws APIException
 	 */
-	private String getAuthor(APISession api) throws APIException
+	public static String getAuthor(APISession api, String configPath, String memberID, String memberRev)
 	{
+		// Initialize the return value
+		String author = "unknown";
+		
 		// Construct the revision-info command
 		Command revInfoCMD = new Command(Command.SI, "revisioninfo");
-		revInfoCMD.addOption(new Option("project", projectConfigPath));
+		revInfoCMD.addOption(new Option("project", configPath));
 		revInfoCMD.addOption(new Option("revision", memberRev));
 		// Add the member selection
 		revInfoCMD.addSelection(memberID);
-		// Execute the revision-info command
-		Response res = api.runCommand(revInfoCMD);
-		logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
-		// Return the author associated with this update
-		if( res.getExitCode() == 0 )
+		try
 		{
-			return res.getWorkItem(memberID).getField("author").getValueAsString();
-		}
-		else
-		{
-			return "unknown";
-		}
-	}
-	
-	
-	@Override
-	public boolean equals(Object o)
-	{
-		if( o instanceof IntegrityCMMember )
-		{
-			if( null != o )
+			// Execute the revision-info command
+			Response res = api.runCommand(revInfoCMD);
+			Logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
+			// Return the author associated with this update
+			if( res.getExitCode() == 0 )
 			{
-				return ((IntegrityCMMember)o).getMemberName().equals(this.getMemberName());
+				author = res.getWorkItem(memberID).getField("author").getValueAsString();
 			}
 		}
-		return false;
+		catch(APIException aex)
+		{
+			ExceptionHandler eh = new ExceptionHandler(aex);
+			Logger.error("API Exception caught...");
+    		Logger.error(eh.getMessage());
+    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		aex.printStackTrace();
+		}	
+		
+		return author;
 	}
+	
+	/**
+	 * Returns the MD5 checksum hash for a file
+	 * @param targetFile File object representing the target file
+	 * @return
+	 * @throws IOException
+	 */
+	public static final String getMD5Checksum(File targetFile) throws IOException
+	{
+		String result = "";
+		InputStream fis = null;
+		try
+		{
+			Logger.debug("Generating checksum for file " + targetFile.getAbsolutePath());
+			fis =  new FileInputStream(targetFile);
+			result = DigestUtils.md5Hex(fis);
+		}
+		catch(FileNotFoundException fnfe)
+		{
+			result = "";
+		}
+		finally
+		{
+			if( null != fis ){ fis.close(); }
+		}
+		return result;
+	}
+	
 }

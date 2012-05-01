@@ -3,10 +3,9 @@
   <parent>
 	<groupId>org.jenkins-ci.plugins</groupId>    
 	<artifactId>plugin</artifactId>    
-	<version>1.449</version>  
+	<version>1.462</version>  
   </parent>  
   
-  <groupId>org.jenkins-ci.plugins</groupId>
   <artifactId>integrity-plugin</artifactId>
   <name>PTC Integrity CM - Jenkins Plugin</name>
   <version>1.13-SNAPSHOT</version>
@@ -18,7 +17,7 @@
     <developer>
       <id>cdsouza</id>
       <name>Cletus D'Souza</name>
-      <email>dsouza@mks.com</email>
+      <email>cdsouza@ptc.com</email>
     </developer>
   </developers>
 	
@@ -34,7 +33,19 @@
   		<artifactId>commons-digester3</artifactId>
   		<version>3.0</version>
   		<scope>compile</scope>
-   	</dependency>  
+   	</dependency>
+   	<dependency>
+   		<groupId>commons-codec</groupId>
+   		<artifactId>commons-codec</artifactId>
+   		<version>1.6</version>
+   		<scope>compile</scope>
+   	</dependency>
+   	<dependency>
+   		<groupId>org.apache.derby</groupId>
+   		<artifactId>derby</artifactId>
+   		<version>10.5.3.0_1</version>
+   		<scope>compile</scope>
+   	</dependency>     	  
    	<dependency>
   		<groupId>com.mks.api</groupId>
   		<artifactId>mksapi-jar</artifactId>
@@ -42,6 +53,7 @@
   		<scope>compile</scope>
    	</dependency>
   </dependencies>
+  
   <dependencyManagement>
   	<dependencies>
   	</dependencies>
@@ -71,8 +83,15 @@
   
   <repositories>
 	<repository>
-		<id>maven.jenkins-ci.org</id>
-		<url>http://maven.jenkins-ci.org/content/repositories/releases</url>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
 	</repository>
   </repositories>
+
+    <pluginRepositories>
+        <pluginRepository>
+            <id>repo.jenkins-ci.org</id>
+            <url>http://repo.jenkins-ci.org/public/</url>
+        </pluginRepository>
+    </pluginRepositories>
 </project>

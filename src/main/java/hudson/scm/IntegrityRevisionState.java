@@ -1,5 +1,6 @@
 package hudson.scm;
 
+import java.io.File;
 import java.io.Serializable;
 
 /**
@@ -8,15 +9,15 @@ import java.io.Serializable;
 public final class IntegrityRevisionState extends SCMRevisionState implements Serializable 
 {
 	private static final long serialVersionUID = 1838332506014398677L;
-	private final IntegrityCMProject siProject;
+	private final File projectDB;
 
-	public IntegrityRevisionState(IntegrityCMProject siProject) 
+	public IntegrityRevisionState(File projectDB) 
 	{
-		this.siProject = siProject;
+		this.projectDB = projectDB;
 	}
 	
-	public IntegrityCMProject getSIProject()
+	public File getProjectDB()
 	{
-		return siProject;
+		return projectDB;
 	}
 }

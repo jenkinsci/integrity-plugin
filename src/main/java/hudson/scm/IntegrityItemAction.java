@@ -17,8 +17,6 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 
 import org.kohsuke.stapler.StaplerRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import net.sf.json.JSONObject;
 
@@ -42,7 +40,6 @@ public class IntegrityItemAction extends Notifier
 	private String successValue;
 	private String failureValue;
 	private String logField;
-	private final Log logger = LogFactory.getLog(getClass());
 	
 	@Extension
 	public static final IntegrityItemDescriptorImpl ITEM_DESCRIPTOR = new IntegrityItemDescriptorImpl();
@@ -253,15 +250,15 @@ public class IntegrityItemAction extends Notifier
     	// Attempt to open a connection to the Integrity (Workflow) Server
     	try
     	{
-    		logger.debug("Creating Integrity API Session...");
+    		Logger.debug("Creating Integrity API Session...");
     		return new APISession(null, 0, hostName, port, userName, Base64.decode(password), secure);
     	}
     	catch(APIException aex)
     	{
-    		logger.error("API Exception caught...");
+    		Logger.error("API Exception caught...");
     		ExceptionHandler eh = new ExceptionHandler(aex);
-    		logger.error(eh.getMessage());
-    		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		Logger.error(eh.getMessage());
+    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
     		return null;
     	}				
@@ -349,15 +346,15 @@ public class IntegrityItemAction extends Notifier
 
 	    			// Finally execute the edit item command
 	    			Response editIssueResponse = api.runCommand(editIssue);
-					logger.debug(editIssueResponse.getCommandString() + " returned " + editIssueResponse.getExitCode());        					
+					Logger.debug(editIssueResponse.getCommandString() + " returned " + editIssueResponse.getExitCode());        					
 					listener.getLogger().println("Updated build item '" + buildItemID + "' with build status!");	    			
 	        	}
 	        	catch(APIException aex)
 	        	{
-	            	logger.error("API Exception caught...");
+	            	Logger.error("API Exception caught...");
 	            	ExceptionHandler eh = new ExceptionHandler(aex);
-	            	logger.error(eh.getMessage());
-	            	logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	            	Logger.error(eh.getMessage());
+	            	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	            	throw new Exception(eh.getMessage());
 	        	}
 	        	finally
@@ -368,13 +365,13 @@ public class IntegrityItemAction extends Notifier
 	        catch (Throwable e) 
 	        {
 	        	e.printStackTrace(listener.fatalError(e.getMessage()));
-				logger.error("Exception caught!  " + e);
+				Logger.error("Exception caught!  " + e);
 				return false;
 	        }
 		}
 		else
 		{
-			logger.error("An API Session could not be established!  Cannot update Integrity Build Item!");
+			Logger.error("An API Session could not be established!  Cannot update Integrity Build Item!");
 			listener.getLogger().println("An API Session could not be established!  Cannot update Integrity Build Item!");
 			return false;
 		}
@@ -415,7 +412,6 @@ public class IntegrityItemAction extends Notifier
 	 */
     public static class IntegrityItemDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private static Log desLogger = LogFactory.getLog(IntegrityItemDescriptorImpl.class);
     	private String defaultQueryDefinition;
     			
     	public IntegrityItemDescriptorImpl()
@@ -425,7 +421,7 @@ public class IntegrityItemAction extends Notifier
     		// Initial variable initializations
 			defaultQueryDefinition = "((field[Type] = \"Build Request\") and (field[State] = \"Approved\"))";
 			load();
-        	desLogger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
+        	Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
@@ -442,7 +438,7 @@ public class IntegrityItemAction extends Notifier
 			itemAction.setSuccessValue(formData.getString("successValue"));
 			itemAction.setFailureValue(formData.getString("failureValue"));
 			itemAction.setLogField(formData.getString("logField"));			
-			desLogger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
+			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
 			return itemAction;
 		}    	
     	
@@ -457,13 +453,13 @@ public class IntegrityItemAction extends Notifier
 		{
 			defaultQueryDefinition = Util.fixEmptyAndTrim(req.getParameter("mks.queryDefinition"));
 			save();
-			desLogger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
+			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			desLogger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
+			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
