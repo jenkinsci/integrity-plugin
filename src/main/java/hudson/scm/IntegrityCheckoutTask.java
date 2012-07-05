@@ -203,7 +203,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 				String configPath = memberInfo.get(CM_PROJECT.CONFIG_PATH).toString();
 				String checksum = (null == memberInfo.get(CM_PROJECT.CHECKSUM) ? "" : memberInfo.get(CM_PROJECT.CHECKSUM).toString());
 			
-				if( cleanCopy || deltaFlag == -1 )
+				if( cleanCopy && deltaFlag != 3 )
 				{
 					Logger.debug("Attempting to checkout file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);
 					IntegrityCMMember.checkout(api, configPath, memberID, memberRev, targetFile, restoreTimestamp, lineTerminator);
