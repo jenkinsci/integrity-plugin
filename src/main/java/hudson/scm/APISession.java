@@ -34,6 +34,7 @@ public class APISession
 	private Session session;
 	private CmdRunner icr;	
 	private boolean terminated;
+	private boolean secure;
 	
 	/**
 	 * Constructor for the API Session Object
@@ -42,40 +43,49 @@ public class APISession
 	public APISession(String ipHost, int ipPortNum, 
 					String host, int portNum, String user, String paswd, boolean secure) throws APIException
 	{
-		// Initialize our termination flag...
-		terminated = false;
-		// Create a Server Integration Point to a client or the target server itself
-		if( null != ipHost && ipHost.length() > 0 && ipPortNum > 0 )
-		{
-			// Connect via the client, using "client as server"
-			ip = IntegrationPointFactory.getInstance().createIntegrationPoint(ipHost, ipPortNum, secure, MAJOR_VERSION, MINOR_VERSION);
-		}
-		else
-		{
-			// Directly to the server...
-			ip = IntegrationPointFactory.getInstance().createIntegrationPoint(host, portNum, secure, MAJOR_VERSION, MINOR_VERSION);
-		}
-		// Create the Session
-		session = ip.createSession(user, paswd);
-		// Test the connection to the Integrity Server
-		Command ping = new Command("api", "ping");
-	    CmdRunner cmdRunner = session.createCmdRunner();
-	    cmdRunner.setDefaultHostname(host);
-	    cmdRunner.setDefaultPort(portNum);
-	    cmdRunner.setDefaultUsername(user);
-	    cmdRunner.setDefaultPassword(paswd);
-	    // Execute the connection
-		Response res = cmdRunner.execute(ping);
-		Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
-		// Initialize class variables
+		
 		ipHostName = ipHost;
 		ipPort = ipPortNum;
 		hostName = host;
 		port = portNum;
 		userName = user;
 		password = paswd;
-		cmdRunner.release();
-		Logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port);
+		this.secure = secure;
+		initAPI();
+	}
+	
+	
+	
+	private void initAPI() throws APIException
+	{
+	 	// Initialize our termination flag...
+        terminated = false;
+        // Create a Server Integration Point to a client or the target server itself
+        if( null != ipHostName && ipHostName.length() > 0 && ipPort > 0 )
+        {
+            // Connect via the client, using "client as server"
+            ip = IntegrationPointFactory.getInstance().createIntegrationPoint(ipHostName, ipPort, secure, MAJOR_VERSION, MINOR_VERSION);
+        }
+        else
+        {
+            // Directly to the server...
+            ip = IntegrationPointFactory.getInstance().createIntegrationPoint(hostName, port, secure, MAJOR_VERSION, MINOR_VERSION);
+        }
+        // Create the Session
+        session = ip.createSession(userName, password);
+        // Test the connection to the Integrity Server
+        Command ping = new Command("api", "ping");
+        CmdRunner cmdRunner = session.createCmdRunner();
+        cmdRunner.setDefaultHostname(hostName);
+        cmdRunner.setDefaultPort(port);
+        cmdRunner.setDefaultUsername(userName);
+        cmdRunner.setDefaultPassword(password);
+        // Execute the connection
+        Response res = cmdRunner.execute(ping);
+        Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
+        // Initialize class variables
+        cmdRunner.release();
+        Logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port); 
 	}
 	
 	/**
@@ -141,6 +151,12 @@ public class APISession
 	    cmdRunner.release();
 	    return res;
 	}
+	
+	public void refreshAPISession() throws APIException
+	{
+	    Terminate();
+	    initAPI();
+	} 
 	
 	/**
 	 * Terminate the API Session and Integration Point

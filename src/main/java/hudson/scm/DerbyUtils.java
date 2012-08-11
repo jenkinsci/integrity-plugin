@@ -33,8 +33,8 @@ public class DerbyUtils
 														CM_PROJECT.DESCRIPTION + " CLOB(4 M), " +
 														CM_PROJECT.AUTHOR + " VARCHAR(100), " +
 														CM_PROJECT.CONFIG_PATH + " VARCHAR(32500), " +
-														CM_PROJECT.REVISION + " VARCHAR(30), " +
-														CM_PROJECT.OLD_REVISION + " VARCHAR(30), " +
+														CM_PROJECT.REVISION + " VARCHAR(32500), " +
+														CM_PROJECT.OLD_REVISION + " VARCHAR(32500), " +
 														CM_PROJECT.RELATIVE_FILE + " VARCHAR(32500), " +
 														CM_PROJECT.CHECKSUM + " VARCHAR(32), " +
 														CM_PROJECT.DELTA + " SMALLINT)"; 		/* 0 = Unchanged; 1 = Added; 2 = Changed; 3 = Dropped */

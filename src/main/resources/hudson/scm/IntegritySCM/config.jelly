@@ -98,7 +98,19 @@
         
         <f:entry title="Synchronize Changed Workspace Files" field="fetchChangedWorkspaceFiles">
             <f:checkbox name="mks.fetchChangedWorkspaceFiles" checked="${scm.fetchChangedWorkspaceFiles}"/>
-        </f:entry>                        
+        </f:entry>        
+        
+        <f:entry title="Delete Non Members" field="deleteNonMembers">
+            <f:checkbox name="mks.deleteNonMembers" checked="${scm.deleteNonMembers}"/>
+        </f:entry>                   
+  
+        <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize">
+			<j:set var="checkoutThreadPoolSize" value="${scm.checkoutThreadPoolSize}"/>
+			<j:if test="${scm.getCheckoutThreadPoolSize() == -1}">
+				<j:set var="checkoutThreadPoolSize" value="${descriptor.getDefaultCheckoutThreadPoolSize()}"/>
+			</j:if>	    		    	
+        	<f:textbox name="mks.checkoutThreadPoolSize" value="${checkoutThreadPoolSize}" checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>
+    	</f:entry>
                 
     </f:advanced>
 

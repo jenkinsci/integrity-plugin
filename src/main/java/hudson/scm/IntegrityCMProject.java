@@ -12,14 +12,16 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.sql.Timestamp;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
-import java.util.ArrayList;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ConcurrentHashMap;
+
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -29,7 +31,7 @@ import javax.xml.transform.TransformerException;
 import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
- 
+
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -37,10 +39,10 @@ import org.w3c.dom.Element;
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
-import com.mks.api.response.WorkItemIterator;
-import com.mks.api.response.WorkItem;
 import com.mks.api.response.Field;
+import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
 import com.mks.api.si.SIModelTypeName;
 
 /**
@@ -253,6 +255,8 @@ public class IntegrityCMProject implements Serializable
 			// Iterate through the list of members returned by the API
 			Logger.debug("Attempting to execute query " + DerbyUtils.INSERT_MEMBER_RECORD);
 			insert = db.prepareStatement(DerbyUtils.INSERT_MEMBER_RECORD);
+			
+			
 			while( wit.hasNext() )
 			{
 				WorkItem wi = wit.next();
@@ -370,7 +374,7 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public void updateChecksum(Hashtable<String, String> checksumHash) throws SQLException, IOException
+	public void updateChecksum(ConcurrentHashMap<String, String> checksumHash) throws SQLException, IOException
 	{
 		Connection db = openProjectDB();
 		Statement checksumSelect = null;
@@ -704,8 +708,12 @@ public class IntegrityCMProject implements Serializable
 		item.appendChild(file);
 		// Create and append the <user> element
 		Element user = xmlDoc.createElement("user");
-		user.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.AUTHOR).toString()));
-		item.appendChild(user);
+		if(memberInfo != null){
+		    Object o = memberInfo.get(CM_PROJECT.AUTHOR);
+		    if(o != null){
+		        user.appendChild(xmlDoc.createTextNode(o.toString()));
+		    }
+		}
 		// Create and append the <rev> element
 		Element revision = xmlDoc.createElement("rev");
 		revision.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.REVISION).toString()));

@@ -1,31 +1,27 @@
 package hudson.scm;
 
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.Util;
+import hudson.model.BuildListener;
+import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Hudson;
+import hudson.util.FormValidation;
+
 import java.io.File;
-import java.io.FileWriter;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Serializable;
-import java.io.IOException;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
-
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.Util;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Hudson;
-import hudson.model.BuildListener;
-import hudson.model.TaskListener;
-import hudson.scm.ChangeLogParser;
-import hudson.scm.PollingResult;
-import hudson.scm.SCMDescriptor;
-import hudson.scm.SCM;
-import hudson.scm.SCMRevisionState;
-import hudson.util.FormValidation;
 
 import net.sf.json.JSONObject;
 
@@ -36,8 +32,8 @@ import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 
 import com.mks.api.Command;
-import com.mks.api.Option;
 import com.mks.api.MultiValue;
+import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
@@ -73,7 +69,9 @@ public class IntegritySCM extends SCM implements Serializable
 	private boolean checkpointBeforeBuild = false;
 	private String alternateWorkspace;
 	private boolean fetchChangedWorkspaceFiles = false;
+	private boolean deleteNonMembers = false;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
+	private int checkoutThreadPoolSize = -1;
 
 	/**
 	 * Create a constructor that takes non-transient fields, and add the annotation @DataBoundConstructor to it. 
@@ -84,7 +82,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
 							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy, 
 							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild,
-							String alternateWorkspace, boolean fetchChangedWorkspaceFiles)
+							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize)
 	{
     	// Log the construction
     	Logger.debug("IntegritySCM constructor has been invoked!");
@@ -106,6 +104,8 @@ public class IntegritySCM extends SCM implements Serializable
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
     	this.alternateWorkspace = alternateWorkspace;
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
+    	this.deleteNonMembers = deleteNonMembers;
+		this.checkoutThreadPoolSize = checkoutThreadPoolSize;
 
     	// Initialize the Integrity URL
     	initIntegrityURL();
@@ -128,6 +128,7 @@ public class IntegritySCM extends SCM implements Serializable
     	Logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
     	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
     	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
+    	Logger.debug("Delete Non Members: " + this.deleteNonMembers);
 	}
 
     @Override
@@ -276,6 +277,24 @@ public class IntegritySCM extends SCM implements Serializable
     }
     
     /**
+     * Returns the true/false depending on whether non members should be deleted before the build
+     * @return
+     */
+    public boolean getDeleteNonMembers()
+	{
+        return deleteNonMembers;
+	}
+	
+     /**
+	 * Returns the size of the thread pool for parallel checkouts
+     * @return
+     */
+    public int getCheckoutThreadPoolSize()
+	{
+        return checkoutThreadPoolSize;
+    }
+    
+    /**
      * Sets the host name of the Integrity Server
      * @return
      */
@@ -411,6 +430,24 @@ public class IntegritySCM extends SCM implements Serializable
     public void setFetchChangedWorkspaceFiles(boolean fetchChangedWorkspaceFiles)
     {
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
+    }
+    
+    /**
+     * Toggles whether or not non members should be deleted
+     * @param deleteNonMembers
+     */
+    public void setDeleteNonMembers(boolean deleteNonMembers)
+    {
+        this.deleteNonMembers = deleteNonMembers;
+	}
+	
+     /** 
+	 * Set the thread pool size of parallel checkout threads
+     * @param checkoutThreadPoolSize
+     */
+    public void setCheckoutThreadPoolSize(int checkoutThreadPoolSize)
+	{
+        this.checkoutThreadPoolSize = checkoutThreadPoolSize;
     }
     
     /**
@@ -596,7 +633,8 @@ public class IntegritySCM extends SCM implements Serializable
 			return false;
 		}
 		// Lets also open the change log file for writing...
-		PrintWriter writer = new PrintWriter(new FileWriter(changeLogFile));		
+		// Override file.encoding property so that we write as UTF-8 and do not have problems with special characters
+		PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
 		try
 		{
 			// Next, load up the information for this Integrity Project's configuration
@@ -672,13 +710,13 @@ public class IntegritySCM extends SCM implements Serializable
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
 				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, true, fetchChangedWorkspaceFiles, listener);
+													restoreTimestamp, true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener);
 			}
 			else 
 			{
 				// Otherwise, update the workspace in accordance with the user's cleanCopy option				
 				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, listener);
+													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener);
 			}
 			
 			// Initialize the API Session connection settings for the check out task
@@ -694,6 +732,15 @@ public class IntegritySCM extends SCM implements Serializable
 				listener.getLogger().println("Writing build change log...");
 				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), projectMembersList));				
 				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
+				// Delete non-members in this workspace, if appropriate...
+				if( deleteNonMembers )
+				{
+				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener, alternateWorkspace, getIntegrityProject());
+				    if( ! workspace.act(deleteNonMembers) )
+					{
+				        return false;
+				    }
+				}
 			}
 			else
 			{
@@ -723,15 +770,22 @@ public class IntegritySCM extends SCM implements Serializable
 		}
 	    finally
 	    {
-	    	writer.close();
-	    	siProject.closeProjectDB();
+	        if( writer != null )
+			{
+	            writer.close();
+	        }
+	    	if( siProject != null )
+			{
+	    	    siProject.closeProjectDB();
+	    	}
 	    	api.Terminate();
-			
 	    }
 
 	    //If we got here, everything is good on the checkout...
 	    return true;
 	}
+	
+
 
 	/**
 	 * Overridden compareRemoteRevisionWith function
@@ -883,6 +937,7 @@ public class IntegritySCM extends SCM implements Serializable
     	private boolean defaultSecure;
         private String defaultUserName;
         private String defaultPassword;
+        private int defaultCheckoutThreadPoolSize = 5;
 		
         protected DescriptorImpl() 
         {
@@ -960,6 +1015,10 @@ public class IntegritySCM extends SCM implements Serializable
 			
 			defaultPassword =  Base64.encode(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
 			Logger.debug("defaultPassword = " + DigestUtils.md5Hex(defaultPassword));
+			
+			Logger.debug("mks.defaultCheckoutThreadPoolSize = " + req.getParameter("mks.defaultCheckoutThreadPoolSize"));
+			defaultCheckoutThreadPoolSize = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultCheckoutThreadPoolSize")));
+            Logger.debug("defaultCheckoutThreadPoolSize = " + defaultCheckoutThreadPoolSize);
 
 			save();
             return true;
@@ -1027,6 +1086,15 @@ public class IntegritySCM extends SCM implements Serializable
 	    {
 	    	return Base64.decode(defaultPassword);
 	    }
+	    
+	    /**
+	     * Return the default checkout thread pool size
+	     * @return
+	     */
+	    public int getDefaultCheckoutThreadPoolSize()
+		{
+	        return defaultCheckoutThreadPoolSize;
+	    }
 
 	    /**
 	     * Sets the default host name for the Integrity Server
@@ -1090,6 +1158,15 @@ public class IntegritySCM extends SCM implements Serializable
 	    {
 	    	this.defaultPassword = Base64.encode(defaultPassword);
 	    }
+	    
+	    /**
+         * Sets the default checkout thread pool size
+         * @return
+         */
+        public void setDefaultCheckoutThreadPoolSize(int defaultCheckoutThreadPoolSize)
+		{
+            this.defaultCheckoutThreadPoolSize = defaultCheckoutThreadPoolSize;
+        }
 
 	    /**
 	     * Validates that the port number is numeric and within a valid range 
@@ -1117,6 +1194,31 @@ public class IntegritySCM extends SCM implements Serializable
 			
 			// Validation was successful if we got here, so we'll return all good!
 		    return FormValidation.ok();
-		}		
+		}
+		
+		
+		
+		public FormValidation doValidCheckoutThreadPoolSizeCheck(@QueryParameter String value)
+        {
+            // The field mks.checkoutThreadPoolSize will be validated through the checkUrl. 
+            // When the user has entered some information and moves the focus away from field,
+            // Hudson/Jenkins will call DescriptorImpl.doValidCheckoutThreadPoolSizeCheck to validate that data entered.
+            try
+            {
+                int intValue = Integer.parseInt(value);
+                if(intValue < 1 || intValue > 10)
+				{
+                    return FormValidation.error("Thread pool size must be between 1 an 10");
+                }
+            }
+            catch(NumberFormatException nfe)
+            {
+                return FormValidation.error("Value must be numeric!");
+            }
+            
+            // Validation was successful if we got here, so we'll return all good!
+            return FormValidation.ok();
+        }
+		
     }
 }
