@@ -708,12 +708,16 @@ public class IntegrityCMProject implements Serializable
 		item.appendChild(file);
 		// Create and append the <user> element
 		Element user = xmlDoc.createElement("user");
-		if(memberInfo != null){
+		if(memberInfo != null)
+		{
 		    Object o = memberInfo.get(CM_PROJECT.AUTHOR);
-		    if(o != null){
+		    if(o != null)
+		    {
 		        user.appendChild(xmlDoc.createTextNode(o.toString()));
+		        item.appendChild(user);
 		    }
 		}
+		
 		// Create and append the <rev> element
 		Element revision = xmlDoc.createElement("rev");
 		revision.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.REVISION).toString()));
