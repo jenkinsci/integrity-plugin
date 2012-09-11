@@ -106,7 +106,7 @@
   
         <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize">
 			<j:set var="checkoutThreadPoolSize" value="${scm.checkoutThreadPoolSize}"/>
-			<j:if test="${scm.getCheckoutThreadPoolSize() == -1}">
+			<j:if test="${scm.getCheckoutThreadPoolSize() &lt; 1}">
 				<j:set var="checkoutThreadPoolSize" value="${descriptor.getDefaultCheckoutThreadPoolSize()}"/>
 			</j:if>	    		    	
         	<f:textbox name="mks.checkoutThreadPoolSize" value="${checkoutThreadPoolSize}" checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>

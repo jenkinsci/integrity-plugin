@@ -50,6 +50,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public static final String FS = System.getProperty("file.separator");
 	public static final int MIN_PORT_VALUE = 1;
 	public static final int MAX_PORT_VALUE = 65535;	
+	public static final int DEFAULT_THREAD_POOL_SIZE = 5;
 	public static final SimpleDateFormat SDF = new SimpleDateFormat("MMM dd, yyyy h:mm:ss a");	
 	private String ciServerURL;
 	private String integrityURL;
@@ -71,7 +72,7 @@ public class IntegritySCM extends SCM implements Serializable
 	private boolean fetchChangedWorkspaceFiles = false;
 	private boolean deleteNonMembers = false;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
-	private int checkoutThreadPoolSize = -1;
+	private int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 
 	/**
 	 * Create a constructor that takes non-transient fields, and add the annotation @DataBoundConstructor to it. 
@@ -105,7 +106,7 @@ public class IntegritySCM extends SCM implements Serializable
     	this.alternateWorkspace = alternateWorkspace;
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     	this.deleteNonMembers = deleteNonMembers;
-		this.checkoutThreadPoolSize = checkoutThreadPoolSize;
+		this.checkoutThreadPoolSize = (checkoutThreadPoolSize > 0 ? checkoutThreadPoolSize : DEFAULT_THREAD_POOL_SIZE);
 
     	// Initialize the Integrity URL
     	initIntegrityURL();
@@ -129,6 +130,7 @@ public class IntegritySCM extends SCM implements Serializable
     	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
     	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
     	Logger.debug("Delete Non Members: " + this.deleteNonMembers);
+    	Logger.debug("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
 	}
 
     @Override
@@ -937,7 +939,7 @@ public class IntegritySCM extends SCM implements Serializable
     	private boolean defaultSecure;
         private String defaultUserName;
         private String defaultPassword;
-        private int defaultCheckoutThreadPoolSize = 5;
+        private int defaultCheckoutThreadPoolSize = IntegritySCM.DEFAULT_THREAD_POOL_SIZE;
 		
         protected DescriptorImpl() 
         {
@@ -1016,10 +1018,6 @@ public class IntegritySCM extends SCM implements Serializable
 			defaultPassword =  Base64.encode(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
 			Logger.debug("defaultPassword = " + DigestUtils.md5Hex(defaultPassword));
 			
-			Logger.debug("mks.defaultCheckoutThreadPoolSize = " + req.getParameter("mks.defaultCheckoutThreadPoolSize"));
-			defaultCheckoutThreadPoolSize = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultCheckoutThreadPoolSize")));
-            Logger.debug("defaultCheckoutThreadPoolSize = " + defaultCheckoutThreadPoolSize);
-
 			save();
             return true;
         }
@@ -1196,8 +1194,11 @@ public class IntegritySCM extends SCM implements Serializable
 		    return FormValidation.ok();
 		}
 		
-		
-		
+		/**
+		 * Validates that the thread pool size is numeric and within a valid range
+		 * @param value Integer value for Thread Pool Size
+		 * @return
+		 */
 		public FormValidation doValidCheckoutThreadPoolSizeCheck(@QueryParameter String value)
         {
             // The field mks.checkoutThreadPoolSize will be validated through the checkUrl. 
