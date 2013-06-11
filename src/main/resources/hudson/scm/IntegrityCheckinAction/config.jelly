@@ -1,0 +1,38 @@
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Integrity Project" field="ciConfigPath">
+		<j:set var="ciConfigPath" value="${instance.getciConfigPath()}"/>
+		<j:if test="${instance.getciConfigPath() == null}">
+			<j:set var="ciConfigPath" value="${descriptor.getDefaultciConfigPath()}"/>
+		</j:if>
+		<f:textbox name="mks.ciConfigPath" value="${ciConfigPath}" 
+			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Project/Subproject configuration path must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+	
+	<f:entry title="Build Output Directory" field="ciWorkspaceDir">
+		<j:set var="ciWorkspaceDir" value="${instance.getciWorkspaceDir()}"/>
+		<j:if test="${instance.getciWorkspaceDir() == null}">
+			<j:set var="ciWorkspaceDir" value="${descriptor.getDefaultciWorkspaceDir()}"/>
+		</j:if>
+		<f:textbox name="mks.ciWorkspaceDir" value="${ciWorkspaceDir}" 
+			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A build output directory must be specified!'))}&amp;value='+encode(this.value)"/>
+	</f:entry>
+
+	<f:entry title="Includes Filter" field="includes">
+		<j:set var="includes" value="${instance.getIncludes()}"/>
+		<j:if test="${instance.getIncludes() == null}">
+			<j:set var="includes" value="${descriptor.getDefaultIncludes()}"/>
+		</j:if>
+		<f:textbox name="mks.includes" value="${includes}"/> 
+	</f:entry>
+
+	<f:entry title="Excludes Filter" field="excludes">
+		<j:set var="excludes" value="${instance.getExcludes()}"/>
+		<j:if test="${instance.getExcludes() == null}">
+			<j:set var="excludes" value="${descriptor.getDefaultExcludes()}"/>
+		</j:if>
+		<f:textbox name="mks.excludes" value="${excludes}"/> 
+	</f:entry>
+		
+</j:jelly>
+

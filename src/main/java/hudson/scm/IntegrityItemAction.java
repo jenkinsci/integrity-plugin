@@ -284,28 +284,42 @@ public class IntegrityItemAction extends Notifier
 	        	try
 	        	{
 	        		// First lets find the build item
-	        		String buildItemID = "";
-	        		Command issues = new Command(Command.IM, "issues");
-	        		issues.addOption(new Option("fields", "ID"));
-	        		issues.addOption(new Option("queryDefinition", queryDefinition));
-	        		Response issuesResponse = api.runCommand(issues);
-	        		if( null != issuesResponse )
+	        		int intBuildItemID = 0;
+	        		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
+	        		// Convert the string Item ID to an integer for comparison...
+	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
+	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
+	        		
+	        		// Figure out if we need to query Integrity for the Build item
+	        		if( intBuildItemID <= 0 )
 	        		{
-	        			WorkItemIterator wit = issuesResponse.getWorkItems();
-	        			if( wit.hasNext() )
-	        			{
-	        				buildItemID = wit.next().getField("ID").getValueAsString();
-	        			}
-	        			else
-	        			{
-	        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-	        				return false;
-	        			}
+	        			// Let's query for the build item id
+		        		Command issues = new Command(Command.IM, "issues");
+		        		issues.addOption(new Option("fields", "ID"));
+		        		issues.addOption(new Option("queryDefinition", queryDefinition));
+		        		Response issuesResponse = api.runCommand(issues);
+		        		if( null != issuesResponse )
+		        		{
+		        			WorkItemIterator wit = issuesResponse.getWorkItems();
+		        			if( wit.hasNext() )
+		        			{
+		        				buildItemID = wit.next().getField("ID").getValueAsString();
+		        			}
+		        			else
+		        			{
+		        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        				return false;
+		        			}
+		        		}
+		        		else
+		        		{
+		        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        			return false;
+		        		}
 	        		}
 	        		else
 	        		{
-	        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-	        			return false;
+	        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");
 	        		}
 	        		
 	        		// Setup the edit item command to update the build item with the results of the build

@@ -7,6 +7,7 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
+import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -219,7 +220,8 @@ public class IntegrityCMProject implements Serializable
 	 */
 	public Connection openProjectDB() throws SQLException
 	{
-		return DerbyUtils.createDBConnection(projectDB);
+		Logger.debug("Attempting to open connection to database: " + projectDB.getAbsolutePath() + IntegritySCM.FS + DerbyUtils.DERBY_DB_FOLDER);
+	    return DriverManager.getConnection(DerbyUtils.DERBY_URL_PREFIX + projectDB.getAbsolutePath().replace('\\', '/') + "/" + DerbyUtils.DERBY_CREATE_URL_SUFFIX);
 	}
 	
 	/**
@@ -260,48 +262,67 @@ public class IntegrityCMProject implements Serializable
 			while( wit.hasNext() )
 			{
 				WorkItem wi = wit.next();
+				String entryType = (null != wi.getField("type") ? wi.getField("type").getValueAsString() : "");
+				
 				if( wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT) )
 				{
-					// Save the configuration path for the current subproject, using the canonical path name
-					pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
-					// Save the relative directory path for this subproject
-					String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
-					pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));				
-					// Save this directory entry
-					insert.clearParameters();
-					insert.setShort(1, (short)1);														// Type
-					insert.setString(2, wi.getField("name").getValueAsString());						// Name
-					insert.setString(3, wi.getId());													// MemberID
-					insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis()));	// Timestamp
-					insert.setClob(5, new StringReader(""));											// Description
-					insert.setString(6, wi.getId());													// ConfigPath
-					insert.setString(7, "");															// Revision
-					insert.setString(8, pjDir);															// RelativeFile
-					insert.executeUpdate();
+					// Ignore pending subprojects in the tree...
+					if( entryType.equalsIgnoreCase("pending-sharesubproject") )
+					{
+						Logger.warn("Skipping " + entryType + " " + wi.getId());
+					}
+					else
+					{
+						// Save the configuration path for the current subproject, using the canonical path name
+						pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
+						// Save the relative directory path for this subproject
+						String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
+						pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));				
+						// Save this directory entry
+						insert.clearParameters();
+						insert.setShort(1, (short)1);														// Type
+						insert.setString(2, wi.getField("name").getValueAsString());						// Name
+						insert.setString(3, wi.getId());													// MemberID
+						insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis()));	// Timestamp
+						insert.setClob(5, new StringReader(""));											// Description
+						insert.setString(6, wi.getId());													// ConfigPath
+						insert.setString(7, "");															// Revision
+						insert.setString(8, pjDir);															// RelativeFile
+						insert.executeUpdate();
+					}
 				}
 				else if( wi.getModelType().equals(SIModelTypeName.MEMBER) )
 				{
-					// Figure out this member's parent project's canonical path name
-					String parentProject = wi.getField("parent").getValueAsString();				
-					// Save this member entry
-					String memberName = wi.getField("name").getValueAsString();
-					String description = "";
-					if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+					// Ignore certain pending operations
+					if( entryType.endsWith("in-pending-sub") ||
+							entryType.equalsIgnoreCase("pending-add") ||
+							entryType.equalsIgnoreCase("pending-move-to-update") || 
+							entryType.equalsIgnoreCase("pending-rename-update") )
 					{
-						description = wi.getField("memberdescription").getValueAsString();
-						// Char 8211 which is a long dash causes problems for the change log XML, need to fix it!
-						description = description.replace((char)8211, '-');
+						Logger.warn("Skipping " + entryType + " " + wi.getId());
 					}
-					insert.clearParameters();
-					insert.setShort(1, (short)0);														// Type
-					insert.setString(2, memberName);													// Name
-					insert.setString(3, wi.getId());													// MemberID
-					insert.setTimestamp(4, new Timestamp(wi.getField("membertimestamp").getDateTime().getTime()));	// Timestamp
-					insert.setClob(5, new StringReader(description));									// Description
-					insert.setString(6, pjConfigHash.get(parentProject));								// ConfigPath
-					insert.setString(7, wi.getField("memberrev").getItem().getId());					// Revision
-					insert.setString(8, memberName.substring(projectRoot.length()));					// RelativeFile
-					insert.executeUpdate();				
+					else
+					{
+						// Figure out this member's parent project's canonical path name
+						String parentProject = wi.getField("parent").getValueAsString();				
+						// Save this member entry
+						String memberName = wi.getField("name").getValueAsString();
+						String description = "";
+						if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+						{
+							description = fixDescription(wi.getField("memberdescription").getValueAsString());
+						}
+						insert.clearParameters();
+						insert.setShort(1, (short)0);																	// Type
+						insert.setString(2, memberName);																// Name
+						insert.setString(3, wi.getId());																// MemberID
+						insert.setTimestamp(4, new Timestamp(wi.getField("membertimestamp").getDateTime().getTime()));	// Timestamp
+						insert.setClob(5, new StringReader(description));												// Description
+						insert.setString(6, pjConfigHash.get(parentProject));											// ConfigPath
+						insert.setString(7, wi.getField("memberrev").getItem().getId());								// Revision
+						insert.setString(8, memberName.substring(projectRoot.length()));								// RelativeFile
+						insert.executeUpdate();
+					}
 				}
 				else
 				{
@@ -425,7 +446,8 @@ public class IntegrityCMProject implements Serializable
 		changeCount = 0;
 		
 		// Open connections to the embedded Integrity SCM Project cache databases
-		Connection baselineDB = DerbyUtils.createDBConnection(baselineProjectDB);
+		Logger.debug("Attempting to open connection to database: " + baselineProjectDB.getAbsolutePath() + IntegritySCM.FS + DerbyUtils.DERBY_DB_FOLDER);
+		Connection baselineDB = DriverManager.getConnection(DerbyUtils.DERBY_URL_PREFIX + baselineProjectDB.getAbsolutePath().replace('\\', '/') + "/" + DerbyUtils.DERBY_CREATE_URL_SUFFIX);
 		Connection db = openProjectDB();
 		Statement baselineSelect = null;
 		Statement pjSelect = null;
@@ -612,6 +634,18 @@ public class IntegrityCMProject implements Serializable
 		}
 		
 		return projectMembersList;
+	}
+	
+	/**
+	 * Attempts to fix known issues with characters that can potentially break the change log xml
+	 * @param desc Input comment string for the revision
+	 * @return Sanitized string that can be embedded within a CDATA tag
+	 */
+	private String fixDescription(String desc)
+	{
+		// Char 8211 which is a long dash causes problems for the change log XML, need to fix it!
+		String description = desc.replace((char)8211, '-');
+		return description.replaceAll("<!\\[CDATA\\[", "< ! [ CDATA [").replaceAll("\\]\\]>", "] ] >");
 	}
 	
 	/**

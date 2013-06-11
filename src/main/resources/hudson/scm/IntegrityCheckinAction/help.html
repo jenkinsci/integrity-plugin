@@ -1,0 +1,14 @@
+<div>
+Updates an Integrity project/subproject with the results of the build
+<p>
+In order to update an Integrity project/subproject that is configured with mandatory/transactional change packages, builds must be configured with 'parameters'.
+The parameter name 'ItemID' must contain the Integrity Item ID that will allow an open change package.  If the build is not configured with the 'ItemID' parameter, then the value supplied for change package will be ':none'.
+With build parameters enabled, builds can be triggered remotely using the URL: http://server/job/myjob/buildWithParameters?token=TOKEN&ItemID=1234
+</p>
+<p>	
+This check-in task <b>does not</b> create sub-projects recursively!  This is not intended to be a recursive project tree update, rather the contents from a single "build output" directory is updated back in an Integrity project/subproject
+</p>
+<p> 
+The Ant-style include/exclude filters (example: "foo/*.zip" or "foo/**/*.xml") is recursively applied to files and folders in the single "build output" directory!
+</p>
+</div>

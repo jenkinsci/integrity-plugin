@@ -444,7 +444,7 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 	
      /** 
-	 * Set the thread pool size of parallel checkout threads
+	 * Sets the thread pool size of parallel checkout threads
      * @param checkoutThreadPoolSize
      */
     public void setCheckoutThreadPoolSize(int checkoutThreadPoolSize)
@@ -572,6 +572,7 @@ public class IntegritySCM extends SCM implements Serializable
 		mvFields.add("memberrev");
 		mvFields.add("membertimestamp");
 		mvFields.add("memberdescription");
+		mvFields.add("type");
 		siViewProjectCmd.addOption(new Option("fields", mvFields));
 		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);

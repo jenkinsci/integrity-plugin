@@ -21,7 +21,11 @@ public class DerbyUtils
 {
 	public static final String DERBY_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
 	public static final String DERBY_SYS_HOME_PROPERTY = "derby.system.home";
+	public static final String DERBY_URL_PREFIX = "jdbc:derby:";
+	public static final String DERBY_USER_PASWD = ";user=dbuser;password=dbuserpwd";
 	public static final String DERBY_DB_FOLDER = "IntegritySCM";
+	public static final String DERBY_CREATE_URL_SUFFIX = DERBY_DB_FOLDER + ";create=true" + DERBY_USER_PASWD;;
+	public static final String DERBY_SHUTDOWN_URL_SUFFIX = DERBY_DB_FOLDER + ";shutdown=true" + DERBY_USER_PASWD;;
 	public static final String CREATE_PROJECT_TABLE = "CREATE TABLE CM_PROJECT (" +
 														CM_PROJECT.ID + " INTEGER NOT NULL " + 
 														"PRIMARY KEY GENERATED ALWAYS AS IDENTITY " + 
@@ -122,7 +126,7 @@ public class DerbyUtils
 	 */
 	public static Connection createDBConnection(File path) throws SQLException
 	{
-		String dbUrl = "jdbc:derby:" + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_DB_FOLDER + ";create=true;user=dbuser;password=dbuserpwd";
+		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_CREATE_URL_SUFFIX;
 		Logger.debug("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + DERBY_DB_FOLDER);
 	    return DriverManager.getConnection(dbUrl);
 	}
@@ -133,7 +137,7 @@ public class DerbyUtils
 	 */
 	public static void shutdownDB(File path)
 	{
-		String dbUrl = "jdbc:derby:" + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_DB_FOLDER + ";shutdown=true;user=dbuser;password=dbuserpwd";
+		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_SHUTDOWN_URL_SUFFIX;
 		try 
 		{
 			Logger.debug("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + DERBY_DB_FOLDER);

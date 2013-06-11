@@ -1,3 +1,7 @@
 <div>
-	This post build action provides the ability to update the status of a build item in Integrity for Workflows and Documents.  Optionally, you may also store the contents of the build log with the item. 
+	This post build action provides the ability to update the status of a build item in Integrity for Workflows and Documents.  Optionally, you may also store the contents of the build log with the item.
+	<p>
+	If the build configured as a 'parameterized' build, using the parameter name 'ItemID', then value for query definition is ignored!
+	With build parameters enabled, builds can be triggered remotely using the URL: http://server/job/myjob/buildWithParameters?token=TOKEN&ItemID=1234
+	</p> 
 </div>
