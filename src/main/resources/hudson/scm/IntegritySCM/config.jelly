@@ -103,6 +103,14 @@
         <f:entry title="Delete Non Members" field="deleteNonMembers">
             <f:checkbox name="mks.deleteNonMembers" checked="${scm.deleteNonMembers}"/>
         </f:entry>                   
+
+        <f:entry title="Recursive to Subprojects" field="recursiveToSubprojects">
+			<j:set var="recursiveToSubprojects" value="${scm.recursiveToSubprojects}"/>
+			<j:if test="${scm.recursiveToSubprojects() == null}">
+				<j:set var="recursiveToSubprojects" value="true"/>
+			</j:if>
+            <f:checkbox name="mks.recursiveToSubprojects" checked="${recursiveToSubprojects}"/>
+        </f:entry>
   
         <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize">
 			<j:set var="checkoutThreadPoolSize" value="${scm.checkoutThreadPoolSize}"/>

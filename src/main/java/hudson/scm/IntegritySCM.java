@@ -71,6 +71,7 @@ public class IntegritySCM extends SCM implements Serializable
 	private String alternateWorkspace;
 	private boolean fetchChangedWorkspaceFiles = false;
 	private boolean deleteNonMembers = false;
+	private boolean recursiveToSubprojects = true;
 	private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
 	private int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 
@@ -83,7 +84,7 @@ public class IntegritySCM extends SCM implements Serializable
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
 							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy, 
 							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild,
-							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize)
+							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, boolean recursiveToSubprojects, int checkoutThreadPoolSize)
 	{
     	// Log the construction
     	Logger.debug("IntegritySCM constructor has been invoked!");
@@ -106,6 +107,7 @@ public class IntegritySCM extends SCM implements Serializable
     	this.alternateWorkspace = alternateWorkspace;
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     	this.deleteNonMembers = deleteNonMembers;
+    	this.recursiveToSubprojects = recursiveToSubprojects;
 		this.checkoutThreadPoolSize = (checkoutThreadPoolSize > 0 ? checkoutThreadPoolSize : DEFAULT_THREAD_POOL_SIZE);
 
     	// Initialize the Integrity URL
@@ -130,6 +132,7 @@ public class IntegritySCM extends SCM implements Serializable
     	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
     	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
     	Logger.debug("Delete Non Members: " + this.deleteNonMembers);
+    	Logger.debug("Recursive to Subprojects: " + this.recursiveToSubprojects);
     	Logger.debug("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
 	}
 
@@ -287,6 +290,15 @@ public class IntegritySCM extends SCM implements Serializable
         return deleteNonMembers;
 	}
 	
+    /**
+     * Returns the true/false depending on whether no go recursive to subproject
+     * @return
+     */
+    public boolean getRecursiveToSubprojects()
+	{
+        return recursiveToSubprojects;
+	}
+
      /**
 	 * Returns the size of the thread pool for parallel checkouts
      * @return
@@ -443,6 +455,15 @@ public class IntegritySCM extends SCM implements Serializable
         this.deleteNonMembers = deleteNonMembers;
 	}
 	
+    /**
+     * Toggles whether or not go recursive to subproject
+     * @return
+     */
+    public void setRecursiveToSubprojects(boolean recursiveToSubprojects)
+	{
+        this.recursiveToSubprojects = recursiveToSubprojects;
+	}
+
      /** 
 	 * Sets the thread pool size of parallel checkout threads
      * @param checkoutThreadPoolSize
@@ -563,7 +584,11 @@ public class IntegritySCM extends SCM implements Serializable
 	{
 		// Lets parse this project
 		Command siViewProjectCmd = new Command(Command.SI, "viewproject");
-		siViewProjectCmd.addOption(new Option("recurse"));
+		if (this.recursiveToSubprojects) {
+			siViewProjectCmd.addOption(new Option("recurse"));
+		} else {
+			siViewProjectCmd.addOption(new Option("norecurse"));
+		}
 		siViewProjectCmd.addOption(new Option("project", siProject.getConfigurationPath()));
 		MultiValue mvFields = new MultiValue(",");
 		mvFields.add("name");
