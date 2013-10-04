@@ -19,6 +19,7 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -61,8 +62,11 @@ public class IntegritySCM extends SCM implements Serializable
 	private int port;
 	private boolean secure;
 	private String configPath;
-    private String userName;
-    private String password;
+	private String includeList;
+	private String excludeList;
+	private String tagName;
+	private String userName;
+	private String password;
 	private boolean cleanCopy;
 	private boolean skipAuthorInfo = false;
 	private String lineTerminator = "native";
@@ -80,9 +84,9 @@ public class IntegritySCM extends SCM implements Serializable
 	 * automatically copying values from a web form to a class.
 	 */
     @DataBoundConstructor
-	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, 
-							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy, 
-							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild,
+	public IntegritySCM(IntegrityRepositoryBrowser browser, String hostName, int port, boolean secure, String configPath, String includeList, String excludeList,
+							String userName, String password, String ipHostName, int ipPort, boolean cleanCopy,
+							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String tagName,
 							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize)
 	{
     	// Log the construction
@@ -96,6 +100,8 @@ public class IntegritySCM extends SCM implements Serializable
     	this.port = port;
     	this.secure = secure;
     	this.configPath = configPath;
+    	this.includeList = includeList;
+    	this.excludeList = excludeList;
     	this.userName = userName;
     	this.password = Base64.encode(password);
     	this.cleanCopy = cleanCopy;
@@ -103,6 +109,7 @@ public class IntegritySCM extends SCM implements Serializable
     	this.restoreTimestamp = restoreTimestamp;
     	this.skipAuthorInfo = skipAuthorInfo;
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
+    	this.tagName = tagName;    	
     	this.alternateWorkspace = alternateWorkspace;
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     	this.deleteNonMembers = deleteNonMembers;
@@ -118,15 +125,18 @@ public class IntegritySCM extends SCM implements Serializable
     	Logger.debug("Host: " + this.hostName);
     	Logger.debug("IP Port: " + this.ipPort);
     	Logger.debug("Port: " + this.port);
+    	Logger.debug("Configuration Path: " + configPath);
+    	Logger.debug("Include Filter: " + this.includeList);
+    	Logger.debug("Exclude Filter: " + this.excludeList);
     	Logger.debug("User: " + this.userName);
     	Logger.debug("Password: " + DigestUtils.md5Hex(this.password));
     	Logger.debug("Secure: " + this.secure);
-    	Logger.debug("Project: " + this.configPath);
     	Logger.debug("Line Terminator: " + this.lineTerminator);
     	Logger.debug("Restore Timestamp: " + this.restoreTimestamp);
     	Logger.debug("Clean: " + this.cleanCopy);
     	Logger.debug("Skip Author Info: " + this.skipAuthorInfo);
     	Logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
+    	Logger.debug("Tag Name: " + this.tagName);    	
     	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
     	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
     	Logger.debug("Delete Non Members: " + this.deleteNonMembers);
@@ -196,6 +206,24 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return configPath;
     }
+    
+    /**
+     * Returns the files that will be excluded
+     * @return
+     */        
+    public String getIncludeList()
+    {
+    	return includeList;
+    }
+    
+    /**
+     * Returns the files that will be included
+     * @return
+     */        
+    public String getExcludeList()
+    {
+    	return excludeList;
+    }
 
     /**
      * Returns the User connecting to the Integrity Server
@@ -258,6 +286,15 @@ public class IntegritySCM extends SCM implements Serializable
     public boolean getCheckpointBeforeBuild()
     {
     	return checkpointBeforeBuild;
+    }
+    
+    /**
+     * Returns the label string for the checkpoint performed before the build
+     * @return
+     */
+    public String getTagName()
+    {
+    	return tagName;
     }
     
     /**
@@ -352,6 +389,24 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	this.configPath = configPath;
     }
+    
+    /**
+     * Sets the files that will be not be included
+     * @return
+     */        
+    public void setIncludeList(String includeList)
+    {
+    	this.includeList = includeList;
+    }
+
+    /**
+     * Sets the files that will be not be included
+     * @return
+     */        
+    public void setExcludeList(String excludeList)
+    {
+    	this.excludeList = excludeList;
+    }
 
     /**
      * Sets the User connecting to the Integrity Server
@@ -414,6 +469,15 @@ public class IntegritySCM extends SCM implements Serializable
     public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild)
     {
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
+    }
+    
+    /**
+     * Sets the label string for the checkpoint performed before the build
+     * @param tagName
+     */
+    public void setTagName(String tagName)
+    {
+    	this.tagName = tagName;
     }
     
     /**
@@ -509,7 +573,7 @@ public class IntegritySCM extends SCM implements Serializable
 	{ 
 		super.buildEnvVars(build, env);
 		Logger.debug("buildEnvVars() invoked...!");		
-		env.put("MKSSI_PROJECT", configPath);
+		env.put("MKSSI_PROJECT", IntegrityCheckpointAction.evalGroovyExpression(env, configPath));
 		env.put("MKSSI_HOST", hostName);
 		env.put("MKSSI_PORT", String.valueOf(port));
 		env.put("MKSSI_USER", userName);
@@ -535,12 +599,12 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
-	private Response initializeCMProject(APISession api, File projectDB) throws APIException
+	private Response initializeCMProject(APISession api, File projectDB, String resolvedConfigPath) throws APIException
 	{
 		// Get the project information for this project
 		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
-		siProjectInfoCmd.addOption(new Option("project", configPath));	
-		Logger.debug("Preparing to execute si projectinfo for " + configPath);
+		siProjectInfoCmd.addOption(new Option("project", resolvedConfigPath));	
+		Logger.debug("Preparing to execute si projectinfo for " + resolvedConfigPath);
 		Response infoRes = api.runCommand(siProjectInfoCmd);
 		Logger.debug(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
 		// Initialize our siProject class variable
@@ -552,6 +616,25 @@ public class IntegritySCM extends SCM implements Serializable
 		return infoRes;
 	}
 
+	/**
+	 * Utility function to parse the include/exclude filter
+	 * @param list String containing a comma or semicolon separated list of filters
+	 * @param include Toggles whether an include or exclude filter should be applied
+	 * @return
+	 */
+	private String parseIncludeExcludeList(String list, boolean include)
+	{
+		StringBuilder filterString = new StringBuilder();
+		String[] filterTokens = list.split(",|;");
+	    for( int i = 0; i < filterTokens.length; i++ )
+	    { 
+	    	filterString.append(i > 0 ? "," : "");
+	    	filterString.append(include ? "file:" : "!file:");
+	    	filterString.append(filterTokens[i]);
+	    }
+	    return filterString.toString();
+	}
+	
 	/**
 	 * Primes the Integrity Project Member metadata information
 	 * @param api Integrity API Session
@@ -574,6 +657,18 @@ public class IntegritySCM extends SCM implements Serializable
 		mvFields.add("memberdescription");
 		mvFields.add("type");
 		siViewProjectCmd.addOption(new Option("fields", mvFields));
+			
+		// Checking if our include list has any entries
+		if( null != includeList && includeList.length() > 0 )
+		{ 
+		    siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(includeList, true)));
+		}
+		// Checking if our exclude list has any entries
+		if( null != excludeList && excludeList.length() > 0 )
+		{ 
+			siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(excludeList, false)));
+		}
+	
 		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
 		siProject.parseProject(viewRes.getWorkItems());
@@ -623,6 +718,10 @@ public class IntegritySCM extends SCM implements Serializable
 	{
 		// Log the invocation... 
 		Logger.debug("Start execution of checkout() routine...!");
+		
+		// Re-evaluate the config path to resolve any groovy expressions...
+		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), configPath);
+		
 		// Provide links to the Change and Build logs for easy access from Integrity
 		listener.getLogger().println("Change Log: " + ciServerURL + build.getUrl() + "changes");
 		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
@@ -641,8 +740,8 @@ public class IntegritySCM extends SCM implements Serializable
 		try
 		{
 			// Next, load up the information for this Integrity Project's configuration
-			listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-			initializeCMProject(api, build.getRootDir());
+			listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
+			initializeCMProject(api, build.getRootDir(), resolvedConfigPath);
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
 			{
@@ -651,7 +750,7 @@ public class IntegritySCM extends SCM implements Serializable
 				{
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, "");
+    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), tagName));
     				Logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -674,16 +773,17 @@ public class IntegritySCM extends SCM implements Serializable
 					
 	    	// Now, we need to find the project state from the previous build.
 			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
-	        for( AbstractBuild<?,?> b = build.getPreviousBuild(); null != b; b = b.getPreviousBuild() ) 
+	        while( null != previousBuild )
 	        {
 	        	// Go back through each previous build to find a useful project state
-	        	File prevProjectDB = new File(build.getRootDir(), DerbyUtils.DERBY_DB_FOLDER);
+	        	File prevProjectDB = new File(previousBuild.getRootDir(), DerbyUtils.DERBY_DB_FOLDER);
 	            if( prevProjectDB.isDirectory() ) 
 	            {
-	            	Logger.debug("Found previous project state in build " + b.getNumber());
-	            	previousBuild = b;
+	            	Logger.debug("Found previous project state in build " + previousBuild.getNumber());
 	                break;
 	            }
+				
+	            previousBuild = previousBuild.getPreviousBuild();	            
 	        }
 	        
 	        // Load up the project state for this previous build...
@@ -830,10 +930,13 @@ public class IntegritySCM extends SCM implements Serializable
         			{
 	        			try
 	        			{
-	        				listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"));
-	        				listener.getLogger().println("Preparing to execute si viewproject for " + configPath);
+	        				// Re-evaluate the config path to resolve any groovy expressions...
+	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(project.getCharacteristicEnvVars(), configPath);
+	        				listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
+	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"), resolvedConfigPath);
+	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
 	        				initializeCMProjectMembers(api);
+	        				
 	        				// Compare this project with the old project 
 	        				int changeCount = siProject.compareBaseline(projectDB, api);		
 	        				// Finally decide whether or not we need to build again
@@ -941,6 +1044,7 @@ public class IntegritySCM extends SCM implements Serializable
         private String defaultUserName;
         private String defaultPassword;
         private int defaultCheckoutThreadPoolSize = IntegritySCM.DEFAULT_THREAD_POOL_SIZE;
+        private String defaultTagName;
 		
         protected DescriptorImpl() 
         {
@@ -952,6 +1056,7 @@ public class IntegritySCM extends SCM implements Serializable
     		defaultSecure = false;
     		defaultUserName = "";
     		defaultPassword = "";
+    		defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
             load();
 
             // Initialize our derby environment
@@ -1094,7 +1199,16 @@ public class IntegritySCM extends SCM implements Serializable
 		{
 	        return defaultCheckoutThreadPoolSize;
 	    }
-
+	    
+	    /**
+	     * Returns the default checkpoint label groovy script
+	     * @return
+	     */
+		public String getDefaultTagName()
+		{
+			return defaultTagName;
+		}
+	    
 	    /**
 	     * Sets the default host name for the Integrity Server
 	     * @param defaultHostName
@@ -1166,7 +1280,7 @@ public class IntegritySCM extends SCM implements Serializable
 		{
             this.defaultCheckoutThreadPoolSize = defaultCheckoutThreadPoolSize;
         }
-
+		
 	    /**
 	     * Validates that the port number is numeric and within a valid range 
 	     * @param value Integer value for Port or IP Port
