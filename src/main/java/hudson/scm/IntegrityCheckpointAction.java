@@ -43,6 +43,61 @@ public class IntegrityCheckpointAction extends Notifier
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
 	/**
+	 * Utility function to convert a groovy expression to a string
+	 * @param env Environment containing the name/value pairs for substitution
+	 * @param expression Groovy expression string
+	 * @return Resolved string
+	 */
+	public static String evalGroovyExpression(Map<String, String> env, String expression)
+	{
+		Binding binding = new Binding();
+		binding.setVariable("env", env);
+		binding.setVariable("sys", System.getProperties());
+		CompilerConfiguration config = new CompilerConfiguration();
+		//config.setDebug(true);
+		GroovyShell shell = new GroovyShell(binding, config);
+		Object result = shell.evaluate("return \"" + expression + "\"");
+		if (result == null)
+		{
+			return "";
+		}
+		else
+		{
+			return result.toString().trim();
+		}
+	}
+	
+	/**
+	 * Checks if the given value is a valid Integrity Label.
+	 * If it's invalid, this method gives you the reason as string.
+	 * @param tagName The checkpoint label name
+	 * @return the error message, or null if label is valid
+	 */
+	public static String isInvalidTag(String tagName)
+	{
+		if (tagName == null || tagName.length() == 0)
+		{
+			return "The label string is empty!";
+		}
+
+		char ch = tagName.charAt(0);
+		if (!(('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z')))
+		{
+			return "The label must start with an alpha character!";
+		}
+
+		for (char invalid : "$,.:;/\\@".toCharArray())
+		{
+			if (tagName.indexOf(invalid) >= 0)
+			{
+				return "The label may cannot contain one of the following characters: $ , . : ; / \\ @";
+			}
+		}
+
+		return null;
+	}	
+	
+	/**
 	 * Returns the label pattern for the Checkpoint
 	 * @return Checkpoint Label
 	 */
@@ -107,7 +162,7 @@ public class IntegrityCheckpointAction extends Notifier
 		{
 			// Evaluate the groovy tag name
 			Map<String, String> env = build.getEnvironment(listener);
-			String chkptLabel = CHECKPOINT_DESCRIPTOR.evalGroovyExpression(env, tagName);
+			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, tagName);
 			try
 			{	
         		try
@@ -287,55 +342,6 @@ public class IntegrityCheckpointAction extends Notifier
 				}
 			}
 			return FormValidation.ok();
-		}
-
-		/**
-		 * Checks if the given value is a valid Integrity Label.
-		 * If it's invalid, this method gives you the reason as string.
-		 * @param tagName The checkpoint label name
-		 * @return the error message, or null if label is valid
-		 */
-		private String isInvalidTag(String tagName)
-		{
-			if (tagName == null || tagName.length() == 0)
-			{
-				return "The label string is empty!";
-			}
-
-			char ch = tagName.charAt(0);
-			if (!(('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z')))
-			{
-				return "The label must start with an alpha character!";
-			}
-
-			for (char invalid : "$,.:;/\\@".toCharArray())
-			{
-				if (tagName.indexOf(invalid) >= 0)
-				{
-					return "The label may cannot contain one of the following characters: $ , . : ; / \\ @";
-				}
-			}
-
-			return null;
-		}
-		
-		public String evalGroovyExpression(Map<String, String> env, String expression)
-		{
-			Binding binding = new Binding();
-			binding.setVariable("env", env);
-			binding.setVariable("sys", System.getProperties());
-			CompilerConfiguration config = new CompilerConfiguration();
-			//config.setDebug(true);
-			GroovyShell shell = new GroovyShell(binding, config);
-			Object result = shell.evaluate("return \"" + expression + "\"");
-			if (result == null)
-			{
-				return "";
-			}
-			else
-			{
-				return result.toString().trim();
-			}
 		}
     }	
 }
