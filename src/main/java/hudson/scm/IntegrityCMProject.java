@@ -308,9 +308,27 @@ public class IntegrityCMProject implements Serializable
 						// Save this member entry
 						String memberName = wi.getField("name").getValueAsString();
 						String description = "";
-						if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+						// Per JENKINS-19791 some users are getting an exception when attempting 
+						// to read the 'memberdescription' field in the API response. This is an
+						// attempt to catch the exception and ignore it...!
+						try
 						{
-							description = fixDescription(wi.getField("memberdescription").getValueAsString());
+							if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+							{
+								description = fixDescription(wi.getField("memberdescription").getValueAsString());
+							}
+						}
+						catch( NoSuchElementException e ) 
+						{
+							// Ignore exception
+							Logger.warn("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
+							Logger.info("API Response has the following fields available: ");
+							for( @SuppressWarnings("unchecked")
+							final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext(); )
+							{
+								Field apiField = fieldsIterator.next();
+								Logger.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
+							}
 						}
 						insert.clearParameters();
 						insert.setShort(1, (short)0);																	// Type
