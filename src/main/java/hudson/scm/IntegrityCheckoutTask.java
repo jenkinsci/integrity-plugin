@@ -284,7 +284,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             this.calculateChecksum = calculateChecksum;
         }
         
-        public Void call() throws Exception 
+        public Void call() throws IOException, APIException 
         {
             APISession api = apiSession.get();
             // Check to see if we need to release the APISession to clear some file handles
