@@ -16,10 +16,9 @@ import java.io.IOException;
 public class APISession
 {
 	// Store the API Version
-	public static final String VERSION = IntegrationPointFactory.getAPIVersion().substring(0, 
-											IntegrationPointFactory.getAPIVersion().indexOf(' '));
-	public static final int MAJOR_VERSION = Integer.parseInt(VERSION.substring(0, VERSION.indexOf('.')));	
-	public static final int MINOR_VERSION = Integer.parseInt(VERSION.substring(VERSION.indexOf('.')+1, VERSION.length()));
+	public static final String VERSION = "4.11";
+	public static final int MAJOR_VERSION = 4;	
+	public static final int MINOR_VERSION = 11;
 	
 	// Class variables used to create an API Session
 	private String ipHostName;
