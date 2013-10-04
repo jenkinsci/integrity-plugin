@@ -4,7 +4,7 @@
   <parent>
 	<groupId>org.jenkins-ci.plugins</groupId>    
 	<artifactId>plugin</artifactId>    
-	<version>1.517</version>  
+	<version>1.533</version>  
   </parent>  
   
   <artifactId>integrity-plugin</artifactId>
