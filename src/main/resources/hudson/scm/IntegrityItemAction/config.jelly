@@ -5,28 +5,76 @@
 		<j:if test="${instance.getQueryDefinition() == null}">
 			<j:set var="queryDefinition" value="${descriptor.getDefaultQueryDefinition()}"/>
 		</j:if>
-		<f:textbox name="mks.queryDefinition" value="${queryDefinition}" 
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Query Definition expression must be specified to locate an Integrity Build Item!'))}&amp;value='+encode(this.value)"/>
+		<f:textbox name="mks.queryDefinition" value="${queryDefinition}"/>
 	</f:entry>
 	
 	<f:entry title="Status Field Name" field="stateField">
-		<f:textbox name="mks.stateField" value="${instance.getStateField()}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Status/State field name must be specified!'))}&amp;value='+encode(this.value)"/>
+		<f:textbox name="mks.stateField" value="${instance.getStateField()}"/>
 	</f:entry>
 	
 	<f:entry title="Success Value" field="successValue">
-		<f:textbox name="mks.successValue" value="${instance.getSuccessValue()}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A success value must be specified!'))}&amp;value='+encode(this.value)"/>
+		<f:textbox name="mks.successValue" value="${instance.getSuccessValue()}"/>
 	</f:entry>
 
 	<f:entry title="Failure Value" field="failureValue">
-		<f:textbox name="mks.failureValue" value="${instance.getFailureValue()}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A failure value must be specified!'))}&amp;value='+encode(this.value)"/>
+		<f:textbox name="mks.failureValue" value="${instance.getFailureValue()}"/>
 	</f:entry>
 
 	<f:entry title="Log Field Name (Rich Content)" field="logField">
 		<f:textbox name="mks.logField" value="${instance.getLogField()}"/>
 	</f:entry>	
+
+	<f:entry title="Test Session Field" field="testSessionField">
+		<f:textbox name="mks.testSessionField" value="${instance.getTestSessionField()}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session State Field" field="testSessionStateField">
+		<f:textbox name="mks.testSessionStateField" value="${instance.getTestSessionStateField()}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session Active State" field="testSessionActiveState">
+		<f:textbox name="mks.testSessionActiveState" value="${instance.getTestSessionActiveState()}"/>
+	</f:entry>	
+
+	<f:entry title="Test Session Tests Field" field="testSessionTestsField">
+		<f:textbox name="mks.testSessionTestsField" value="${instance.getTestSessionTestsField()}"/>
+	</f:entry>	
+
+	<f:entry title="Test Case Test Name Field (External ID)" field="testCaseTestNameField">
+		<f:textbox name="mks.testCaseTestNameField" value="${instance.getTestCaseTestNameField()}"/>
+	</f:entry>	
+	
+	<f:entry title="Contains Field" field="testSuiteContainsField">
+		<j:set var="testSuiteContainsField" value="${instance.getTestSuiteContainsField()}"/>
+		<j:if test="${instance.getTestSuiteContainsField() == null}">
+			<j:set var="testSuiteContainsField" value="${descriptor.getDefaultTestSuiteContainsField()}"/>
+		</j:if>
+		<f:textbox name="mks.testSuiteContainsField" value="${testSuiteContainsField}"/>
+	</f:entry>
+
+	<f:entry title="Passed Verdict Name" field="testPassedVerdictName">
+		<j:set var="testPassedVerdictName" value="${instance.getTestPassedVerdictName()}"/>
+		<j:if test="${instance.getTestPassedVerdictName() == null}">
+			<j:set var="testPassedVerdictName" value="${descriptor.getDefaultTestPassedVerdictName()}"/>
+		</j:if>
+		<f:textbox name="mks.testPassedVerdictName" value="${testPassedVerdictName}"/>
+	</f:entry>
+
+	<f:entry title="Failed Verdict Name" field="testFailedVerdictName">
+		<j:set var="testFailedVerdictName" value="${instance.getTestFailedVerdictName()}"/>
+		<j:if test="${instance.getTestFailedVerdictName() == null}">
+			<j:set var="testFailedVerdictName" value="${descriptor.getDefaultTestFailedVerdictName()}"/>
+		</j:if>
+		<f:textbox name="mks.testFailedVerdictName" value="${testFailedVerdictName}"/>
+	</f:entry>
+
+	<f:entry title="Skipped Verdict Name" field="testSkippedVerdictName">
+		<j:set var="testSkippedVerdictName" value="${instance.getTestSkippedVerdictName()}"/>
+		<j:if test="${instance.getTestSkippedVerdictName() == null}">
+			<j:set var="testSkippedVerdictName" value="${descriptor.getDefaultTestSkippedVerdictName()}"/>
+		</j:if>
+		<f:textbox name="mks.testSkippedVerdictName" value="${testSkippedVerdictName}"/>
+	</f:entry>
 
 	<f:advanced>
 	
