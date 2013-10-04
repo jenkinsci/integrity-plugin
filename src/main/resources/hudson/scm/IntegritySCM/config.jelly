@@ -71,6 +71,14 @@
             <f:checkbox name="mks.secure" checked="${secure}"/>
         </f:entry>
 
+		<f:entry title="Include List" field="includeList">
+			<f:textbox name="mks.includeList" value="${scm.includeList}"/>
+		</f:entry>       
+
+		<f:entry title="Exclude List" field="excludeList">
+			<f:textbox name="mks.excludeList" value="${scm.excludeList}"/>    
+		</f:entry>
+        
         <f:entry title="Restore Timestamp?" field="restoreTimestamp">
             <f:checkbox name="mks.restoreTimestamp" checked="${scm.restoreTimestamp}"/>
         </f:entry>
@@ -91,6 +99,15 @@
         <f:entry title="Checkpoint Before Build?" field="checkpointBeforeBuild">
             <f:checkbox name="mks.checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
         </f:entry>
+        
+		<f:entry title="Tag Name" field="tagName">
+    		<j:set var="tagName" value="${scm.getTagName()}"/>
+    		<j:if test="${scm.getTagName() == null}">
+        		<j:set var="tagName" value="${descriptor.getDefaultTagName()}"/>
+    		</j:if>
+    		<f:textbox name="mks.tagName" value="${scm.tagName}" 
+				checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
+  		</f:entry>
         
         <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
             <f:textbox name="mks.alternateWorkspace" value="${scm.alternateWorkspace}"/>
