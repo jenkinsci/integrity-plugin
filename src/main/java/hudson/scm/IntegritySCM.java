@@ -617,63 +617,83 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 
 	/**
-	 * Utility function to parse the include/exclude filter
-	 * @param list String containing a comma or semicolon separated list of filters
-	 * @param include Toggles whether an include or exclude filter should be applied
-	 * @return
-	 */
-	private String parseIncludeExcludeList(String list, boolean include)
-	{
-		StringBuilder filterString = new StringBuilder();
-		String[] filterTokens = list.split(",|;");
-	    for( int i = 0; i < filterTokens.length; i++ )
-	    { 
-	    	filterString.append(i > 0 ? "," : "");
-	    	filterString.append(include ? "file:" : "!file:");
-	    	filterString.append(filterTokens[i]);
-	    }
-	    return filterString.toString();
-	}
-	
+	+   * Utility function to parse the include/exclude filter
+	+   * @param list String containing a comma or semicolon separated list of filters
+	+   * @param include Toggles whether an include or exclude filter should be applied
+	+   * @return
+	+   */
+	private void applyMemberFilters(Command siViewProjectCmd){
+  
+		 // Checking if our include list has any entries
+                if( null != includeList && includeList.length() > 0 )
+                { 
+                	StringBuilder filterString = new StringBuilder();
+                        String[] filterTokens = includeList.split(",|;");
+                        // prepare a OR combination of include filters (all in one filter, separated by comma if needed)
+                        for( int i = 0; i < filterTokens.length; i++ )
+                        { 
+                        	filterString.append(i > 0 ? "," : "");
+                                filterString.append("file:");
+                                filterString.append(filterTokens[i]);
+                       	}
+                       	// apply the prepared filter 
+                	siViewProjectCmd.addOption(new Option("filter", filterString.toString()));
+                	
+                }
+
+                // Checking if our exclude list has any entries
+                if( null != excludeList && excludeList.length() > 0 )
+                { 
+                	StringBuilder filterString = new StringBuilder();
+                        String[] filterTokens = excludeList.split(",|;");
+                        // prepare a AND combination of exclude filters (one filter each filter)
+                        for( int i = 0; i < filterTokens.length; i++ )
+                        { 
+                        	if (filterTokens[i]!= null)
+                        	{
+                        		// apply the new  filter 
+                                	siViewProjectCmd.addOption(new Option("filter", "!file:"+filterTokens[i]));
+                        	}
+                        }                              
+                }
+  	}
+
 	/**
-	 * Primes the Integrity Project Member metadata information
-	 * @param api Integrity API Session
-	 * @return response Integrity API Response
-	 * @throws APIException
-	 * @throws SQLException 
+	* Primes the Integrity Project Member metadata information
+	* @param api Integrity API Session
+	* @return response Integrity API Response
+	* @throws APIException
+	* @throws SQLException 
 	 */
 	private Response initializeCMProjectMembers(APISession api) throws APIException, SQLException
 	{
 		// Lets parse this project
 		Command siViewProjectCmd = new Command(Command.SI, "viewproject");
-		siViewProjectCmd.addOption(new Option("recurse"));
-		siViewProjectCmd.addOption(new Option("project", siProject.getConfigurationPath()));
-		MultiValue mvFields = new MultiValue(",");
-		mvFields.add("name");
-		mvFields.add("context");
-		mvFields.add("cpid");		
-		mvFields.add("memberrev");
-		mvFields.add("membertimestamp");
-		mvFields.add("memberdescription");
-		mvFields.add("type");
-		siViewProjectCmd.addOption(new Option("fields", mvFields));
-			
-		// Checking if our include list has any entries
-		if( null != includeList && includeList.length() > 0 )
-		{ 
-		    siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(includeList, true)));
-		}
-		// Checking if our exclude list has any entries
-		if( null != excludeList && excludeList.length() > 0 )
-		{ 
-			siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(excludeList, false)));
-		}
-	
-		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
-		siProject.parseProject(viewRes.getWorkItems());
-		return viewRes;
+                siViewProjectCmd.addOption(new Option("recurse"));
+                siViewProjectCmd.addOption(new Option("project", siProject.getConfigurationPath()));
+                
+                MultiValue mvFields = new MultiValue(",");
+                mvFields.add("name");
+                mvFields.add("context");
+                mvFields.add("cpid");                
+                mvFields.add("memberrev");
+                mvFields.add("membertimestamp");
+                mvFields.add("memberdescription");
+                mvFields.add("type");
+                
+                siViewProjectCmd.addOption(new Option("fields", mvFields));
+                
+                //add filter Option if any are set
+                applyMemberFilters(siViewProjectCmd);
+                               
+                Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+                
+                Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
+                siProject.parseProject(viewRes.getWorkItems());
+                
+                return viewRes;
 	}
+
 	
     /**
      * Toggles whether or not a workspace is required for polling
