@@ -14,6 +14,7 @@ import hudson.model.AbstractProject;
 import hudson.model.Hudson;
 import hudson.model.BuildListener;
 import hudson.model.Result;
+import hudson.model.TopLevelItem;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.tasks.BuildStepDescriptor;
@@ -127,7 +128,7 @@ public class IntegrityCheckpointAction extends Notifier
 	 */
 	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
 	{
-		if (abstractProject.getParent() instanceof Hudson)
+		if (abstractProject.getParent() instanceof TopLevelItem)
 		{
 			return abstractProject;
 		}
