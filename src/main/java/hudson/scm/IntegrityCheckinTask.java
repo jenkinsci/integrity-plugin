@@ -3,21 +3,17 @@ package hudson.scm;
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Hudson;
 import hudson.remoting.VirtualChannel;
-
 import java.io.File;
 import java.io.IOException;
-
 import com.mks.api.Command;
 import com.mks.api.FileOption;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
-public class IntegrityCheckinTask implements FileCallable<Boolean> 
+public class IntegrityCheckinTask implements FileCallable<Boolean>
 {
 	private static final long serialVersionUID = 4165773747683187630L;
 	private final String itemID;
@@ -27,7 +23,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 	private final String ciIncludes;
 	private final String ciExcludes;
 	private final BuildListener listener;
-	private final AbstractProject<?,?> rootProject;
+	private IntegrityConfigurable integrityConfig;
     	
 	/**
 	 * The check-in task provides updates back to an Integrity CM Project
@@ -41,7 +37,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 	 * @throws IOException 
 	 */
 	public IntegrityCheckinTask(String ciConfigPath, String ciWorkspaceDir, String ciIncludes, String ciExcludes, 
-									AbstractBuild<?, ?> build, BuildListener listener) throws IOException, InterruptedException
+									AbstractBuild<?, ?> build, BuildListener listener, IntegrityConfigurable integrityConfig) throws IOException, InterruptedException
 	{
 		this.itemID = build.getEnvironment(listener).get("ItemID", "");
 		this.buildID = build.getFullDisplayName();
@@ -50,26 +46,8 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		this.ciIncludes = ciIncludes;
 		this.ciExcludes = ciExcludes;
 		this.listener = listener;
-		this.rootProject = getRootProject(build.getProject());
-
+		this.integrityConfig = integrityConfig;
 		Logger.debug("Integrity Checkin Task Created!");
-	}
-	
-	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
-	 * @return
-	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-	{
-		if (abstractProject.getParent() instanceof Hudson)
-		{
-			return abstractProject;
-		}
-		else
-		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-		}
 	}
 		
     private String createCP(APISession api) throws APIException
@@ -140,8 +118,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		listener.getLogger().println("Integrity project '" + ciConfigPath + "' will be updated from directory " + workspace);
 
 		// Open our connection to the Integrity Server		
-		IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-		APISession api = scm.createAPISession();
+		APISession api = APISession.create(integrityConfig);
 		if( null != api )
 		{
 			try
@@ -191,6 +168,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 	
 								// Execute the check-in command
 								api.runCommand(ci);
+								
 							}
 							catch( APIException ae )
 							{
@@ -273,6 +251,24 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 								// Re-throw the error as we need to troubleshoot
 								throw ae;
 							}
+							
+						}
+					}
+					else{
+						// Construct the unlock command
+						Command unlock = new Command(Command.SI, "unlock");
+						unlock.addOption(new Option("project", ciConfigPath));
+						unlock.addOption(new Option("action", "remove"));
+						unlock.addOption(new Option("recurse"));
+						unlock.addOption(new Option("yes"));
+						// Execute the unlock command
+					
+						try
+						{
+							api.runCommand(unlock);
+						}
+						catch( APIException ae )
+						{
 							
 						}
 					}
