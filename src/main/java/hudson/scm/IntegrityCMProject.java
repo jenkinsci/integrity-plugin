@@ -7,7 +7,6 @@ import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.Connection;
-import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
@@ -70,14 +69,14 @@ public class IntegrityCMProject implements Serializable
 	private Document xmlDoc;
 	private StringBuffer changeLog;
 	private transient int changeCount;
-	
+	private String dbName;
 	/**
 	 * Creates an instance of an Integrity CM Project
 	 * and extracts all information from the API Response Field
 	 * @param wi Work Item associated with the response from running si projectinfo
 	 * @param projectDB Location of where the embedded derby database for this project
 	 */
-	public IntegrityCMProject(WorkItem wi, File projectDB)
+	public IntegrityCMProject(WorkItem wi, File projectDB, String dbName)
 	{
 		// Initialize the project with default options
 		lineTerminator = "native";
@@ -86,16 +85,15 @@ public class IntegrityCMProject implements Serializable
 		
 		// Initialize the project's DB location
 		this.projectDB = projectDB;
-		
 		// Initialize the change log report, if we need to compare with a baseline
 		changeLog = new StringBuffer();
 		changeCount = 0;
 		
 		// Parse the current output from si projectinfo and cache the contents
-		initializeProject(wi);
+		initializeProject(wi, dbName);
 	}
 
-	public void initializeProject(WorkItem wi)
+	public void initializeProject(WorkItem wi, String dbName)
 	{
 		// Parse the current project information
 		try
@@ -105,7 +103,7 @@ public class IntegrityCMProject implements Serializable
 			Field pjTypeFld = wi.getField("projectType");
 			Field pjCfgPathFld = wi.getField("fullConfigSyntax");
 			Field pjChkptFld = wi.getField("lastCheckpoint");
-			
+			this.dbName = dbName;
 			// Convert to our class fields
 			// First obtain the project name field
 			if( null != pjNameFld && null != pjNameFld.getValueAsString() )
@@ -220,8 +218,7 @@ public class IntegrityCMProject implements Serializable
 	 */
 	public Connection openProjectDB() throws SQLException
 	{
-		Logger.debug("Attempting to open connection to database: " + projectDB.getAbsolutePath() + IntegritySCM.FS + DerbyUtils.DERBY_DB_FOLDER);
-	    return DriverManager.getConnection(DerbyUtils.DERBY_URL_PREFIX + projectDB.getAbsolutePath().replace('\\', '/') + "/" + DerbyUtils.DERBY_CREATE_URL_SUFFIX);
+	    return DerbyUtils.createDBConnection(projectDB, dbName);
 	}
 	
 	/**
@@ -229,7 +226,7 @@ public class IntegrityCMProject implements Serializable
 	 */
 	public void closeProjectDB()
 	{
-		DerbyUtils.shutdownDB(projectDB);
+		DerbyUtils.shutdownDB(projectDB, dbName);
 	}
 	
 	/**
@@ -464,8 +461,7 @@ public class IntegrityCMProject implements Serializable
 		changeCount = 0;
 		
 		// Open connections to the embedded Integrity SCM Project cache databases
-		Logger.debug("Attempting to open connection to database: " + baselineProjectDB.getAbsolutePath() + IntegritySCM.FS + DerbyUtils.DERBY_DB_FOLDER);
-		Connection baselineDB = DriverManager.getConnection(DerbyUtils.DERBY_URL_PREFIX + baselineProjectDB.getAbsolutePath().replace('\\', '/') + "/" + DerbyUtils.DERBY_CREATE_URL_SUFFIX);
+		Connection baselineDB = DerbyUtils.createDBConnection(baselineProjectDB, dbName);
 		Connection db = openProjectDB();
 		Statement baselineSelect = null;
 		Statement pjSelect = null;
@@ -611,7 +607,7 @@ public class IntegrityCMProject implements Serializable
 			if( null != db ){ db.close(); }
 			
 			// Shutdown the baseline project DB
-			DerbyUtils.shutdownDB(baselineProjectDB);
+			DerbyUtils.shutdownDB(baselineProjectDB, dbName);
 		}
 		
 		return changeCount;
@@ -781,6 +777,7 @@ public class IntegrityCMProject implements Serializable
 		// Create and append the annotation and differences links
 		try
 		{
+			
 			// Add the <annotation> element
 			Element annotation = xmlDoc.createElement("annotation");
 			annotation.appendChild(xmlDoc.createCDATASection(IntegrityCMMember.getAnnotatedLink(
