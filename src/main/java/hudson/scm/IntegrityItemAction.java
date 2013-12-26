@@ -4,7 +4,6 @@ import java.io.IOException;
 import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
-
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -21,11 +20,8 @@ import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
-
 import org.kohsuke.stapler.StaplerRequest;
-
 import net.sf.json.JSONObject;
-
 import com.mks.api.Command;
 import com.mks.api.MultiValue;
 import com.mks.api.Option;
@@ -36,9 +32,9 @@ import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
 import com.mks.api.util.Base64;
 
-public class IntegrityItemAction extends Notifier
+public class IntegrityItemAction extends Notifier implements IntegrityConfigurable
 {
-	private String hostName;
+	private String host;
 	private int port;
 	private boolean secure;
     private String userName;
@@ -61,46 +57,27 @@ public class IntegrityItemAction extends Notifier
 	@Extension
 	public static final IntegrityItemDescriptorImpl ITEM_DESCRIPTOR = new IntegrityItemDescriptorImpl();
 
-    /**
-     * Returns the host name of the Integrity (Workflow) Server
-     * @return
-     */
-    public String getHostName()
+    @Override
+    public String getHost()
     {
-    	return hostName;
+    	return host;
     }
-    
-    /**
-     * Returns the port of the Integrity (Workflow) Server
-     * @return
-     */    
+    @Override
     public int getPort()
     {
     	return port;
     }
-
-    /**
-     * Returns true/false depending on secure sockets are enabled
-     * @return
-     */        
+    @Override
     public boolean getSecure()
     {
     	return secure;
     }
-
-    /**
-     * Returns the User connecting to the Integrity (Workflow) Server
-     * @return
-     */    
+    @Override
     public String getUserName()
     {
     	return userName;
     }
-    
-    /**
-     * Returns the clear password of the user connecting to the Integrity (Workflow) Server
-     * @return
-     */        
+    @Override
     public String getPassword()
     {
     	return (password != null && password.length() > 0 ? Base64.decode(password) : password);
@@ -252,46 +229,31 @@ public class IntegrityItemAction extends Notifier
     	return testSkippedVerdictName;
     }
     
-    /**
-     * Sets the host name of the Integrity (Workflow) Server
-     * @param hostName
-     */
-    public void setHostName(String hostName)
+    @Override
+    public void setHost(String host)
     {
-    	this.hostName = hostName;
+    	this.host = host;
     }
-
-    /**
-     * Sets the port of the Integrity (Workflow) Server
-     * @param port
-     */    
+    
+    @Override
     public void setPort(int port)
     {
     	this.port = port;
     }
 
-    /**
-     * Toggles whether or not secure sockets are enabled
-     * @param secure
-     */        
+    @Override   
     public void setSecure(boolean secure)
     {
     	this.secure = secure;
     }
 
-    /**
-     * Sets the User connecting to the Integrity (Workflow) Server
-     * @param userName
-     */
+	@Override
     public void setUserName(String userName)
     {
     	this.userName = userName;
     }
     
-    /**
-     * Sets the encrypted Password of the user connecting to the Integrity (Workflow) Server
-     * @param password
-     */        
+    @Override      
     public void setPassword(String password)
     {
     	this.password = Base64.encode(password);
@@ -446,21 +408,7 @@ public class IntegrityItemAction extends Notifier
      */
     public APISession createAPISession()
     {
-    	// Attempt to open a connection to the Integrity (Workflow) Server
-    	try
-    	{
-    		Logger.debug("Creating Integrity API Session...");
-    		return new APISession(null, 0, hostName, port, userName, Base64.decode(password), secure);
-    	}
-    	catch(APIException aex)
-    	{
-    		Logger.error("API Exception caught...");
-    		ExceptionHandler eh = new ExceptionHandler(aex);
-    		Logger.error(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
-    		return null;
-    	}				
+    	return APISession.create(this);
     }
 	
     /**
@@ -932,7 +880,7 @@ public class IntegrityItemAction extends Notifier
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
 			IntegrityItemAction itemAction = new IntegrityItemAction();
-			itemAction.setHostName(formData.getString("hostName"));
+			itemAction.setHost(formData.getString("host"));
 			itemAction.setPort(formData.getInt("port"));
 			itemAction.setUserName(formData.getString("userName"));
 			itemAction.setPassword(formData.getString("password"));
@@ -1071,5 +1019,34 @@ public class IntegrityItemAction extends Notifier
 		{
 			return defaultTestSkippedVerdictName;
 		}		
-    }	
+    }
+
+	@Override
+	public String getIntegrationPointHost() {
+		return null;
+	}
+	@Override
+	public void setIntegrationPointHost(String host) {
+		
+	}
+	@Override
+	public int getIntegrationPointPort() {
+		return 0;
+	}
+	@Override
+	public void setIntegrationPointPort(int port) {
+		
+	}
+	@Override
+	public String getEncryptedPassword() {
+		return password;
+	}
+	@Override
+	public String getConfigurationName() {
+		return null;
+	}
+	@Override
+	public void setConfigurationName(String configurationName) {
+
+	}	
 }
