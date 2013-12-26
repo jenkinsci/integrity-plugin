@@ -6,7 +6,9 @@ import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import com.mks.api.util.Base64;
 import com.mks.api.Session;
+
 import java.io.IOException;
 
 /**
@@ -36,10 +38,41 @@ public class APISession
 	private boolean secure;
 	
 	/**
+     * Creates an authenticated API Session against the Integrity Server
+     * @return An authenticated API Session
+     */
+	public static APISession create(IntegrityConfigurable settings)
+	{
+		// Attempt to open a connection to the Integrity Server
+    	try
+    	{
+    		Logger.debug("Creating Integrity API Session...");
+    		return new APISession(
+    					settings.getIntegrationPointHost(),
+    					settings.getIntegrationPointPort(),
+    					settings.getHost(), 
+    					settings.getPort(),
+    					settings.getUserName(),
+    					settings.getPassword(),
+    					settings.getSecure()
+    				);
+    	}
+    	catch(APIException aex)
+    	{
+    		Logger.error("API Exception caught...");
+    		ExceptionHandler eh = new ExceptionHandler(aex);
+    		Logger.error(eh.getMessage());
+    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		aex.printStackTrace();
+    		return null;
+    	}				
+	}
+	
+	/**
 	 * Constructor for the API Session Object
 	 * @throws APIException
 	 */
-	public APISession(String ipHost, int ipPortNum, 
+	private APISession(String ipHost, int ipPortNum, 
 					String host, int portNum, String user, String paswd, boolean secure) throws APIException
 	{
 		
