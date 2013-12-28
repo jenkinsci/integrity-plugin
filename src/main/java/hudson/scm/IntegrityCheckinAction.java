@@ -2,10 +2,10 @@ package hudson.scm;
 
 import java.io.IOException;
 
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.Extension;
@@ -14,23 +14,51 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
+import com.mks.api.util.Base64;
+
 import net.sf.json.JSONObject;
 
-public class IntegrityCheckinAction extends Notifier
+public class IntegrityCheckinAction extends Notifier implements IntegrityConfigurable
 {
 	private String ciConfigPath;
 	private String ciWorkspaceDir;
 	private String includes;
 	private String excludes;
 	private final Log logger = LogFactory.getLog(getClass());
+	private String configurationName;
+	private String password;
+	private boolean secure;
+	private String userName;
+	private String host;
+	private int integrationPointPort;
+	private String integrationPointHost;
+	private int port;
 	
 	@Extension
 	public static final IntegrityCheckinDescriptorImpl CHECKIN_DESCRIPTOR = new IntegrityCheckinDescriptorImpl();
 
+	@DataBoundConstructor
+	public IntegrityCheckinAction(String ciConfigPath, String ciWorkspaceDir, String includes, String excludes,  String integrationPointHost, int integrationPointPort, String host,
+			int port, String userName, String password, boolean secure, String configurationName)
+	{
+		setciConfigPath(ciConfigPath);
+		setciWorkspaceDir(ciWorkspaceDir);
+		setIncludes(includes);
+		setExcludes(excludes);
+		setIntegrationPointHost(integrationPointHost);
+		setIntegrationPointPort(integrationPointPort);
+		setHost(host);
+		setPort(port);
+		setUserName(userName);
+		setPassword(password);
+		setSecure(secure);
+		setConfigurationName(configurationName);
+	}
     /**
 	 * Returns the configuration path for the project to check-in artifacts after the build
 	 * @return
@@ -122,23 +150,6 @@ public class IntegrityCheckinAction extends Notifier
     {
     	this.excludes = excludes;
     }
-    
-	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
-	 * @return
-	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-	{
-		if (abstractProject.getParent() instanceof Hudson)
-		{
-			return abstractProject;
-		}
-		else
-		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-		}
-	}
 	
 	/**
 	 * Executes the actual Integrity Checkpoint operation
@@ -152,17 +163,8 @@ public class IntegrityCheckinAction extends Notifier
 			return true;
 		}
 
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
-
-		if( !(rootProject.getScm() instanceof IntegritySCM) )
-		{
-			logger.debug("Integrity Check-in action is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			listener.getLogger().println("Integrity Check-in action is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			return true;
-		}
-
 		// Create our Integrity check-in task
-        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener);
+        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener, this);
         
         // Execute the check-in task and return the overall result
         return build.getWorkspace().act(ciTask);
@@ -206,11 +208,12 @@ public class IntegrityCheckinAction extends Notifier
 		private String defaultciWorkspaceDir;
 		private String defaultIncludes;
 		private String defaultExcludes;
-    			
+    	private DescriptorImpl defaults;
     	public IntegrityCheckinDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityCheckinAction.class);
+    		defaults = IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR;
 			this.defaultciConfigPath = "";
 			this.defaultciWorkspaceDir = "";
 			this.defaultIncludes = "";
@@ -222,11 +225,7 @@ public class IntegrityCheckinAction extends Notifier
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			IntegrityCheckinAction ciAction = new IntegrityCheckinAction();
-			ciAction.setciConfigPath(formData.getString("ciConfigPath"));
-			ciAction.setciWorkspaceDir(formData.getString("ciWorkspaceDir"));
-			ciAction.setIncludes(formData.getString("includes"));
-			ciAction.setExcludes(formData.getString("excludes"));
+			IntegrityCheckinAction ciAction = (IntegrityCheckinAction) super.newInstance(req, formData);
 			desLogger.debug("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.newInstance() executed!");   
 			return ciAction;
 		}    	
@@ -271,7 +270,42 @@ public class IntegrityCheckinAction extends Notifier
 		public String getDefaultExcludes()
 		{
 			return defaultExcludes;
-		}		
+		}	
+
+		public int getDefaultPort()
+		{
+			return defaults.getDefaultPort();
+		}
+		
+		public String getDefaultHostName()
+		{
+			return defaults.getDefaultHostName();
+		}
+		
+		public boolean getDeafultSecure()
+		{
+			return defaults.getDefaultSecure();
+		}
+		
+		public String getDefaultPassword()
+		{
+			return defaults.getDefaultPassword();
+		}
+		
+		public String getDefaultUserName()
+		{
+			return defaults.getDefaultUserName();
+		}
+		
+		public String getDefaultIPHostName()
+		{
+			return defaults.getDefaultIPHostName();
+		}
+		
+		public int getDefaultIPPort()
+		{
+			return defaults.getDefaultIPPort();
+		}
 		
 		public void setDefaultciConfigPath(String defaultciConfigPath)
 		{
@@ -292,5 +326,91 @@ public class IntegrityCheckinAction extends Notifier
 		{
 			this.defaultExcludes = defaultExcludes;
 		}			
-    }	
+    }
+
+	@Override
+	public String getIntegrationPointHost() {
+		return integrationPointHost;
+	}
+
+	@Override
+	public void setIntegrationPointHost(String host) {
+		this.integrationPointHost = host;
+	}
+
+	@Override
+	public int getIntegrationPointPort() {
+		return integrationPointPort;
+	}
+
+	@Override
+	public void setIntegrationPointPort(int port) {
+		this.integrationPointPort = port;
+	}
+
+	@Override
+	public String getHost() {
+		return host;
+	}
+
+	@Override
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	@Override
+	public int getPort() {
+		return port;
+	}
+
+	@Override
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	@Override
+	public String getUserName() {
+		return userName;
+	}
+
+	@Override
+	public void setUserName(String username) {
+		this.userName = username;
+	}
+
+	@Override
+	public String getPassword() {
+		return Base64.decode(password);
+	}
+
+	@Override
+	public String getEncryptedPassword() {
+		return password;
+	}
+
+	@Override
+	public void setPassword(String password) {
+		this.password = Base64.encode(password);
+		
+	}
+
+	@Override
+	public boolean getSecure() {
+		return secure;
+	}
+
+	@Override
+	public void setSecure(boolean secure) {
+		this.secure = secure;
+	}
+
+	@Override
+	public String getConfigurationName() {
+		return this.configurationName;
+	}
+
+	@Override
+	public void setConfigurationName(String configurationName) {
+		this.configurationName = configurationName;		
+	}	
 }

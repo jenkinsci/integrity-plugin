@@ -6,15 +6,16 @@ import java.util.Map;
 
 import javax.servlet.ServletException;
 
+import jenkins.model.Jenkins;
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
+import hudson.model.Descriptor;
 import hudson.model.BuildListener;
 import hudson.model.Result;
-import hudson.model.TopLevelItem;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.tasks.BuildStepDescriptor;
@@ -22,6 +23,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.util.FormValidation;
 
+import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.QueryParameter;
 import org.apache.commons.logging.Log;
@@ -34,15 +36,39 @@ import net.sf.json.JSONObject;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+import com.mks.api.util.Base64;
 
-public class IntegrityCheckpointAction extends Notifier
+public class IntegrityCheckpointAction extends Notifier implements IntegrityConfigurable
 {
 	private String tagName;
 	private final Log logger = LogFactory.getLog(getClass());
+	private String ipHost;
+	private int ipPort;
+	private String host;
+	private int port;
+	private String userName;
+	private String password;
+	private boolean secure;
+	private String configurationName;
 	
 	@Extension
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
+	@DataBoundConstructor
+	public IntegrityCheckpointAction(String tagName, String integrationPointHost, int integrationPointPort, String host,
+			int port, String userName, String password, boolean secure, String configurationName)
+	{
+		setTagName(tagName);
+		setIntegrationPointHost(integrationPointHost);
+		setIntegrationPointPort(integrationPointPort);
+		setHost(host);
+		setPort(port);
+		setUserName(userName);
+		setPassword(password);
+		setSecure(secure);
+		setConfigurationName(configurationName);
+	}
+	
 	/**
 	 * Utility function to convert a groovy expression to a string
 	 * @param env Environment containing the name/value pairs for substitution
@@ -122,23 +148,6 @@ public class IntegrityCheckpointAction extends Notifier
 	}
 	
 	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
-	 * @return
-	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-	{
-		if (abstractProject.getParent() instanceof TopLevelItem)
-		{
-			return abstractProject;
-		}
-		else
-		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-		}
-	}
-	
-	/**
 	 * Executes the actual Integrity Checkpoint operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
@@ -149,16 +158,7 @@ public class IntegrityCheckpointAction extends Notifier
 			return true;
 		}
 
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
-
-		if( !(rootProject.getScm() instanceof IntegritySCM) )
-		{
-			listener.getLogger().println("Integrity Checkpoint is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			return true;
-		}
-
-		IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-		APISession api = scm.createAPISession();
+		APISession api = APISession.create(this);
 		if( null != api )
 		{
 			// Evaluate the groovy tag name
@@ -169,7 +169,7 @@ public class IntegrityCheckpointAction extends Notifier
         		try
         		{
         			// Get information about the project
-        			IntegrityCMProject siProject = scm.getIntegrityProject();
+        			IntegrityCMProject siProject = IntegritySCM.findProject(getConfigurationName());
         			// Ensure this is not a build project configuration
         			if( ! siProject.isBuild() )
         			{
@@ -179,24 +179,12 @@ public class IntegrityCheckpointAction extends Notifier
     					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
     					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
     					String chkpt = wi.getResult().getField("resultant").getItem().getId();
-    					listener.getLogger().println("Successfully checkpointed project " + scm.getConfigPath() + 
+    					listener.getLogger().println("Successfully checkpointed project " + siProject.getConfigurationPath() + 
     												" with label '" + chkptLabel + "', new revision is " + chkpt);
         			}
         			else
         			{
-        				// Check to see if the user has requested a checkpoint before the build
-        				if( scm.getCheckpointBeforeBuild() )
-        				{
-        					// Looks like the checkpoint was done before the build, so lets apply the label now
-	        				listener.getLogger().println("Preparing to execute si addprojectlabel for " + siProject.getConfigurationPath());
-	        				Response res = siProject.addProjectLabel(api, chkptLabel);
-	    					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
-	    					listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + siProject.getProjectRevision());        					
-        				}
-        				else
-        				{
-        					listener.getLogger().println("Cannot checkpoint a build project configuration: " + scm.getConfigPath() + "!");
-        				}
+        				listener.getLogger().println("Cannot checkpoint a build project configuration: " +  siProject.getConfigurationPath() + "!");
         			}
         		}
         		catch(APIException aex)
@@ -264,12 +252,13 @@ public class IntegrityCheckpointAction extends Notifier
     {
     	private static Log desLogger = LogFactory.getLog(IntegrityCheckpointDescriptorImpl.class);
 		private String defaultTagName;
-    			
+		private DescriptorImpl defaults;
     	public IntegrityCheckpointDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityCheckpointAction.class);
-			this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
+			defaults = IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR;
+    		this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
 			load();    		
         	desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
     	}
@@ -277,8 +266,7 @@ public class IntegrityCheckpointAction extends Notifier
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			IntegrityCheckpointAction chkptAction = new IntegrityCheckpointAction();
-			chkptAction.setTagName(formData.getString("tagName"));
+			IntegrityCheckpointAction chkptAction = (IntegrityCheckpointAction) super.newInstance(req, formData);
 			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
 			return chkptAction;
 		}    	
@@ -309,11 +297,46 @@ public class IntegrityCheckpointAction extends Notifier
 			return defaultTagName;
 		}
 
+		public int getDefaultPort()
+		{
+			return defaults.getDefaultPort();
+		}
+		
+		public String getDefaultHostName()
+		{
+			return defaults.getDefaultHostName();
+		}
+		
+		public boolean getDeafultSecure()
+		{
+			return defaults.getDefaultSecure();
+		}
+		
+		public String getDefaultPassword()
+		{
+			return defaults.getDefaultPassword();
+		}
+		
+		public String getDefaultUserName()
+		{
+			return defaults.getDefaultUserName();
+		}
+		
+		public String getDefaultIPHostName()
+		{
+			return defaults.getDefaultIPHostName();
+		}
+		
+		public int getDefaultIPPort()
+		{
+			return defaults.getDefaultIPPort();
+		}
+		
 		public void setDefaultTagName(String defaultTagName)
 		{
 			this.defaultTagName = defaultTagName;
 		}
-
+		 
 		public FormValidation doTagNameCheck(@QueryParameter("value") final String tagName) throws IOException, ServletException
 		{
 			if( tagName == null || tagName.length() == 0 )
@@ -345,4 +368,86 @@ public class IntegrityCheckpointAction extends Notifier
 			return FormValidation.ok();
 		}
     }	
+    @Override
+	public String getIntegrationPointHost() {
+		return this.ipHost;
+	}
+
+	@Override
+	public void setIntegrationPointHost(String host) {
+		this.ipHost = host;
+	}
+
+	@Override
+	public int getIntegrationPointPort() {
+		return this.ipPort;
+	}
+
+	@Override
+	public void setIntegrationPointPort(int port) {
+		this.ipPort = port;
+	}
+
+	@Override
+	public String getHost() {
+		return this.host;
+	}
+
+	@Override
+	public void setHost(String host) {
+		this.host = host;
+	}
+
+	@Override
+	public int getPort() {
+		return this.port;
+	}
+
+	@Override
+	public void setPort(int port) {
+		this.port = port;
+	}
+
+	@Override
+	public String getUserName() {
+		return this.userName;
+	}
+
+	@Override
+	public void setUserName(String username) {
+		this.userName = username;
+	}
+
+	@Override
+	public String getPassword() {
+		return Base64.decode(getEncryptedPassword());
+	}
+
+	@Override
+	public String getEncryptedPassword() {
+		return this.password;
+	}
+
+	@Override
+	public void setPassword(String password) {
+		this.password = Base64.encode(password);
+	}
+
+	@Override
+	public boolean getSecure() {
+		return this.secure;
+	}
+
+	@Override
+	public void setSecure(boolean secure) {
+		this.secure = secure;
+	}
+	@Override
+	public String getConfigurationName() {
+		return configurationName;
+	}
+	@Override
+	public void setConfigurationName(String configurationName) {
+		this.configurationName = configurationName;
+	}
 }

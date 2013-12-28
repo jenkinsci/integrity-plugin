@@ -1,5 +1,7 @@
 package hudson.scm;
 
+import hudson.model.AbstractBuild;
+
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.IOException;
@@ -23,9 +25,9 @@ public class DerbyUtils
 	public static final String DERBY_SYS_HOME_PROPERTY = "derby.system.home";
 	public static final String DERBY_URL_PREFIX = "jdbc:derby:";
 	public static final String DERBY_USER_PASWD = ";user=dbuser;password=dbuserpwd";
-	public static final String DERBY_DB_FOLDER = "IntegritySCM";
-	public static final String DERBY_CREATE_URL_SUFFIX = DERBY_DB_FOLDER + ";create=true" + DERBY_USER_PASWD;;
-	public static final String DERBY_SHUTDOWN_URL_SUFFIX = DERBY_DB_FOLDER + ";shutdown=true" + DERBY_USER_PASWD;;
+	private static final String DERBY_DB_FOLDER = "IntegritySCM/%s";
+	private static final String DERBY_CREATE_URL_SUFFIX = DERBY_DB_FOLDER + ";create=true" + DERBY_USER_PASWD;
+	private static final String DERBY_SHUTDOWN_URL_SUFFIX = DERBY_DB_FOLDER + ";shutdown=true" + DERBY_USER_PASWD;
 	public static final String CREATE_PROJECT_TABLE = "CREATE TABLE CM_PROJECT (" +
 														CM_PROJECT.ID + " INTEGER NOT NULL " + 
 														"PRIMARY KEY GENERATED ALWAYS AS IDENTITY " + 
@@ -124,10 +126,10 @@ public class DerbyUtils
 	 * @return SQL Connection to the derby db
 	 * @throws SQLException 
 	 */
-	public static Connection createDBConnection(File path) throws SQLException
+	public static Connection createDBConnection(File path, String DBName) throws SQLException
 	{
-		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_CREATE_URL_SUFFIX;
-		Logger.debug("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + DERBY_DB_FOLDER);
+		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_CREATE_URL_SUFFIX, DBName);
+		Logger.debug("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
 	    return DriverManager.getConnection(dbUrl);
 	}
 
@@ -135,20 +137,30 @@ public class DerbyUtils
 	 * Shuts down the embedded derby database represented with the File 'path'
 	 * @param path Job directory where the derby db can be located
 	 */
-	public static void shutdownDB(File path)
+	public static void shutdownDB(File path, String DBName)
 	{
-		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + DERBY_SHUTDOWN_URL_SUFFIX;
+		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_SHUTDOWN_URL_SUFFIX, DBName);
 		try 
 		{
-			Logger.debug("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + DERBY_DB_FOLDER);
+			Logger.debug("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
 		    Connection db = DriverManager.getConnection(dbUrl);
 		    db.close();
 		}
 		catch( SQLException sqle )
 		{
-			Logger.error("Failed to shutdown database connection!");
-			Logger.error(sqle.getMessage());
-		    Logger.fatal(sqle);
+			if(sqle.getErrorCode() == 45000 && sqle.getSQLState().equals("08006"))
+			{
+				Logger.error("Database shutdown successful!");
+			}
+			else
+			{
+				
+				Logger.error("Failed to shutdown database connection! ");
+				Logger.error("SQL Error Code: " + sqle.getErrorCode());
+				Logger.error("SQL Error State: " + sqle.getSQLState());
+				Logger.error(sqle.getMessage());
+				Logger.fatal(sqle);
+			}
 		}		
 	}
 	
@@ -416,5 +428,22 @@ public class DerbyUtils
 		}
 		
 		return rowCount;   
-	}  
+	} 
+	
+	public static  File getIntegrityCMProjectDB(AbstractBuild<?,?> build, String DBName)
+    {
+    	// Make sure this build is not null, before processing it!
+    	File projectDB = null;
+    	if( null != build )
+    	{
+	        // Lets make absolutely certain we've found a useful build, 
+	        projectDB = new File(build.getRootDir(), String.format(DERBY_DB_FOLDER, DBName));
+	        if( ! projectDB.isDirectory() )
+	        {
+	        	// There is no project state for this build!
+	        	Logger.debug("Integrity SCM Project DB not found for build " + build.getNumber() + "!");
+	        }
+    	}
+    	return projectDB;
+    }
 }

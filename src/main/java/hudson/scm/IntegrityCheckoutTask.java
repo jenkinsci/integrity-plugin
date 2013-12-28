@@ -20,7 +20,6 @@ import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 
 import com.mks.api.response.APIException;
-import com.mks.api.util.Base64;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
 {
@@ -34,14 +33,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	private final String alternateWorkspaceDir;
 	private final boolean fetchChangedWorkspaceFiles;
 	private final BuildListener listener;
-	// API connection information
-	private String ipHostName;
-	private String hostName;
-	private int ipPort = 0;
-	private int port;
-	private boolean secure;
-    private String userName;
-    private String password;
+	private IntegrityConfigurable integrityConfig;
     // Checksum Hash
     private ConcurrentHashMap<String, String> checksumHash;
     // Counts
@@ -67,7 +59,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 */
 	public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> dirList,
 									String alternateWorkspaceDir, String lineTerminator, boolean restoreTimestamp,
-									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, BuildListener listener)
+									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, BuildListener listener, IntegrityConfigurable integrityConfig)
 	{
 		this.projectMembersList = projectMembersList;
 		this.dirList = dirList;
@@ -77,13 +69,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		this.cleanCopy = cleanCopy;
 		this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
 		this.listener = listener;
-		this.ipHostName = "";
-		this.ipPort = 0;
-		this.hostName = "";
-		this.port = 7001;
-		this.secure = false;
-		this.userName = "";
-		this.password = "";
+		this.integrityConfig = integrityConfig;
 		this.addCount = 0;
 		this.updateCount = 0;
 		this.dropCount = 0;
@@ -93,48 +79,13 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		Logger.debug("Integrity Checkout Task Created!");
 	}
 	
-	/**
-	 * Helper function to initialize all the variables needed to establish an APISession
-	 * @param ipHostName Integration Point Hostname
-	 * @param ipPort Integration Point Port
-	 * @param hostName Integrity Server Hostname
-	 * @param port Integrity Server Port
-	 * @param secure Toggles whether Integrity Server is SSL enabled
-	 * @param userName Username to connect to the Integrity Server
-	 * @param password Password for the Username connection to the Integrity Server
-	 */
-	public void initAPIVariables(String ipHostName, int ipPort, String hostName, int port, boolean secure, String userName, String password)
-	{
-		this.ipHostName = ipHostName;
-		this.ipPort = ipPort;
-		this.hostName = hostName;
-		this.port = port;
-		this.secure = secure;
-		this.userName = userName;
-		this.password = password;
-	}
-	
     /**
      * Creates an authenticated API Session against the Integrity Server
      * @return An authenticated API Session
      */
     public APISession createAPISession()
     {
-    	// Attempt to open a connection to the Integrity Server
-    	try
-    	{
-    		Logger.debug("Creating Integrity API Session...");
-    		return new APISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
-    	}
-    	catch(APIException aex)
-    	{
-    		Logger.error("API Exception caught...");
-    		ExceptionHandler eh = new ExceptionHandler(aex);
-    		Logger.error(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		Logger.fatal(aex);
-    		return null;
-    	}				
+    	return APISession.create(integrityConfig);			
     }
 	
 	/**
@@ -185,13 +136,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 */
     private static class ThreadLocalAPISession extends ThreadLocal<APISession>
     {
-        final String ipHost;
-        final int ipPortNum;
-        final String host;
-        final int portNum;
-        final String user;
-        final String paswd;
-        final boolean secure;
+        IntegrityConfigurable integrityConfig;
         // Using a thread safe Vector instead of a List
         private Vector<APISession> sessions = new Vector<APISession>();
    
@@ -205,15 +150,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
          * @param paswd Integrity Server user's password
          * @param secure Flag to determine whether or not secure sockets are in use
          */
-        public ThreadLocalAPISession(String ipHost, int ipPortNum, String host, int portNum, String user, String paswd, boolean secure)
+        public ThreadLocalAPISession(IntegrityConfigurable integrityConfig)
         {
-            this.ipHost = ipHost;
-            this.ipPortNum = ipPortNum;
-            this.host = host;
-            this.portNum = portNum;
-            this.user = user;
-            this.paswd = paswd;
-            this.secure = secure;
+        	this.integrityConfig = integrityConfig;
         }
 
         /**
@@ -242,18 +181,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         @Override
         protected APISession initialValue() 
         {
-            Logger.debug("Trying to initialize new thread session");
-            try 
-            {
-                APISession session = new APISession(ipHost, ipPortNum, host, portNum, user, paswd, secure);
-                Logger.debug("Initialized thread session: " + session.toString());
-                sessions.add(session);
-                return session;
-            }
-            catch (APIException e) 
-            {
-                throw new RuntimeException(e);
-            }
+        	return APISession.create(integrityConfig);
         }
     }
     
@@ -317,7 +245,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		// Convert the file object to a hudson FilePath (helps us with workspace.deleteContents())
 		FilePath workspace = new FilePath(checkOutDir.isAbsolute() ? checkOutDir : new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkOutDir.getPath()));
 		listener.getLogger().println("Checkout directory is " + workspace);
-		final ThreadLocalAPISession generateAPISession = new ThreadLocalAPISession(ipHostName, ipPort, hostName, port, userName, Base64.decode(password), secure);
+		final ThreadLocalAPISession generateAPISession = new ThreadLocalAPISession(integrityConfig);
 		final ThreadLocalOpenFileHandler openFileHandler = new ThreadLocalOpenFileHandler();
         ExecutorService executor = Executors.newFixedThreadPool(checkoutThreadPoolSize);
         @SuppressWarnings("rawtypes")
