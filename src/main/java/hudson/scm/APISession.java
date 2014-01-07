@@ -22,6 +22,9 @@ public class APISession
 	public static final int MAJOR_VERSION = 4;	
 	public static final int MINOR_VERSION = 11;
 	
+	// Encrypted password prefix
+	public static final String ENC_PREFIX = "__PTC__";
+	
 	// Class variables used to create an API Session
 	private String ipHostName;
 	private int ipPort = 0;
@@ -81,7 +84,7 @@ public class APISession
 		hostName = host;
 		port = portNum;
 		userName = user;
-		password = paswd;
+		password = Base64.decode(paswd.substring(ENC_PREFIX.length()));
 		this.secure = secure;
 		initAPI();
 	}

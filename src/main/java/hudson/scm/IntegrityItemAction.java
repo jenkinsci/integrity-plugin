@@ -57,30 +57,29 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 	@Extension
 	public static final IntegrityItemDescriptorImpl ITEM_DESCRIPTOR = new IntegrityItemDescriptorImpl();
 
-    @Override
     public String getHost()
     {
     	return host;
     }
-    @Override
+
     public int getPort()
     {
     	return port;
     }
-    @Override
+
     public boolean getSecure()
     {
     	return secure;
     }
-    @Override
+
     public String getUserName()
     {
     	return userName;
     }
-    @Override
+
     public String getPassword()
     {
-    	return (password != null && password.length() > 0 ? Base64.decode(password) : password);
+    	return APISession.ENC_PREFIX + password;
     }
 	
 	/**
@@ -229,34 +228,36 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
     	return testSkippedVerdictName;
     }
     
-    @Override
     public void setHost(String host)
     {
     	this.host = host;
     }
     
-    @Override
     public void setPort(int port)
     {
     	this.port = port;
     }
 
-    @Override   
     public void setSecure(boolean secure)
     {
     	this.secure = secure;
     }
 
-	@Override
     public void setUserName(String userName)
     {
     	this.userName = userName;
     }
     
-    @Override      
     public void setPassword(String password)
     {
-    	this.password = Base64.encode(password);
+    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
+    	{
+    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
+    	}
+    	else
+    	{
+    		this.password = Base64.encode(password);
+    	}
     }
 	
 	/**
@@ -1021,32 +1022,33 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 		}		
     }
 
-	@Override
-	public String getIntegrationPointHost() {
+	public String getIntegrationPointHost() 
+	{
 		return null;
 	}
-	@Override
-	public void setIntegrationPointHost(String host) {
+
+	public void setIntegrationPointHost(String host) 
+	{
 		
 	}
-	@Override
-	public int getIntegrationPointPort() {
+	
+	public int getIntegrationPointPort() 
+	{
 		return 0;
 	}
-	@Override
-	public void setIntegrationPointPort(int port) {
+	
+	public void setIntegrationPointPort(int port) 
+	{
 		
 	}
-	@Override
-	public String getEncryptedPassword() {
-		return password;
-	}
-	@Override
-	public String getConfigurationName() {
+
+	public String getConfigurationName() 
+	{
 		return null;
 	}
-	@Override
-	public void setConfigurationName(String configurationName) {
+	
+	public void setConfigurationName(String configurationName) 
+	{
 
 	}	
 }

@@ -25,6 +25,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
+import jenkins.model.Jenkins;
+
 import net.sf.json.JSONObject;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -78,7 +80,6 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	private String alternateWorkspace;
 	private boolean fetchChangedWorkspaceFiles = false;
 	private boolean deleteNonMembers = false;
-	//private transient IntegrityCMProject siProject; /* This will get initialized when checkout is executed */
 	private int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
 
 	/**
@@ -95,7 +96,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	// Log the construction
     	Logger.debug("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
-    	this.ciServerURL = Hudson.getInstance().getRootUrlFromRequest();
+    	this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
     	this.browser = browser;
     	setIntegrationPointHost(integrationPointHost);
     	setHost(host);
@@ -129,7 +130,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	Logger.debug("Host: " + getHost());
     	Logger.debug("IP Port: " + getIntegrationPointPort());
     	Logger.debug("Port: " + getPort());
-    	Logger.debug("Configuration Path: " + configPath);
+    	Logger.debug("Configuration Name: " + this.configurationName);
+    	Logger.debug("Configuration Path: " + this.configPath);
     	Logger.debug("Include Filter: " + this.includeList);
     	Logger.debug("Exclude Filter: " + this.excludeList);
     	Logger.debug("User: " + getUserName());
@@ -157,31 +159,26 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         return browser == null ? new IntegrityWebUI(null) : browser;
     }
     
-    @Override
     public String getHost()
     {
     	return host;
     }
 
-    @Override
     public String getIntegrationPointHost()
     {
     	return this.integrationPointHost;
     }
     
-    @Override
     public int getPort()
     {
     	return port;
     }
     
-    @Override  
     public int getIntegrationPointPort()
     {
     	return this.integrationPointPort;
     }
     
-    @Override      
     public boolean getSecure()
     {
     	return secure;
@@ -214,16 +211,14 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	return excludeList;
     }
 
-    @Override
     public String getUserName()
     {
     	return userName;
     }
     
-    @Override  
     public String getPassword()
     {
-    	return Base64.decode(password);
+    	return APISession.ENC_PREFIX + password;
     }
     
     /**
@@ -316,33 +311,37 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         return checkoutThreadPoolSize;
     }
 
-    @Override
+    /**
+     * Returns the configuration name for this project
+     * Required when working with Multiple SCMs plug-in
+     */
+	public String getConfigurationName() 
+	{
+		return configurationName;
+	}
+	
     public void setHost(String host)
     {
     	this.host = host;
     	initIntegrityURL();
     }
 
-    @Override
     public void setIntegrationPointHost(String host)
     {
     	this.integrationPointHost = host;
     }
     
-    @Override
     public void setPort(int port)
     {
     	this.port = port;
     	initIntegrityURL();
     }
 
-    @Override
     public void setIntegrationPointPort(int port)
     {
     	this.integrationPointPort = port;
     }
     
-    @Override      
     public void setSecure(boolean secure)
     {
     	this.secure = secure;
@@ -376,16 +375,21 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	this.excludeList = excludeList;
     }
 
-    @Override
     public void setUserName(String userName)
     {
     	this.userName = userName;
     }
     
-    @Override  
     public void setPassword(String password)
     {
-    	this.password = Base64.encode(password);
+    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
+    	{
+    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
+    	}
+    	else
+    	{
+    		this.password = Base64.encode(password);
+    	}
     }
     
     /**
@@ -479,6 +483,15 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     }
     
     /**
+     * Sets the configuration name for this project
+     * @param configurationName Name for this project configuration
+     */
+	public void setConfigurationName(String configurationName) 
+	{
+		this.configurationName = configurationName;
+	}
+    
+    /**
      * Provides a mechanism to update the Integrity URL, based on updates
      * to the hostName/port/secure variables
      */
@@ -525,6 +538,13 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		env.put("MKSSI_HOST", getHost());
 		env.put("MKSSI_PORT", String.valueOf(getPort()));
 		env.put("MKSSI_USER", getUserName());
+
+		// Populate with information about the most recent checkpoint
+		IntegrityCMProject siProject = getIntegrityProject();
+		if( null != siProject && siProject.isBuild() )
+		{
+			env.put("MKSSI_BUILD", getIntegrityProject().getProjectRevision());
+		}
 	}
 	
 	/**
@@ -566,21 +586,39 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 
 	/**
 	 * Utility function to parse the include/exclude filter
-	 * @param list String containing a comma or semicolon separated list of filters
-	 * @param include Toggles whether an include or exclude filter should be applied
+	 * @param siViewProjectCmd API Command for the 'si viewproject' command
 	 * @return
 	 */
-	private String parseIncludeExcludeList(String list, boolean include)
+	private void applyMemberFilters(Command siViewProjectCmd)
 	{
-		StringBuilder filterString = new StringBuilder();
-		String[] filterTokens = list.split(",|;");
-	    for( int i = 0; i < filterTokens.length; i++ )
-	    { 
-	    	filterString.append(i > 0 ? "," : "");
-	    	filterString.append(include ? "file:" : "!file:");
-	    	filterString.append(filterTokens[i]);
-	    }
-	    return filterString.toString();
+		// Checking if our include list has any entries
+		if( null != includeList && includeList.length() > 0 )
+		{ 
+			StringBuilder filterString = new StringBuilder();
+			String[] filterTokens = includeList.split(",|;");
+			// prepare a OR combination of include filters (all in one filter, separated by comma if needed)
+			for( int i = 0; i < filterTokens.length; i++ )
+			{ 
+				filterString.append(i > 0 ? "," : "");
+				filterString.append("file:");
+				filterString.append(filterTokens[i]);
+			}
+			siViewProjectCmd.addOption(new Option("filter", filterString.toString()));
+		}
+	 
+		// Checking if our exclude list has any entries
+		if( null != excludeList && excludeList.length() > 0 )
+		{ 
+			String[] filterTokens = excludeList.split(",|;");
+			// prepare a AND combination of exclude filters (one filter each filter)
+			for( int i = 0; i < filterTokens.length; i++ )
+			{ 
+				if (filterTokens[i]!= null)
+				{
+					siViewProjectCmd.addOption(new Option("filter", "!file:"+filterTokens[i]));
+				}
+			}                              
+		}
 	}
 	
 	/**
@@ -607,16 +645,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		mvFields.add("type");
 		siViewProjectCmd.addOption(new Option("fields", mvFields));
 			
-		// Checking if our include list has any entries
-		if( null != includeList && includeList.length() > 0 )
-		{ 
-		    siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(includeList, true)));
-		}
-		// Checking if our exclude list has any entries
-		if( null != excludeList && excludeList.length() > 0 )
-		{ 
-			siViewProjectCmd.addOption(new Option("filter", parseIncludeExcludeList(excludeList, false)));
-		}
+		// Apply our include/exclude filters
+        applyMemberFilters(siViewProjectCmd);
 	
 		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
@@ -844,7 +874,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
-        		Logger.debug("No prior successful builds found!  Advice to build now!");
+        		Logger.debug("No prior successful builds found!  Advise to build now!");
         		return PollingResult.BUILD_NOW;
         	}
         	else
@@ -991,7 +1021,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
             load();
 
             // Initialize our derby environment
-            DerbyUtils.setDerbySystemDir(Hudson.getInstance().getRootDir());
+            DerbyUtils.setDerbySystemDir(Jenkins.getInstance().getRootDir());
             DerbyUtils.loadDerbyDriver();
             
             // Log the construction...
@@ -1004,7 +1034,9 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         	IntegritySCM scm = (IntegritySCM) super.newInstance(req, formData);
         	scm.browser = RepositoryBrowsers.createInstance(IntegrityWebUI.class, req, formData, "browser");
         	if (scm.browser == null)
+        	{
         		scm.browser = new IntegrityWebUI(null);
+        	}
             return scm;
         }
         
@@ -1054,7 +1086,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 			defaultUserName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultUserName"));
 			Logger.debug("defaultUserName = " + defaultUserName);
 			
-			defaultPassword =  Base64.encode(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
+			setDefaultPassword(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
 			Logger.debug("defaultPassword = " + DigestUtils.md5Hex(defaultPassword));
 			
 			save();
@@ -1116,12 +1148,12 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	    }
 	    
 	    /**
-	     * Returns the default user's password connecting to the Integrity Server
+	     * Returns the default user's encrypted password connecting to the Integrity Server
 	     * @return defaultPassword
 	     */        
 	    public String getDefaultPassword()
 	    {
-	    	return Base64.decode(defaultPassword);
+	    	return APISession.ENC_PREFIX + defaultPassword;
 	    }
 	    
 	    /**
@@ -1202,7 +1234,14 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	     */        
 	    public void setDefaultPassword(String defaultPassword)
 	    {
-	    	this.defaultPassword = Base64.encode(defaultPassword);
+	    	if( defaultPassword.indexOf(APISession.ENC_PREFIX) == 0 )
+	    	{
+	    		this.defaultPassword = Base64.encode(Base64.decode(defaultPassword.substring(APISession.ENC_PREFIX.length())));
+	    	}
+	    	else
+	    	{
+	    		this.defaultPassword = Base64.encode(defaultPassword);
+	    	}	    	
 	    }
 	    
 	    /**
@@ -1270,19 +1309,4 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         }
 		
     }
-    
-	@Override
-	public String getEncryptedPassword() {
-		return password;
-	}
-
-	@Override
-	public String getConfigurationName() {
-		return configurationName;
-	}
-
-	@Override
-	public void setConfigurationName(String configurationName) {
-		this.configurationName = configurationName;
-	}
 }

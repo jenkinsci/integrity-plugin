@@ -52,15 +52,10 @@ public interface IntegrityConfigurable {
      */
 	public void setUserName(String username);
 	 /**
-     * Returns the clear password of the user connecting to the Integrity Server
-     * @return
-     */
-	public String getPassword();
-	 /**
      * Returns the encrypted password of the user connecting to the Integrity Server
      * @return
      */
-	public String getEncryptedPassword();
+	public String getPassword();
 	/**
      * Sets the encrypted Password of the user connecting to the Integrity Server
      * @param password - The clear password

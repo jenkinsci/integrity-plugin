@@ -70,6 +70,7 @@ public class IntegrityCMProject implements Serializable
 	private StringBuffer changeLog;
 	private transient int changeCount;
 	private String dbName;
+	
 	/**
 	 * Creates an instance of an Integrity CM Project
 	 * and extracts all information from the API Response Field

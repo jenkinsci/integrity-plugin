@@ -83,7 +83,7 @@
 			<j:if test="${instance.getHost() == null}">
 				<j:set var="host" value="${descriptor.getDefaultHostName()}"/>
 			</j:if>
-	        <f:textbox name="mks.hostName" value="${hostName}"
+	        <f:textbox name="mks.host" value="${host}"
 	        	checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
 	    </f:entry>
 	    	

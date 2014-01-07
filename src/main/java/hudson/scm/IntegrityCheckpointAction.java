@@ -368,86 +368,91 @@ public class IntegrityCheckpointAction extends Notifier implements IntegrityConf
 			return FormValidation.ok();
 		}
     }	
-    @Override
-	public String getIntegrationPointHost() {
+
+	public String getIntegrationPointHost() 
+	{
 		return this.ipHost;
 	}
 
-	@Override
-	public void setIntegrationPointHost(String host) {
+	public void setIntegrationPointHost(String host) 
+	{
 		this.ipHost = host;
 	}
 
-	@Override
-	public int getIntegrationPointPort() {
+	public int getIntegrationPointPort() 
+	{
 		return this.ipPort;
 	}
 
-	@Override
-	public void setIntegrationPointPort(int port) {
+	public void setIntegrationPointPort(int port) 
+	{
 		this.ipPort = port;
 	}
 
-	@Override
-	public String getHost() {
+	public String getHost() 
+	{
 		return this.host;
 	}
 
-	@Override
-	public void setHost(String host) {
+	public void setHost(String host) 
+	{
 		this.host = host;
 	}
 
-	@Override
-	public int getPort() {
+	public int getPort() 
+	{
 		return this.port;
 	}
 
-	@Override
-	public void setPort(int port) {
+	public void setPort(int port) 
+	{
 		this.port = port;
 	}
 
-	@Override
-	public String getUserName() {
+	public String getUserName() 
+	{
 		return this.userName;
 	}
 
-	@Override
-	public void setUserName(String username) {
+	public void setUserName(String username) 
+	{
 		this.userName = username;
 	}
 
-	@Override
-	public String getPassword() {
-		return Base64.decode(getEncryptedPassword());
+	public String getPassword() 
+	{
+    	return APISession.ENC_PREFIX + password;
 	}
 
-	@Override
-	public String getEncryptedPassword() {
-		return this.password;
+	public void setPassword(String password) 
+	{
+    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
+    	{
+    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
+    	}
+    	else
+    	{
+    		this.password = Base64.encode(password);
+    	}
 	}
 
-	@Override
-	public void setPassword(String password) {
-		this.password = Base64.encode(password);
-	}
-
-	@Override
-	public boolean getSecure() {
+	public boolean getSecure() 
+	{
 		return this.secure;
 	}
 
-	@Override
-	public void setSecure(boolean secure) {
+	public void setSecure(boolean secure) 
+	{
 		this.secure = secure;
 	}
-	@Override
-	public String getConfigurationName() {
+	
+	public String getConfigurationName() 
+	{
 		return configurationName;
 	}
-	@Override
-	public void setConfigurationName(String configurationName) {
+	
+	public void setConfigurationName(String configurationName) 
+	{
 		this.configurationName = configurationName;
 	}
 }
