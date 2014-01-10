@@ -39,9 +39,10 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 	public IntegrityCheckinTask(String ciConfigPath, String ciWorkspaceDir, String ciIncludes, String ciExcludes, 
 									AbstractBuild<?, ?> build, BuildListener listener, IntegrityConfigurable integrityConfig) throws IOException, InterruptedException
 	{
+		
 		this.itemID = build.getEnvironment(listener).get("ItemID", "");
 		this.buildID = build.getFullDisplayName();
-		this.ciConfigPath = ciConfigPath;
+		this.ciConfigPath = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), ciConfigPath);
 		this.ciWorkspaceDir = ciWorkspaceDir;
 		this.ciIncludes = ciIncludes;
 		this.ciExcludes = ciExcludes;
@@ -115,6 +116,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		File checkinDir = new File(ciWorkspaceDir);
 		// Convert the file object to a hudson FilePath
 		FilePath workspace = new FilePath(checkinDir.isAbsolute() ? checkinDir : new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkinDir.getPath()));
+		
 		listener.getLogger().println("Integrity project '" + ciConfigPath + "' will be updated from directory " + workspace);
 
 		// Open our connection to the Integrity Server		

@@ -580,6 +580,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		siProject.setLineTerminator(lineTerminator);
 		siProject.setRestoreTimestamp(restoreTimestamp);
 		siProject.setSkipAuthorInfo(skipAuthorInfo);
+		siProject.setCheckpointBeforeBuild(checkpointBeforeBuild);
 		projects.put(configurationName, siProject);
 		return infoRes;
 	}
@@ -722,8 +723,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 													siProject.getConfigurationPath() + ", new revision is " + chkpt);
 					// Update the siProject to use the new checkpoint as the basis for this build
 					Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
-					siProjectInfoCmd.addOption(new Option("project", siProject.getProjectName()));	
-					siProjectInfoCmd.addOption(new Option("projectRevision", chkpt));
+					siProjectInfoCmd.addOption(new Option("project", siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));	
+
 					Response infoRes = api.runCommand(siProjectInfoCmd);
 					siProject.initializeProject(infoRes.getWorkItems().next(), getConfigurationName());
 				}

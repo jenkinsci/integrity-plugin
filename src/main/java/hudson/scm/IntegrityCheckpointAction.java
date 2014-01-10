@@ -1,37 +1,37 @@
 package hudson.scm;
 
+import groovy.lang.Binding;
+import groovy.lang.GroovyShell;
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.Hudson;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.util.FormValidation;
+
 import java.io.IOException;
 import java.util.HashMap;
+import java.util.Hashtable;
 import java.util.Map;
 
 import javax.servlet.ServletException;
 
-import jenkins.model.Jenkins;
-import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.tasks.Publisher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Descriptor;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.Extension;
-import hudson.Launcher;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Notifier;
-import hudson.util.FormValidation;
+import net.sf.json.JSONObject;
 
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.QueryParameter;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
-
-import net.sf.json.JSONObject;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
@@ -147,6 +147,16 @@ public class IntegrityCheckpointAction extends Notifier implements IntegrityConf
 		this.tagName = tagName;
 	}
 	
+	private void applyProjectLabel(APISession api, BuildListener listener, IntegrityCMProject siProject, String fullConfigPath, String projectName, String revision, String chkptLabel) throws APIException {
+		// Looks like the checkpoint was done before the build, so lets apply the label now
+		listener.getLogger().println("Preparing to execute si addprojectlabel for " + fullConfigPath);
+		listener.getLogger().println(" (" + projectName + ", " +  revision + ")");
+		Response res = siProject.addProjectLabel(api, chkptLabel, projectName, revision);
+		logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+		listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + revision);        					
+		
+	}
+	
 	/**
 	 * Executes the actual Integrity Checkpoint operation
 	 */
@@ -157,7 +167,7 @@ public class IntegrityCheckpointAction extends Notifier implements IntegrityConf
 			listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
 			return true;
 		}
-
+		
 		APISession api = APISession.create(this);
 		if( null != api )
 		{
@@ -184,7 +194,25 @@ public class IntegrityCheckpointAction extends Notifier implements IntegrityConf
         			}
         			else
         			{
-        				listener.getLogger().println("Cannot checkpoint a build project configuration: " +  siProject.getConfigurationPath() + "!");
+
+        				// Check to see if the user has requested a checkpoint before the build
+        				if( siProject.getCheckpointBeforeBuild() ) {
+
+        					// Attach label to 'main' project
+        					applyProjectLabel(api, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
+        					
+        					// Attach label to 'subProjects'
+        					for (Hashtable<CM_PROJECT, Object> memberInfo: siProject.viewSubProjects()) {
+        						String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
+        						String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
+        						String revision = String.class.cast(memberInfo.get(CM_PROJECT.REVISION));
+       							applyProjectLabel(api, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
+        					}
+        				}
+        				else
+        				{
+        					listener.getLogger().println("Cannot checkpoint a build project configuration: " + siProject.getConfigurationPath() + "!");
+        				}
         			}
         		}
         		catch(APIException aex)
