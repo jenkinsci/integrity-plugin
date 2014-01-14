@@ -286,7 +286,7 @@ public class IntegrityCMProject implements Serializable
 						insert.setClob(5, new StringReader(""));											// Description
 						insert.setString(6, wi.getId());													// ConfigPath
 						
-						String subProjectRev = null;
+						String subProjectRev = "";
 						if (wi.contains("memberrev")) {
 							subProjectRev = wi.getField("memberrev").getItem().getId();
 						}
