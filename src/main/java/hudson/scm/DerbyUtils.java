@@ -66,7 +66,11 @@ public class DerbyUtils
 												CM_PROJECT.DESCRIPTION + ", " + CM_PROJECT.AUTHOR + ", " + CM_PROJECT.CONFIG_PATH + ", " +
 												CM_PROJECT.REVISION + ", " + CM_PROJECT.OLD_REVISION + ", " + CM_PROJECT.RELATIVE_FILE + ", " + 
 												CM_PROJECT.CHECKSUM + ", " + CM_PROJECT.DELTA +
-												" FROM CM_PROJECT WHERE " + CM_PROJECT.TYPE + " = 0 ORDER BY " + CM_PROJECT.NAME + " ASC";	
+												" FROM CM_PROJECT WHERE " + CM_PROJECT.TYPE + " = 0 ORDER BY " + CM_PROJECT.NAME + " ASC";
+
+	public static final String SUB_PROJECT_SELECT = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.CONFIG_PATH + ", " +  CM_PROJECT.REVISION +
+												" FROM CM_PROJECT WHERE " + CM_PROJECT.TYPE + " = 1 ORDER BY " + CM_PROJECT.CONFIG_PATH + " ASC";	
+	
 	public static final String AUTHOR_SELECT = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " + CM_PROJECT.AUTHOR + ", " +
 												CM_PROJECT.CONFIG_PATH + ", " + CM_PROJECT.REVISION + " FROM CM_PROJECT WHERE " + 
 												CM_PROJECT.TYPE + " = 0 AND (" + CM_PROJECT.DELTA + " IS NULL OR " + CM_PROJECT.DELTA + " <> 3)";
@@ -158,6 +162,7 @@ public class DerbyUtils
 				Logger.error("Failed to shutdown database connection! ");
 				Logger.error("SQL Error Code: " + sqle.getErrorCode());
 				Logger.error("SQL Error State: " + sqle.getSQLState());
+
 				Logger.error(sqle.getMessage());
 				Logger.fatal(sqle);
 			}

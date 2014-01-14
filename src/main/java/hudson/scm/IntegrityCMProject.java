@@ -65,6 +65,7 @@ public class IntegrityCMProject implements Serializable
 	private String lineTerminator;
 	private boolean restoreTimestamp;
 	private boolean skipAuthorInfo;
+	private boolean checkpointBeforeBuild;
 
 	private Document xmlDoc;
 	private StringBuffer changeLog;
@@ -284,9 +285,17 @@ public class IntegrityCMProject implements Serializable
 						insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis()));	// Timestamp
 						insert.setClob(5, new StringReader(""));											// Description
 						insert.setString(6, wi.getId());													// ConfigPath
-						insert.setString(7, "");															// Revision
+						
+						String subProjectRev = "";
+						if (wi.contains("memberrev")) {
+							subProjectRev = wi.getField("memberrev").getItem().getId();
+						}
+						
+						insert.setString(7, subProjectRev);													// Revision
 						insert.setString(8, pjDir);															// RelativeFile
+						
 						insert.executeUpdate();
+						
 					}
 				}
 				else if( wi.getModelType().equals(SIModelTypeName.MEMBER) )
@@ -651,6 +660,46 @@ public class IntegrityCMProject implements Serializable
 		return projectMembersList;
 	}
 	
+	
+	/**
+	 * Project access function that returns the state of the current project
+	 * NOTE: For maximum efficiency, this should be called only once and after the compareBasline() has been invoked!
+	 * @return A List containing every subproject in this project
+	 * @throws SQLException
+	 * @throws IOException
+	 */
+	public List<Hashtable<CM_PROJECT, Object>> viewSubProjects() throws SQLException, IOException
+	{
+		// Initialize our return variable
+		List<Hashtable<CM_PROJECT, Object>> subprojectsList = new ArrayList<Hashtable<CM_PROJECT, Object>>();
+		
+		// Initialize our db connection
+		Connection db = openProjectDB();
+		Statement stmt = null;
+		ResultSet rs = null;
+		
+		try
+		{
+			stmt = db.createStatement();
+			rs = stmt.executeQuery(DerbyUtils.SUB_PROJECT_SELECT);
+			while( rs.next() )
+			{
+				subprojectsList.add(DerbyUtils.getRowData(rs));
+			}
+		}
+		finally
+		{
+			// Close the database resources
+			if( null != rs ){ rs.close(); }
+			if( null != stmt ){ stmt.close(); }
+			if( null != db ){ db.close(); }
+		}
+		
+		return subprojectsList;
+	}
+	
+	
+	
 	/**
 	 * Attempts to fix known issues with characters that can potentially break the change log xml
 	 * @param desc Input comment string for the revision
@@ -835,6 +884,7 @@ public class IntegrityCMProject implements Serializable
 		return api.runCommand(siCheckpoint);
 	}
 	
+	
 	/**
 	 * Applies a Project Label on this Integrity CM Project
 	 * @param api Authenticated Integrity API Session
@@ -842,12 +892,14 @@ public class IntegrityCMProject implements Serializable
 	 * @return Integrity API Response object
 	 * @throws APIException
 	 */
-	public Response addProjectLabel(APISession api, String chkptLabel) throws APIException
+	public Response addProjectLabel(APISession api, String chkptLabel, String projectName, String projectRevision) throws APIException
 	{
 		// Construct the addprojectlabel command
 		Command siAddProjectLabel = new Command(Command.SI, "addprojectlabel");
 		// Set the project name
-		siAddProjectLabel.addOption(new Option("project", fullConfigSyntax));
+		siAddProjectLabel.addOption(new Option("project", projectName));
+		// Set the project revision
+		siAddProjectLabel.addOption(new Option("projectRevision", projectRevision));
 		// Set the label
 		siAddProjectLabel.addOption(new Option("label", chkptLabel));
 		// Move the label, if a previous one was applied
@@ -974,6 +1026,25 @@ public class IntegrityCMProject implements Serializable
 	public Date getLastCheckpointDate()
 	{
 		return lastCheckpoint;
+	}
+
+	/** Sets if the project is checkpointed before the build (configuration parameter)
+	 * 
+	 * @param checkpointBeforeBuild
+	 */
+	public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild) {
+
+		this.checkpointBeforeBuild = checkpointBeforeBuild;
+		
+	}
+	
+	/** Returns if the project is checkpointed before the build (configuration parameter)
+	 * 
+	 * @return
+	 */
+	public boolean getCheckpointBeforeBuild() {
+		
+		return checkpointBeforeBuild;
 	}
 }
 
