@@ -89,8 +89,6 @@ public class APISession
 		initAPI();
 	}
 	
-	
-	
 	private void initAPI() throws APIException
 	{
 	 	// Initialize our termination flag...
@@ -153,9 +151,13 @@ public class APISession
 		// Terminate the previous command runner, if applicable
 		if( null != icr )
 		{
-			icr.interrupt();
+			if( !icr.isFinished() )
+			{
+				icr.interrupt();
+			}
 			icr.release();
 		}
+		
 		icr = session.createCmdRunner();
 		icr.setDefaultHostname(hostName);
 		icr.setDefaultPort(port);
@@ -205,18 +207,21 @@ public class APISession
 			{
 				if( null != icr )
 				{
-					icr.interrupt();
-					icr.release();
+					if( !icr.isFinished() )
+					{
+						icr.interrupt();
+					}
+					icr.release();					
 				}
 				
 				if( null != session )
 				{
-					session.release();
+					session.release(true);
 				}
 	
 				if( null != ip )
 				{
-					ip.release();
+					ip.release();					
 				}
 				
 				terminated = true;

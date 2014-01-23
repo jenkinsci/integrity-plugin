@@ -79,15 +79,6 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		Logger.debug("Integrity Checkout Task Created!");
 	}
 	
-    /**
-     * Creates an authenticated API Session against the Integrity Server
-     * @return An authenticated API Session
-     */
-    public APISession createAPISession()
-    {
-    	return APISession.create(integrityConfig);			
-    }
-	
 	/**
 	 * Creates the folder structure for the project's contents allowing empty folders to be created
 	 * @param workspace
@@ -165,6 +156,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             {
                 try
                 {
+                	Logger.debug("Terminating threaded API Sessions...");
                     session.Terminate();
                 }
                 catch(Exception ex)
@@ -181,7 +173,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         @Override
         protected APISession initialValue() 
         {
-        	return APISession.create(integrityConfig);
+        	APISession api = APISession.create(integrityConfig);
+        	sessions.add(api);
+        	return api;
         }
     }
     

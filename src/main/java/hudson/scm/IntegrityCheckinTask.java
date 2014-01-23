@@ -256,22 +256,25 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 							
 						}
 					}
-					else{
+					else
+					{
 						// Construct the unlock command
 						Command unlock = new Command(Command.SI, "unlock");
 						unlock.addOption(new Option("project", ciConfigPath));
 						unlock.addOption(new Option("action", "remove"));
 						unlock.addOption(new Option("recurse"));
 						unlock.addOption(new Option("yes"));
-						// Execute the unlock command
-					
+						
+						// Execute the unlock command					
 						try
 						{
 							api.runCommand(unlock);
 						}
 						catch( APIException ae )
 						{
-							
+				    		ExceptionHandler eh = new ExceptionHandler(ae);
+				    		Logger.error(eh.getMessage());
+				    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());							
 						}
 					}
 	

@@ -404,15 +404,6 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 	}
 	
     /**
-     * Creates an authenticated API Session against the Integrity (Workflow) Server
-     * @return An authenticated API Session
-     */
-    public APISession createAPISession()
-    {
-    	return APISession.create(this);
-    }
-	
-    /**
      * Wrapper function to edit a specific Integrity Build Item with a status and log
      * @param build Jenkins abstract build item
      * @param listener Build listener
@@ -682,131 +673,123 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 			return true;
 		}
 
-		APISession api = createAPISession();
+		APISession api = APISession.create(this);
 		if( null != api )
 		{
-			try
-			{	
-	        	try
-	        	{
-	        		// First lets find the build item or test session id
-	        		int intBuildItemID = 0;
-	        		int intTestSessionID = 0;
+        	try
+        	{
+        		// First lets find the build item or test session id
+        		int intBuildItemID = 0;
+        		int intTestSessionID = 0;
 
-	        		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
-	        		// Convert the string Item ID to an integer for comparison...
-	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
-	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
+        		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
+        		// Convert the string Item ID to an integer for comparison...
+        		try { intBuildItemID = Integer.parseInt(buildItemID); }
+        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
 
-	        		String testSessionID = build.getEnvironment(listener).get("SessionID", "");
-	        		// Convert the string Item ID to an integer for comparison...
-	        		try { intTestSessionID = Integer.parseInt(testSessionID); }
-	        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }
+        		String testSessionID = build.getEnvironment(listener).get("SessionID", "");
+        		// Convert the string Item ID to an integer for comparison...
+        		try { intTestSessionID = Integer.parseInt(testSessionID); }
+        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }
 
-	        		// Figure out if we need to query Integrity for the Build item
-	        		if( intBuildItemID <= 0 )
-	        		{
-	        			if( queryDefinition.length() > 0 )
-	        			{
-		        			// Let's query for the build item id
-			        		Command issues = new Command(Command.IM, "issues");
-			        		issues.addOption(new Option("fields", "ID"));
-			        		issues.addOption(new Option("queryDefinition", queryDefinition));
-			        		Response issuesResponse = api.runCommand(issues);
-			        		if( null != issuesResponse )
-			        		{
-			        			WorkItemIterator wit = issuesResponse.getWorkItems();
-			        			// Get the first item returned by the query definition
-			        			if( wit.hasNext() )
-			        			{
-			        				buildItemID = wit.next().getField("ID").getValueAsString();
-			    	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
-			    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }			        				
-			        			}
-			        			else
-			        			{
-			        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-			        				return false;
-			        			}
-			        		}
-			        		else
-			        		{
-			        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-			        			return false;
-			        		}
-	        			}
+        		// Figure out if we need to query Integrity for the Build item
+        		if( intBuildItemID <= 0 )
+        		{
+        			if( queryDefinition.length() > 0 )
+        			{
+	        			// Let's query for the build item id
+		        		Command issues = new Command(Command.IM, "issues");
+		        		issues.addOption(new Option("fields", "ID"));
+		        		issues.addOption(new Option("queryDefinition", queryDefinition));
+		        		Response issuesResponse = api.runCommand(issues);
+		        		if( null != issuesResponse )
+		        		{
+		        			WorkItemIterator wit = issuesResponse.getWorkItems();
+		        			// Get the first item returned by the query definition
+		        			if( wit.hasNext() )
+		        			{
+		        				buildItemID = wit.next().getField("ID").getValueAsString();
+		    	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
+		    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }			        				
+		        			}
+		        			else
+		        			{
+		        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        				return false;
+		        			}
+		        		}
 		        		else
 		        		{
-		        			listener.getLogger().println("WARNING: No configuration information provided to locate an Integrity Build Item!");
-		        		}	        			
-	        		}
-	        		
-	        		// Figure out if we need to do anything with the Test Results of this build...
-	        		AbstractTestResultAction<?> testResult = build.getTestResultAction();
-	        		if( null != testResult && testResult.getTotalCount() > 0 )
-	        		{	        			
-		        		// Figure out if we need to interrogate the Build item for the Test Session item
-		        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
-		        		{
-		        			// Get the relationships for the Build item
-		        			Command walk = new Command(Command.IM, "relationships");
-		        			walk.addOption(new Option("fields", testSessionStateField));
-		        			walk.addOption(new Option("traverseFields", testSessionField));
-		        			walk.addSelection(buildItemID);
-		        			Response walkResponse = api.runCommand(walk);
-		        			if( null != walkResponse )
-		        			{
-		        				Field testSessionFld = walkResponse.getWorkItem(buildItemID).getField(testSessionField);
-		        				if( null != testSessionFld && null != testSessionFld.getList() )
-		        				{
-		        					@SuppressWarnings("unchecked")
-		        					List<Item> sessionList = testSessionFld.getList(); 
-		        					for( Item session : sessionList  )
-		        					{
-		        						// Look for the first Test Session in an Active state...
-		        						if( null != session.getField(testSessionStateField) && session.getField(testSessionStateField).getValueAsString().equals(testSessionActiveState) )
-		        						{
-		        							testSessionID = session.getId();
-		        							try { intTestSessionID = Integer.parseInt(testSessionID); }
-		        			        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
-		        							break;
-		        						}
-		        					}
-		        				}
-		        			}	        			
+		        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        			return false;
 		        		}
-		        		
-		        		// Update the Test Session with the results from the JUnit tests, if we got a Test Session to work with...
-		        		if( intTestSessionID > 0 )
-		        		{
-		        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
-		        			success = collectTestResults(build.getAggregatedTestResultAction(), listener, api, testSessionID);
-		        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
-		        		}
-	        		}
-	        		
-	        		// Finally, lets update the status of the build, if appropriate
-	        		if( intBuildItemID > 0 )
+        			}
+	        		else
 	        		{
-	        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
-	        			success = editBuildItem(build, listener, api, buildItemID);
+	        			listener.getLogger().println("WARNING: No configuration information provided to locate an Integrity Build Item!");
+	        		}	        			
+        		}
+        		
+        		// Figure out if we need to do anything with the Test Results of this build...
+        		AbstractTestResultAction<?> testResult = build.getTestResultAction();
+        		if( null != testResult && testResult.getTotalCount() > 0 )
+        		{	        			
+	        		// Figure out if we need to interrogate the Build item for the Test Session item
+	        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
+	        		{
+	        			// Get the relationships for the Build item
+	        			Command walk = new Command(Command.IM, "relationships");
+	        			walk.addOption(new Option("fields", testSessionStateField));
+	        			walk.addOption(new Option("traverseFields", testSessionField));
+	        			walk.addSelection(buildItemID);
+	        			Response walkResponse = api.runCommand(walk);
+	        			if( null != walkResponse )
+	        			{
+	        				Field testSessionFld = walkResponse.getWorkItem(buildItemID).getField(testSessionField);
+	        				if( null != testSessionFld && null != testSessionFld.getList() )
+	        				{
+	        					@SuppressWarnings("unchecked")
+	        					List<Item> sessionList = testSessionFld.getList(); 
+	        					for( Item session : sessionList  )
+	        					{
+	        						// Look for the first Test Session in an Active state...
+	        						if( null != session.getField(testSessionStateField) && session.getField(testSessionStateField).getValueAsString().equals(testSessionActiveState) )
+	        						{
+	        							testSessionID = session.getId();
+	        							try { intTestSessionID = Integer.parseInt(testSessionID); }
+	        			        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
+	        							break;
+	        						}
+	        					}
+	        				}
+	        			}	        			
 	        		}
 	        		
-	        	}
-	        	catch(APIException aex)
-	        	{
-	            	Logger.error("API Exception caught...");
-	            	ExceptionHandler eh = new ExceptionHandler(aex);
-	            	Logger.error(eh.getMessage());
-	            	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-	            	throw new Exception(eh.getMessage());
-	        	}
-	        }
-	        catch (Throwable e) 
-	        {
-	        	e.printStackTrace(listener.fatalError(e.getMessage()));
-				Logger.error("Exception caught!  " + e);
-				return false;
+	        		// Update the Test Session with the results from the JUnit tests, if we got a Test Session to work with...
+	        		if( intTestSessionID > 0 )
+	        		{
+	        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
+	        			success = collectTestResults(build.getAggregatedTestResultAction(), listener, api, testSessionID);
+	        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
+	        		}
+        		}
+        		
+        		// Finally, lets update the status of the build, if appropriate
+        		if( intBuildItemID > 0 )
+        		{
+        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
+        			success = editBuildItem(build, listener, api, buildItemID);
+        		}
+        		
+        	}
+        	catch(APIException aex)
+        	{
+            	Logger.error("API Exception caught...");
+            	ExceptionHandler eh = new ExceptionHandler(aex);
+	        	aex.printStackTrace(listener.fatalError(aex.getMessage()));            	
+            	Logger.error(eh.getMessage());
+            	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+            	return false;
 	        }
         	finally
         	{

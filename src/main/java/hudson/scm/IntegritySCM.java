@@ -8,7 +8,6 @@ import hudson.model.BuildListener;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
 
@@ -709,7 +708,6 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
 			{
-				
 				// Make sure we don't have a build project configuration
 				if( ! siProject.isBuild() )
 				{

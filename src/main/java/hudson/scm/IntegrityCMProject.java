@@ -287,13 +287,12 @@ public class IntegrityCMProject implements Serializable
 						insert.setString(6, wi.getId());													// ConfigPath
 						
 						String subProjectRev = "";
-						if (wi.contains("memberrev")) {
+						if (wi.contains("memberrev")) 
+						{
 							subProjectRev = wi.getField("memberrev").getItem().getId();
-						}
-						
+						}						
 						insert.setString(7, subProjectRev);													// Revision
 						insert.setString(8, pjDir);															// RelativeFile
-						
 						insert.executeUpdate();
 						
 					}
@@ -314,6 +313,10 @@ public class IntegrityCMProject implements Serializable
 						String parentProject = wi.getField("parent").getValueAsString();				
 						// Save this member entry
 						String memberName = wi.getField("name").getValueAsString();
+						// Figure out the full member path
+						Logger.debug("Member context: " + wi.getContext());
+						String fullMemberPath = wi.getContext().substring(0, wi.getContext().lastIndexOf('/')+1) + wi.getId();
+						Logger.debug("Member full path: " + fullMemberPath);
 						String description = "";
 						// Per JENKINS-19791 some users are getting an exception when attempting 
 						// to read the 'memberdescription' field in the API response. This is an
@@ -345,7 +348,7 @@ public class IntegrityCMProject implements Serializable
 						insert.setClob(5, new StringReader(description));												// Description
 						insert.setString(6, pjConfigHash.get(parentProject));											// ConfigPath
 						insert.setString(7, wi.getField("memberrev").getItem().getId());								// Revision
-						insert.setString(8, memberName.substring(projectRoot.length()));								// RelativeFile
+						insert.setString(8, fullMemberPath.substring(projectRoot.length()));							// RelativeFile (for workspace)
 						insert.executeUpdate();
 					}
 				}
@@ -660,7 +663,6 @@ public class IntegrityCMProject implements Serializable
 		return projectMembersList;
 	}
 	
-	
 	/**
 	 * Project access function that returns the state of the current project
 	 * NOTE: For maximum efficiency, this should be called only once and after the compareBasline() has been invoked!
@@ -697,8 +699,6 @@ public class IntegrityCMProject implements Serializable
 		
 		return subprojectsList;
 	}
-	
-	
 	
 	/**
 	 * Attempts to fix known issues with characters that can potentially break the change log xml
@@ -884,7 +884,6 @@ public class IntegrityCMProject implements Serializable
 		return api.runCommand(siCheckpoint);
 	}
 	
-	
 	/**
 	 * Applies a Project Label on this Integrity CM Project
 	 * @param api Authenticated Integrity API Session
@@ -1028,22 +1027,21 @@ public class IntegrityCMProject implements Serializable
 		return lastCheckpoint;
 	}
 
-	/** Sets if the project is checkpointed before the build (configuration parameter)
-	 * 
+	/** 
+	 * Sets if the project is checkpointed before the build (configuration parameter) 
 	 * @param checkpointBeforeBuild
 	 */
-	public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild) {
-
-		this.checkpointBeforeBuild = checkpointBeforeBuild;
-		
+	public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild) 
+	{
+		this.checkpointBeforeBuild = checkpointBeforeBuild;	
 	}
 	
-	/** Returns if the project is checkpointed before the build (configuration parameter)
-	 * 
+	/** 
+	 * Returns if the project is checkpointed before the build (configuration parameter) 
 	 * @return
 	 */
-	public boolean getCheckpointBeforeBuild() {
-		
+	public boolean getCheckpointBeforeBuild() 
+	{
 		return checkpointBeforeBuild;
 	}
 }

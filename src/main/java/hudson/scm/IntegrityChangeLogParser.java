@@ -1,7 +1,6 @@
 package hudson.scm;
 
 import hudson.model.AbstractBuild;
-import hudson.util.IOException2;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
 
@@ -66,11 +65,11 @@ public class IntegrityChangeLogParser extends ChangeLogParser
         }
         catch( IOException e ) 
         {
-            throw new IOException2("Failed to parse " + changeLogFile, e);
+            throw new IOException("Failed to parse " + changeLogFile, e);
         } 
         catch( SAXException e ) 
         {
-            throw new IOException2("Failed to parse " + changeLogFile, e);
+            throw new IOException("Failed to parse " + changeLogFile, e);
         }
         		
         // Create a new Integrity Change Log Set populated with a list of Entries...
