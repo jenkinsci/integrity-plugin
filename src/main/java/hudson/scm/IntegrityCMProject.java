@@ -315,41 +315,51 @@ public class IntegrityCMProject implements Serializable
 						String memberName = wi.getField("name").getValueAsString();
 						// Figure out the full member path
 						Logger.debug("Member context: " + wi.getContext());
-						String fullMemberPath = wi.getContext().substring(0, wi.getContext().lastIndexOf('/')+1) + wi.getId();
-						Logger.debug("Member full path: " + fullMemberPath);
-						String description = "";
-						// Per JENKINS-19791 some users are getting an exception when attempting 
-						// to read the 'memberdescription' field in the API response. This is an
-						// attempt to catch the exception and ignore it...!
-						try
+						Logger.debug("Member parent: " + parentProject);
+						Logger.debug("Member name: " + memberName);
+						
+						// Process this member only if we can figure out where to put it in the workspace
+						if( memberName.startsWith(projectRoot) )
 						{
-							if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+							String description = "";
+							// Per JENKINS-19791 some users are getting an exception when attempting 
+							// to read the 'memberdescription' field in the API response. This is an
+							// attempt to catch the exception and ignore it...!
+							try
 							{
-								description = fixDescription(wi.getField("memberdescription").getValueAsString());
+								if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
+								{
+									description = fixDescription(wi.getField("memberdescription").getValueAsString());
+								}
 							}
+							catch( NoSuchElementException e ) 
+							{
+								// Ignore exception
+								Logger.warn("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
+								Logger.info("API Response has the following fields available: ");
+								for( @SuppressWarnings("unchecked")
+								final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext(); )
+								{
+									Field apiField = fieldsIterator.next();
+									Logger.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
+								}
+							}
+							insert.clearParameters();
+							insert.setShort(1, (short)0);																	// Type
+							insert.setString(2, memberName);																// Name
+							insert.setString(3, wi.getId());																// MemberID
+							insert.setTimestamp(4, new Timestamp(wi.getField("membertimestamp").getDateTime().getTime()));	// Timestamp
+							insert.setClob(5, new StringReader(description));												// Description
+							insert.setString(6, pjConfigHash.get(parentProject));											// ConfigPath
+							insert.setString(7, wi.getField("memberrev").getItem().getId());								// Revision 
+							insert.setString(8, memberName.substring(projectRoot.length()));								// RelativeFile (for workspace)
+							insert.executeUpdate();
 						}
-						catch( NoSuchElementException e ) 
+						else
 						{
-							// Ignore exception
-							Logger.warn("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
-							Logger.info("API Response has the following fields available: ");
-							for( @SuppressWarnings("unchecked")
-							final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext(); )
-							{
-								Field apiField = fieldsIterator.next();
-								Logger.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
-							}
+							// Issue warning...
+							Logger.warn("Skipping " + memberName + " it doesn't appear to exist within this project " + projectRoot + "!");
 						}
-						insert.clearParameters();
-						insert.setShort(1, (short)0);																	// Type
-						insert.setString(2, memberName);																// Name
-						insert.setString(3, wi.getId());																// MemberID
-						insert.setTimestamp(4, new Timestamp(wi.getField("membertimestamp").getDateTime().getTime()));	// Timestamp
-						insert.setClob(5, new StringReader(description));												// Description
-						insert.setString(6, pjConfigHash.get(parentProject));											// ConfigPath
-						insert.setString(7, wi.getField("memberrev").getItem().getId());								// Revision
-						insert.setString(8, fullMemberPath.substring(projectRoot.length()));							// RelativeFile (for workspace)
-						insert.executeUpdate();
 					}
 				}
 				else
