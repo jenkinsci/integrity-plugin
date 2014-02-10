@@ -200,6 +200,10 @@ public class APISession
 	 */
 	public void Terminate()
 	{
+		boolean CommandRunnerKilled = false;
+		boolean SessionKilled = false;
+		boolean IntegrationPointKilled = false;
+		
 		// Terminate only if not already terminated!
 		if( ! terminated )
 		{
@@ -211,21 +215,32 @@ public class APISession
 					{
 						icr.interrupt();
 					}
-					icr.release();					
+					icr.release();
+					CommandRunnerKilled = true;
+				}
+				else{
+					CommandRunnerKilled = true;
 				}
 				
+			}
+			catch(APIException aex)
+			{
+			    Logger.debug("Caught API Exception when releasing Command Runner!");
+			    aex.printStackTrace();
+			}
+			
+			//separate try-block to ensure this code is executed even it the previous try-block threw an exception
+			try{
 				if( null != session )
 				{
+					// force the termination of an running comnand
 					session.release(true);
+					SessionKilled = true;
+				}
+				else{
+					SessionKilled = true;
 				}
 	
-				if( null != ip )
-				{
-					ip.release();					
-				}
-				
-				terminated = true;
-				Logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
 			}
 			catch(APIException aex)
 			{
@@ -236,6 +251,21 @@ public class APISession
 			{
 			    Logger.debug("Caught IO Exception when releasing session!");
 			    ioe.printStackTrace();			
+			}
+			
+			
+			if( null != ip )
+			{
+				ip.release();
+				IntegrationPointKilled = true;
+			}
+			else{
+				IntegrationPointKilled = true;
+			}
+				
+			if (CommandRunnerKilled && SessionKilled && IntegrationPointKilled){
+				terminated = true;
+				Logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
 			}
 		}
 	}
