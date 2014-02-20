@@ -200,9 +200,9 @@ public class APISession
 	 */
 	public void Terminate()
 	{
-		boolean CommandRunnerKilled = false;
-		boolean SessionKilled = false;
-		boolean IntegrationPointKilled = false;
+		boolean cmdRunnerKilled = false;
+		boolean sessionKilled = false;
+		boolean intPointKilled = false;
 		
 		// Terminate only if not already terminated!
 		if( ! terminated )
@@ -215,30 +215,34 @@ public class APISession
 					{
 						icr.interrupt();
 					}
+					
 					icr.release();
-					CommandRunnerKilled = true;
+					cmdRunnerKilled = true;
 				}
-				else{
-					CommandRunnerKilled = true;
+				else
+				{
+					cmdRunnerKilled = true;
 				}
 				
 			}
-			catch(APIException aex)
+			catch( APIException aex )
 			{
 			    Logger.debug("Caught API Exception when releasing Command Runner!");
 			    aex.printStackTrace();
 			}
 			
-			//separate try-block to ensure this code is executed even it the previous try-block threw an exception
-			try{
+			// Separate try-block to ensure this code is executed even it the previous try-block threw an exception
+			try
+			{
 				if( null != session )
 				{
-					// force the termination of an running comnand
+					// force the termination of an running command
 					session.release(true);
-					SessionKilled = true;
+					sessionKilled = true;
 				}
-				else{
-					SessionKilled = true;
+				else
+				{
+					sessionKilled = true;
 				}
 	
 			}
@@ -257,15 +261,21 @@ public class APISession
 			if( null != ip )
 			{
 				ip.release();
-				IntegrationPointKilled = true;
+				intPointKilled = true;
 			}
-			else{
-				IntegrationPointKilled = true;
+			else
+			{
+				intPointKilled = true;
 			}
 				
-			if (CommandRunnerKilled && SessionKilled && IntegrationPointKilled){
+			if( cmdRunnerKilled && sessionKilled && intPointKilled )
+			{
 				terminated = true;
 				Logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
+			}
+			else
+			{
+				Logger.warn("Failed to disconnect connection " + userName + "@" + hostName + ":" + port);
 			}
 		}
 	}

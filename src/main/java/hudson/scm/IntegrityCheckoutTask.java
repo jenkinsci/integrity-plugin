@@ -14,6 +14,7 @@ import java.util.List;
 import java.util.Vector;
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -174,8 +175,15 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         protected APISession initialValue() 
         {
         	APISession api = APISession.create(integrityConfig);
-        	sessions.add(api);
-        	return api;
+        	if( null != api )
+        	{
+        		sessions.add(api);
+        		return api;
+        	}
+        	else
+        	{
+        		return null;
+        	}
         }
     }
     
@@ -206,23 +214,42 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             this.calculateChecksum = calculateChecksum;
         }
         
-        public Void call() throws IOException, APIException 
+        public Void call() throws Exception 
         {
             APISession api = apiSession.get();
-            // Check to see if we need to release the APISession to clear some file handles
-            Logger.debug("API open file handles: " + openFileHandler.get() );
-            if( openFileHandler.get() >= CHECKOUT_TRESHOLD  )
+            if( null != api )
             {
-                Logger.debug("Checkout threshold reached for session " + api.toString() + ", refreshing API session");
-                api.refreshAPISession();
-                openFileHandler.set(1);
+            	// Check to see if we need to release the APISession to clear some file handles
+            	Logger.debug("API open file handles: " + openFileHandler.get() );
+            	if( openFileHandler.get() >= CHECKOUT_TRESHOLD  )
+            	{
+            		Logger.debug("Checkout threshold reached for session " + api.toString() + ", refreshing API session");
+            		api.refreshAPISession();
+            		openFileHandler.set(1);
+            	}
+            	Logger.debug("Checkout on API thread: " + api.toString());
+            	try
+            	{
+            		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, targetFile, restoreTimestamp, lineTerminator);
+            	}
+            	catch( APIException aex )
+            	{
+            		Logger.error("API Exception caught...");
+            		ExceptionHandler eh = new ExceptionHandler(aex);
+            		Logger.error(eh.getMessage());
+            		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+            		throw new Exception(eh.getMessage());
+            	}
+            
+            	openFileHandler.set( openFileHandler.get() + 1);
+            	if(calculateChecksum)
+            	{
+            		checksumHash.put(memberName, IntegrityCMMember.getMD5Checksum(targetFile));
+            	}
             }
-            Logger.debug("Checkout on API thread: " + api.toString());
-            IntegrityCMMember.checkout(api, configPath, memberID, memberRev, targetFile, restoreTimestamp, lineTerminator);
-            openFileHandler.set( openFileHandler.get() + 1);
-            if(calculateChecksum)
+            else
             {
-                checksumHash.put(memberName, IntegrityCMMember.getMD5Checksum(targetFile));
+            	throw new Exception("Failed to create APISession!");
             }
             return null;
         }
@@ -306,7 +333,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 						listener.getLogger().println("Failed to clean up workspace file " + targetFile.getAbsolutePath() + "!");
 						return false;
 					}
-				}
+				}				
 			}
 			
             int checkoutMembers = 0;
@@ -319,15 +346,32 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                 Iterator<Future> iter = coThreads.iterator();
                 while (iter.hasNext()) 
                 {
-                    Future<?> future = iter.next();
-                    if(future.isCancelled())
+                    Future<?> future = iter.next();                    
+                    if( future.isCancelled() )
                     {
                         listener.getLogger().println("Checkout thread " + future.toString() + " was cancelled");
                         canceledMembers++;
                         iter.remove();
                     }
-                    else if(future.isDone())
+                    else if( future.isDone() )
                     {
+                    	// Look for the result of this thread's execution...
+                        try 
+                        {
+    						future.get();
+    					} 
+                        catch( ExecutionException e ) 
+                        {
+                    		listener.getLogger().println(e.getMessage());
+                    		Logger.error(e);
+                    		StackTraceElement[] st = e.getStackTrace();
+                    		for( int i = 0; i < st.length; i++ )
+                    		{
+                    			Logger.error("\tat " + st[i].getClassName() + "." + st[i].getMethodName() + "(" + st[i].getFileName() + ":" + st[i].getLineNumber() + ")");
+                    		}                		
+                    		return false;
+    					}
+                        
                         checkoutMembers++;  
                         iter.remove();
                     }
@@ -366,7 +410,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     		listener.getLogger().println(iex.getMessage());
     		listener.getLogger().println("Failed to clean up workspace (" + workspace + ") contents!");
     		return false;			
-		}
+		}	
 		finally
 		{
 		    if( generateAPISession != null )

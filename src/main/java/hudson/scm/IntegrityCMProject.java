@@ -548,6 +548,7 @@ public class IntegrityCMProject implements Serializable
 													rowHash.get(CM_PROJECT.REVISION).toString())); }
 						// Initialize the delta flag for this member
 						rs.updateShort(CM_PROJECT.DELTA.toString(), (short)2);
+						Logger.debug("... " + memberName + " revision changed - new revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
 						changeCount++;
 					}
 					else
@@ -579,6 +580,7 @@ public class IntegrityCMProject implements Serializable
 												rowHash.get(CM_PROJECT.REVISION).toString())); }				
 					// Initialize the delta flag for this member
 					rs.updateShort(CM_PROJECT.DELTA.toString(), (short)1);
+					Logger.debug("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());					
 					changeCount++;
 				}
 				
@@ -612,6 +614,8 @@ public class IntegrityCMProject implements Serializable
 				rs.updateShort(CM_PROJECT.DELTA.toString(), (short)3);
 				rs.insertRow();
 				rs.moveToCurrentRow();
+				
+				Logger.debug("... " + memberName + " file dropped - revision was " + memberInfo.get(CM_PROJECT.REVISION).toString());
 			}
 
 			// Commit changes to the database...

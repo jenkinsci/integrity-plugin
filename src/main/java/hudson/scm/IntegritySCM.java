@@ -863,7 +863,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		// Log the call for now...
 		Logger.debug("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
-        IntegrityCMProject siProject = getIntegrityProject();
+        IntegrityCMProject siProject = null;
         // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
         {
@@ -895,7 +895,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"), resolvedConfigPath);
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
 	        				initializeCMProjectMembers(api);
-	        				
+	        				// Get the current project information after all the cache priming...
+	        				siProject = getIntegrityProject();
 	        				// Obtain the details on the old project configuration
 	            			File projectDB = baseline.getProjectDB();
 	        				// Compare this project with the old project 
@@ -935,7 +936,10 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        		    finally
 	        		    {
 	        				api.Terminate();
-	        				siProject.closeProjectDB();
+	        				if( null != siProject )
+	        				{
+	        					siProject.closeProjectDB();	
+	        				}
 	        		    }
         			}
         			else
