@@ -1,9 +1,11 @@
 package hudson.scm;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
+
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -20,8 +22,11 @@ import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
+
 import org.kohsuke.stapler.StaplerRequest;
+
 import net.sf.json.JSONObject;
+
 import com.mks.api.Command;
 import com.mks.api.MultiValue;
 import com.mks.api.Option;
@@ -32,8 +37,9 @@ import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
 import com.mks.api.util.Base64;
 
-public class IntegrityItemAction extends Notifier implements IntegrityConfigurable
+public class IntegrityItemAction extends Notifier implements Serializable, IntegrityConfigurable
 {
+	private static final long serialVersionUID = 7067049279037277420L;
 	private String host;
 	private int port;
 	private boolean secure;
@@ -481,11 +487,16 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 		// Update Integrity for this Test Case result
 		try
 		{
+			Logger.debug("Attempting to update test result for Integrity Test - " + testCaseID);
 			api.runCommand(editresult);
 		}
 		catch (APIException aex)
 		{
+			Logger.debug("Caught API Exception...");
+			Logger.debug(aex);
+			
 			ExceptionHandler eh = new ExceptionHandler(aex);
+			Logger.debug(eh.getMessage());
 			String message = eh.getMessage();
 			if( message.indexOf("MKS124746") > 0 || (message.indexOf("result for test case") > 0 && message.indexOf("does not exist") > 0) )
 			{
@@ -497,6 +508,10 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 			{
 				throw aex;
 			}
+		}
+		catch (Exception e)
+		{
+			Logger.fatal(e);
 		}
 
     }
@@ -563,6 +578,7 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 	@SuppressWarnings("unchecked")
 	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, List<Item> testCaseList) throws APIException
     {
+		// Look for the specific Tests we're interested in...
 		for( Item test : testCaseList  )
 		{ 
 			Field testCaseIDFld = test.getField(testCaseTestNameField);
@@ -576,12 +592,14 @@ public class IntegrityItemAction extends Notifier implements IntegrityConfigurab
 				if( null != caseResult )
 				{
 					// Execute the edit test result command
+					Logger.debug("Located internal JUnit Test - " + junitTestName);
 					editTestResult(api, (caseResult.isPassed() ? "Test " + caseResult.getId() + " has passed" : caseResult.getErrorDetails()), 
 									(caseResult.isPassed() ? testPassedVerdictName : testFailedVerdictName), testSessionID, test.getId());
 				}
 				else
 				{
 					// Lets mark the Test Result as skipped for this Test Case
+					Logger.warn("Could not locate internal JUnit Test - " + junitTestName);
 					editTestResult(api, "Test " + getJUnitID(testCaseID) + " was not run!", testSkippedVerdictName, testSessionID, test.getId());
 				}
 			}

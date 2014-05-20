@@ -1,6 +1,7 @@
 package hudson.scm;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
@@ -23,8 +24,9 @@ import com.mks.api.util.Base64;
 
 import net.sf.json.JSONObject;
 
-public class IntegrityCheckinAction extends Notifier implements IntegrityConfigurable
+public class IntegrityCheckinAction extends Notifier implements Serializable, IntegrityConfigurable
 {
+	private static final long serialVersionUID = 4647604916824363519L;
 	private String ciConfigPath;
 	private String ciWorkspaceDir;
 	private String includes;

@@ -16,6 +16,7 @@ import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -38,8 +39,9 @@ import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 import com.mks.api.util.Base64;
 
-public class IntegrityCheckpointAction extends Notifier implements IntegrityConfigurable
+public class IntegrityCheckpointAction extends Notifier implements Serializable, IntegrityConfigurable
 {
+	private static final long serialVersionUID = 3344676447487492553L;
 	private String tagName;
 	private final Log logger = LogFactory.getLog(getClass());
 	private String ipHost;

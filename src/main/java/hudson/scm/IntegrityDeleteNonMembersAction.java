@@ -12,15 +12,17 @@ import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 
 import java.io.IOException;
+import java.io.Serializable;
 
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.StaplerRequest;
 
-public class IntegrityDeleteNonMembersAction extends Notifier
+public class IntegrityDeleteNonMembersAction extends Notifier implements Serializable
 {
-
-    @Extension
+	private static final long serialVersionUID = 654691931521381720L;
+	
+	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();
 
 

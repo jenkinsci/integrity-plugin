@@ -43,8 +43,6 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     private int dropCount;
     private int fetchCount;
     private int checkoutThreadPoolSize;
-    
-	
 	
 	/**
 	 * Hudson supports building on distributed machines, and the SCM plugin must 
@@ -368,8 +366,16 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                     		for( int i = 0; i < st.length; i++ )
                     		{
                     			Logger.error("\tat " + st[i].getClassName() + "." + st[i].getMethodName() + "(" + st[i].getFileName() + ":" + st[i].getLineNumber() + ")");
-                    		}                		
-                    		return false;
+                    		}
+                    		
+                    		if( null != e.getMessage() && e.getMessage().indexOf("Unbuffered entity enclosing request can not be repeated") > 0 )
+                    		{
+                    			// ignore...
+                    		}
+                    		else
+                    		{
+                    			return false;
+                    		}
     					}
                         
                         checkoutMembers++;  
