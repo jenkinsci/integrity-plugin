@@ -1,10 +1,11 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 	<f:entry title="Configuration Name" field="configurationName">
-		<f:textbox name="scm.configurationName" value="${it.configurationName}"
+		<f:textbox name="scm.configurationName" value="${instance.getConfigurationName()}"
 			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Configuration Name!'))}&amp;value='+encode(this.value)"/>        
 	</f:entry>
+	
 	<f:entry title="Tag Name" field="tagName">
-    	<j:set var="tagName" value="${it.tagName}"/>
+    	<j:set var="tagName" value="${instance.getTagName()}"/>
     		<j:if test="${instance.getTagName() == null}">
         	<j:set var="tagName" value="${descriptor.getDefaultTagName()}"/>
     	</j:if>
@@ -14,8 +15,8 @@
     <f:advanced>
     
 		<f:entry title="Integrity (CM) Hostname" field="host">
-			<j:set var="host" value="${it.host}"/>
-			<j:if test="${it.getHost() == null}">
+			<j:set var="host" value="${instance.getHost()}"/>
+			<j:if test="${instance.getHost() == null}">
 				<j:set var="host" value="${descriptor.getDefaultHostName()}"/>
 			</j:if>	    		
         	<f:textbox name="mks.host" value="${host}"
@@ -23,8 +24,8 @@
     	</f:entry>
 
     	<f:entry title="Integrity (CM) Port" field="port">
-			<j:set var="port" value="${it.port}"/>
-			<j:if test="${it.getPort() == null}">
+			<j:set var="port" value="${instance.getPort()}"/>
+			<j:if test="${instance.getPort() == null}">
 				<j:set var="port" value="${descriptor.getDefaultPort()}"/>
 			</j:if>	    		    	
         	<f:textbox name="mks.port" value="${port}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>
@@ -32,8 +33,8 @@
     	</f:entry>
 
     	<f:entry title="Integrity (CM) Username" field="userName">
-			<j:set var="userName" value="${it.userName}"/>
-			<j:if test="${it.getUserName() == null}">
+			<j:set var="userName" value="${instance.getUserName()}"/>
+			<j:if test="${instance.getUserName() == null}">
 				<j:set var="userName" value="${descriptor.getDefaultUserName()}"/>
 			</j:if>	    		    	
         	<f:textbox name="mks.userName" value="${userName}"
@@ -41,8 +42,8 @@
     	</f:entry>
 
     	<f:entry title="Integrity (CM) Password" field="password">
-			<j:set var="password" value="${it.password}"/>
-			<j:if test="${it.getPassword() == null}">
+			<j:set var="password" value="${instance.getPassword()}"/>
+			<j:if test="${instance.getPassword() == null}">
 				<j:set var="password" value="${descriptor.getDefaultPassword()}"/>
 			</j:if>	    		    	    	
         	<f:password name="mks.password" value="${password}"
@@ -50,24 +51,24 @@
     	</f:entry>
     
         <f:entry title="Integration Point Server Hostname" field="integrationPointHost">
-			<j:set var="integrationPointHost" value="${it.integrationPointHost}"/>
-			<j:if test="${it.getIntegrationPointHost() == null}">
+			<j:set var="integrationPointHost" value="${instance.getIntegrationPointHost()}"/>
+			<j:if test="${instance.getIntegrationPointHost() == null}">
 				<j:set var="integrationPointHost" value="${descriptor.getDefaultIPHostName()}"/>
 			</j:if>	    		    	        
         	<f:textbox name="mks.integrationPointHost" value="${integrationPointHost}"/>
     	</f:entry>
 
     	<f:entry title="Integration Point Server Port" field="integrationPointPort">
-			<j:set var="integrationPointPort" value="${it.integrationPointPort}"/>
-			<j:if test="${it.getIntegrationPointPort() == null}">
+			<j:set var="integrationPointPort" value="${instance.getIntegrationPointPort()}"/>
+			<j:if test="${instance.getIntegrationPointPort() == null}">
 				<j:set var="integrationPointPort" value="${descriptor.getDefaultIPPort()}"/>
 			</j:if>	    		    	            	
         	<f:textbox name="mks.integrationPointPort" value="${integrationPointPort}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>        
     	</f:entry>
 
         <f:entry title="Use Secure Connection?" field="secure">
-			<j:set var="secure" value="${it.secure}"/>
-			<j:if test="${it.getSecure() == null}">
+			<j:set var="secure" value="${instance.getSecure()}"/>
+			<j:if test="${instance.getSecure() == null}">
 				<j:set var="secure" value="${descriptor.getDefaultSecure()}"/>
 			</j:if>	    		    	            	
             <f:checkbox name="mks.secure" checked="${secure}"/>
