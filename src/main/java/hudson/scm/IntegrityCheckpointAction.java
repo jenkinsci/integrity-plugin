@@ -192,39 +192,47 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
     		{
     			// Get information about the project
     			IntegrityCMProject siProject = IntegritySCM.findProject(getConfigurationName());
-    			// Ensure this is not a build project configuration
-    			if( ! siProject.isBuild() )
+    			if( null != siProject )
     			{
-					// A checkpoint wasn't done before the build, so lets checkpoint this build now...
-    				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, chkptLabel);
-					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
-					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
-					String chkpt = wi.getResult().getField("resultant").getItem().getId();
-					listener.getLogger().println("Successfully checkpointed project " + siProject.getConfigurationPath() + 
-												" with label '" + chkptLabel + "', new revision is " + chkpt);
+	    			// Ensure this is not a build project configuration
+	    			if( ! siProject.isBuild() )
+	    			{
+						// A checkpoint wasn't done before the build, so lets checkpoint this build now...
+	    				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
+	    				Response res = siProject.checkpoint(api, chkptLabel);
+						logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+						WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
+						String chkpt = wi.getResult().getField("resultant").getItem().getId();
+						listener.getLogger().println("Successfully checkpointed project " + siProject.getConfigurationPath() + 
+													" with label '" + chkptLabel + "', new revision is " + chkpt);
+	    			}
+	    			else
+	    			{
+	    				// Check to see if the user has requested a checkpoint before the build
+	    				if( siProject.getCheckpointBeforeBuild() ) 
+	    				{
+	    					// Attach label to 'main' project
+	    					applyProjectLabel(api, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
+	    					
+	    					// Attach label to 'subProjects'
+	    					for (Hashtable<CM_PROJECT, Object> memberInfo: siProject.viewSubProjects()) 
+	    					{
+	    						String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
+	    						String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
+	    						String revision = String.class.cast(memberInfo.get(CM_PROJECT.REVISION));
+	   							applyProjectLabel(api, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
+	    					}
+	    				}
+	    				else
+	    				{
+	    					listener.getLogger().println("Cannot checkpoint a build project configuration: " + siProject.getConfigurationPath() + "!");
+	    				}
+	    			}
     			}
     			else
     			{
-    				// Check to see if the user has requested a checkpoint before the build
-    				if( siProject.getCheckpointBeforeBuild() ) 
-    				{
-    					// Attach label to 'main' project
-    					applyProjectLabel(api, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
-    					
-    					// Attach label to 'subProjects'
-    					for (Hashtable<CM_PROJECT, Object> memberInfo: siProject.viewSubProjects()) 
-    					{
-    						String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
-    						String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
-    						String revision = String.class.cast(memberInfo.get(CM_PROJECT.REVISION));
-   							applyProjectLabel(api, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
-    					}
-    				}
-    				else
-    				{
-    					listener.getLogger().println("Cannot checkpoint a build project configuration: " + siProject.getConfigurationPath() + "!");
-    				}
+    				logger.error("Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'");    				
+					listener.getLogger().println("ERROR: Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'!");    				
     			}
     		}
     		catch( APIException aex )
