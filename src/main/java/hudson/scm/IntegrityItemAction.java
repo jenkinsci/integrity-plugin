@@ -749,7 +749,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
         		}
         		
         		// Figure out if we need to do anything with the Test Results of this build...
-        		AbstractTestResultAction<?> testResult = build.getTestResultAction();
+        		AbstractTestResultAction<?> testResult = build.getAction(AbstractTestResultAction.class);
         		if( null != testResult && testResult.getTotalCount() > 0 )
         		{	        			
 	        		// Figure out if we need to interrogate the Build item for the Test Session item
@@ -787,7 +787,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        		if( intTestSessionID > 0 )
 	        		{
 	        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
-	        			success = collectTestResults(build.getAggregatedTestResultAction(), listener, api, testSessionID);
+	        			success = collectTestResults(build.getAction(AggregatedTestResultAction.class), listener, api, testSessionID);
 	        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
 	        		}
         		}
