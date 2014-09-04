@@ -175,11 +175,12 @@ public class IntegrityCheckinAction extends Notifier implements Serializable, In
 
 	/**
 	 * Toggles whether or not this needs to run after build is finalized
+	 * Returning false, so that a check-in failure will cause a failed build
 	 */
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**
