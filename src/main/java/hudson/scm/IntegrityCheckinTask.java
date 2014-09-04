@@ -56,6 +56,12 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
     	// Return the generated CP ID
     	String cpid = ":none";
 
+		// Check to see if the Item ID contains the magic keyword
+		if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
+		{
+			return ":bypass";
+		}
+    	
     	// First figure out what Integrity Item to use for the Change Package
     	try
     	{
