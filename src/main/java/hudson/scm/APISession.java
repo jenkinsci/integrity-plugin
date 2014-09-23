@@ -118,16 +118,27 @@ public class APISession
 		if( null != icr )
 		{
 			icr.interrupt();
-			icr.release();
+			try
+			{
+				icr.release();
+			}
+			catch(IOException ioe)
+			{
+		    		Logger.debug("Caught IO Exception when terminating the previous command runner! There was a problem communicating with the IntegrationPoint.");
+		    		ioe.printStackTrace();			
+			}
+			Logger.debug("Successfully terminated the previous command runner");
 		}
+		
 		icr = session.createCmdRunner();
 		icr.setDefaultHostname(hostName);
 		icr.setDefaultPort(port);
 		icr.setDefaultUsername(userName);
 		icr.setDefaultPassword(password);
-	    Response res = icr.executeWithInterim(cmd, false);
-	    Logger.debug("Executed " + res.getCommandString() + " with interim");
-	    return res;
+	    	
+	    	Response res = icr.executeWithInterim(cmd, false);
+	    	Logger.debug("Executed " + res.getCommandString() + " with interim");
+	    	return res;
 	}
 	
 	/**
