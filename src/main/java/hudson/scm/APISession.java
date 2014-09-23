@@ -110,8 +110,12 @@ public class APISession
 	    	return res;
 	}
 	
-	
-	private void saveRelease(CmdRunner cmdRunner){
+	/**
+	 * This function handles the rare IOEceptions thrown by the CmdRunner.release() method, any other APIException is thrown back to the caller
+	 * @param cmdRunner a Integrity API CmdRunner object to release
+	 * @throws APIException
+	 */
+	private void saveRelease(CmdRunner cmdRunner) throws APIException {
 		try	
 		{
 			cmdRunner.release();
