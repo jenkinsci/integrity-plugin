@@ -83,7 +83,9 @@ public class APISession
         Response res = cmdRunner.execute(ping);
         Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
         // Initialize class variables
-        cmdRunner.release();
+        
+        saveRelease(cmdRunner);
+        
         Logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port); 
 	}
 	
@@ -95,15 +97,30 @@ public class APISession
 	 */
 	public Response runCommand(Command cmd) throws APIException
 	{
-	    CmdRunner cmdRunner = session.createCmdRunner();
-	    cmdRunner.setDefaultHostname(hostName);
-	    cmdRunner.setDefaultPort(port);
-	    cmdRunner.setDefaultUsername(userName);
-	    cmdRunner.setDefaultPassword(password);
-	    Response res = cmdRunner.execute(cmd);
-	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());	    
-	    cmdRunner.release();
-	    return res;
+		CmdRunner cmdRunner = session.createCmdRunner();
+		cmdRunner.setDefaultHostname(hostName);
+		cmdRunner.setDefaultPort(port);
+		cmdRunner.setDefaultUsername(userName);
+		cmdRunner.setDefaultPassword(password);
+		Response res = cmdRunner.execute(cmd);
+		Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());	 
+
+		saveRelease(cmdRunner);
+		
+	    	return res;
+	}
+	
+	
+	private void saveRelease(CmdRunner cmdRunner){
+		try	
+		{
+			cmdRunner.release();
+		}
+		catch(IOException ioe)
+		{
+	    		Logger.debug("Caught IO Exception when releasing a command runner! There was a problem communicating with the IntegrationPoint.");
+	    		ioe.printStackTrace();			
+		}
 	}
 	
 	/**
@@ -118,15 +135,7 @@ public class APISession
 		if( null != icr )
 		{
 			icr.interrupt();
-			try
-			{
-				icr.release();
-			}
-			catch(IOException ioe)
-			{
-		    		Logger.debug("Caught IO Exception when terminating the previous command runner! There was a problem communicating with the IntegrationPoint.");
-		    		ioe.printStackTrace();			
-			}
+			saveRelease(icr);
 			Logger.debug("Successfully terminated the previous command runner");
 		}
 		
@@ -158,7 +167,9 @@ public class APISession
 	    cmdRunner.setDefaultImpersonationUser(impersonateUser);
 	    Response res = cmdRunner.execute(cmd);
 	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
-	    cmdRunner.release();
+	    
+	    saveRelease(cmdRunner);
+	    
 	    return res;
 	}
 	
@@ -181,7 +192,7 @@ public class APISession
 				if( null != icr )
 				{
 					icr.interrupt();
-					icr.release();
+					saveRelease(icr);
 				}
 				
 				if( null != session )
