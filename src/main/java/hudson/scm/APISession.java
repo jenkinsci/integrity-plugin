@@ -230,6 +230,11 @@ public class APISession
 			    Logger.debug("Caught API Exception when releasing Command Runner!");
 			    aex.printStackTrace();
 			}
+			catch( Exception ex )
+			{
+				Logger.debug("Caught Exception when releasing Command Runner!");
+				ex.printStackTrace();							
+			}
 			
 			// Separate try-block to ensure this code is executed even it the previous try-block threw an exception
 			try
