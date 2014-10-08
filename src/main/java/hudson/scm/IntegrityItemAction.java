@@ -5,6 +5,7 @@ import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
 
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
@@ -576,12 +577,26 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
      * @throws APIException
      */
 	@SuppressWarnings("unchecked")
-	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, List<Item> testCaseList) throws APIException
+	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, Response walkResponse, List<Item> testCaseList) throws APIException
     {
 		// Look for the specific Tests we're interested in...
 		for( Item test : testCaseList  )
 		{ 
-			Field testCaseIDFld = test.getField(testCaseTestNameField);
+			Field testCaseIDFld = null;
+			Field containsFld = null;
+			try
+			{
+				// This should work on a 10.5 and prior...
+				testCaseIDFld = test.getField(testCaseTestNameField);
+				containsFld = test.getField(testSuiteContainsField);
+			}
+			catch( NoSuchElementException nsee )
+			{
+				// 10.6 and beyond...
+				testCaseIDFld = walkResponse.getWorkItem(test.getId()).getField(testCaseTestNameField);
+				containsFld = walkResponse.getWorkItem(test.getId()).getField(testSuiteContainsField);
+			}
+			
 			if( null != testCaseIDFld && null != testCaseIDFld.getValueAsString() )
 			{
 				String testCaseID = testCaseIDFld.getValueAsString();
@@ -605,10 +620,9 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			}
 			
 			// Process the next level of Test Cases
-			Field containsFld = test.getField(testSuiteContainsField);
 			if( null != containsFld && null != containsFld.getList() )
 			{
-				updateTestResult(testResult, listener, api, testSessionID, containsFld.getList());
+				updateTestResult(testResult, listener, api, testSessionID, walkResponse, containsFld.getList());
 			}
 		}
     }
@@ -670,7 +684,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			Field testSessionFld = walkResponse.getWorkItem(testSessionID).getField(testSessionTestsField);
 			if( null != testSessionFld && null != testSessionFld.getList() )
 			{
-				updateTestResult(getTestResult(testResultAction), listener, api, testSessionID, testSessionFld.getList()); 
+				updateTestResult(getTestResult(testResultAction), listener, api, testSessionID, walkResponse, testSessionFld.getList()); 
 			}
 		}				
 		
@@ -771,13 +785,25 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	        					for( Item session : sessionList  )
 	        					{
 	        						// Look for the first Test Session in an Active state...
-	        						if( null != session.getField(testSessionStateField) && session.getField(testSessionStateField).getValueAsString().equals(testSessionActiveState) )
+	        						Field stateField = null;
+	        						try
 	        						{
-	        							testSessionID = session.getId();
-	        							try { intTestSessionID = Integer.parseInt(testSessionID); }
-	        			        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
-	        							break;
+	        							// This should work on a 10.5 and prior...
+	        							stateField = session.getField(testSessionStateField);
 	        						}
+	        						catch( NoSuchElementException nsee )
+	        						{
+	        							// 10.6 and beyond...
+	        							stateField = walkResponse.getWorkItem(session.getId()).getField(testSessionStateField);
+	        						}
+	        						
+        							if( null != stateField && testSessionActiveState.equals(stateField.getValueAsString()) )
+        							{
+        								testSessionID = session.getId();
+        								try { intTestSessionID = Integer.parseInt(testSessionID); }
+        								catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
+        								break;
+        							}	        						
 	        					}
 	        				}
 	        			}	        			
