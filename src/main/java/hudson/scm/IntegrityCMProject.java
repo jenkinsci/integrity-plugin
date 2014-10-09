@@ -344,15 +344,34 @@ public class IntegrityCMProject implements Serializable
 									Logger.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
 								}
 							}
+							
+							Date timestamp = new Date();
+							// Per JENKINS-25068 some users are getting a null pointer exception when attempting 
+							// to read the 'membertimestamp' field in the API response. This is an attempt to work around it!							
+							try
+							{
+								Field timeFld = wi.getField("membertimestamp");
+								if( null != timeFld && null != timeFld.getDateTime() )
+								{
+									timestamp = timeFld.getDateTime();
+								}
+							}
+							catch( Exception e )
+							{
+								// Ignore exception
+								Logger.warn("Cannot obtain the value for 'membertimestamp' in API response for member: "+ memberName);
+								Logger.warn("Defaulting 'membertimestamp' to now - " + timestamp);
+							}
+							
 							insert.clearParameters();
-							insert.setShort(1, (short)0);																	// Type
-							insert.setString(2, memberName);																// Name
-							insert.setString(3, wi.getId());																// MemberID
-							insert.setTimestamp(4, new Timestamp(wi.getField("membertimestamp").getDateTime().getTime()));	// Timestamp
-							insert.setClob(5, new StringReader(description));												// Description
-							insert.setString(6, pjConfigHash.get(parentProject));											// ConfigPath
-							insert.setString(7, wi.getField("memberrev").getItem().getId());								// Revision 
-							insert.setString(8, memberName.substring(projectRoot.length()));								// RelativeFile (for workspace)
+							insert.setShort(1, (short)0);										// Type
+							insert.setString(2, memberName);									// Name
+							insert.setString(3, wi.getId());									// MemberID
+							insert.setTimestamp(4, new Timestamp(timestamp.getTime()));			// Timestamp
+							insert.setClob(5, new StringReader(description));					// Description
+							insert.setString(6, pjConfigHash.get(parentProject));				// ConfigPath
+							insert.setString(7, wi.getField("memberrev").getItem().getId());	// Revision 
+							insert.setString(8, memberName.substring(projectRoot.length()));	// RelativeFile (for workspace)
 							insert.executeUpdate();
 						}
 						else
