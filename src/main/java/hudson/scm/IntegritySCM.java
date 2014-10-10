@@ -1237,7 +1237,11 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	     */        
 	    public void setDefaultPassword(String defaultPassword)
 	    {
-	    	if( defaultPassword.indexOf(APISession.ENC_PREFIX) == 0 )
+	    	if (defaultPassword == null)
+            {
+                this.defaultPassword = "";
+            }
+            else if( defaultPassword.indexOf(APISession.ENC_PREFIX) == 0 )
 	    	{
 	    		this.defaultPassword = Base64.encode(Base64.decode(defaultPassword.substring(APISession.ENC_PREFIX.length())));
 	    	}
