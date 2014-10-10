@@ -3,3 +3,5 @@ project.pj
 /target/
 release.txt
 executeBuild.js
+.idea/
+.iml
