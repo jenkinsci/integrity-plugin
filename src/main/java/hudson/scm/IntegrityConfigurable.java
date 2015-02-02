@@ -1,84 +1,195 @@
 package hudson.scm;
 
-public interface IntegrityConfigurable {
+import java.io.Serializable;
+import hudson.util.Secret;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+public final class IntegrityConfigurable implements Serializable 
+{
+	private static final long serialVersionUID = 3627193531372714191L;
+	private String name;
+	private String ipHostName;
+	private int ipPort = 0;
+	private String hostName;
+	private int port;
+	private boolean secure;
+	private String userName;
+	private Secret password;
+
+	@DataBoundConstructor
+	public IntegrityConfigurable(String ipHostName, int ipPort, String hostName, int port, boolean secure, String userName, String password) 
+	{
+		this.ipHostName = ipHostName;
+		this.ipPort = ipPort;
+		this.hostName = hostName;
+		this.port = port;
+		this.userName = userName;
+		this.password = Secret.fromString(password);
+		this.name = String.format("%s@%s:%d", userName, hostName, port);
+	}
+
     /**
-     * Returns the Integration Point host name of the API Session
+     * Returns the Integration Point host name for the connection
      * @return
      */
-	public String getIntegrationPointHost();
+	public String getIpHostName()
+	{
+		return this.ipHostName;
+	}
+	
 	/**
      * Sets the Integration Point host name of the API Session
      * @return
      */
-	public void setIntegrationPointHost(String host);
+	public void setIpHostName(String ipHostName)
+	{
+		this.ipHostName = ipHostName;
+	}
+	
 	/**
      * Returns the Integration Point port of the API Session
      * @return
      */    
-	public int getIntegrationPointPort();
+	public int getIpPort()
+	{
+		return ipPort;
+	}
+	
 	/**
      * Sets the Integration Point port of the API Session
      * @return
      */    
-	public void setIntegrationPointPort(int port);	
+	public void setIpPort(int ipPort)
+	{
+		this.ipPort = ipPort;
+	}
+	
 	/**
      * Returns the host name of the Integrity Server
      * @return
      */
-	public String getHost();
+	public String getHostName()
+	{
+		return this.hostName;
+	}
+	
 	/**
      * Sets the host name of the Integrity Server
      * @return
      */
-	public void setHost(String host);
+	public void setHostName(String hostName)
+	{
+		this.hostName = hostName;
+	}
+	
 	/**
      * Returns the port of the Integrity Server
      * @return
      */    
-	public int getPort();
+	public int getPort()
+	{
+		return this.port;
+	}
+	
 	/**
      * Sets the port of the Integrity Server
      * @return
      */  
-	public void setPort(int port);
+	public void setPort(int port)
+	{
+		this.port = port;
+	}
+	
 	/**
      * Returns the User connecting to the Integrity Server
      * @return
      */
-	public String getUserName();
+	public String getUserName()
+	{
+		return this.userName;
+	}
+	
 	/**
      * Sets the User connecting to the Integrity Server
      * @return
      */
-	public void setUserName(String username);
+	public void setUserName(String userName)
+	{
+		this.userName = userName;
+	}
+	
 	 /**
      * Returns the encrypted password of the user connecting to the Integrity Server
      * @return
      */
-	public String getPassword();
+	public String getPassword()
+	{
+		return this.password.getEncryptedValue();
+	}
+	
+	/**
+	 * Returns the password (plain text) of the user connecting to the Integrity Server 
+	 * @return
+	 */
+	public String getPasswordInPlainText()
+	{
+		return password.getPlainText();
+	}
+	
 	/**
      * Sets the encrypted Password of the user connecting to the Integrity Server
      * @param password - The clear password
      */
-	public void setPassword(String password);
+	public void setPassword(String password)
+	{
+		this.password = Secret.fromString(password);
+	}
+	
 	/**
      * Returns true/false depending on secure sockets are enabled
      * @return
      */       
-	public boolean getSecure();
+	public boolean getSecure()
+	{
+		return this.secure;
+	}
+	
 	/**
      * Toggles whether or not secure sockets are enabled
      * @return
      */      
-	public void setSecure(boolean secure);
+	public void setSecure(boolean secure)
+	{
+		this.secure = secure;
+	}
+	
 	/**
-     * Returns The Integrity Configuration Name
-     * @return
-     */     
-	public String getConfigurationName();
+	 * Returns the simple name for this Integrity Configuration
+	 * @return
+	 */
+	public String getName()
+	{
+		this.name = String.format("%s@%s:%d", userName, hostName, port);
+		return this.name;
+	}
+	
 	/**
-     * Sets the Integrity Configuration Name
-     * @param configurationName
-     */
-	public void setConfigurationName(String configurationName);
+	 * Overridden equality function to safeguard from duplicate connections
+	 */
+	@Override
+	public boolean equals(Object o)
+	{
+		if( o instanceof IntegrityConfigurable )
+		{
+			return ((IntegrityConfigurable)o).getHostName().equals(hostName) &&
+					((IntegrityConfigurable)o).getPort() == port && 
+					((IntegrityConfigurable)o).getUserName().equals(userName) &&
+					((IntegrityConfigurable)o).getPasswordInPlainText().equals(password.getPlainText());
+							
+		}
+		else
+		{
+			return false;
+		}
+	}
 }

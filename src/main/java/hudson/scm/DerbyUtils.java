@@ -13,6 +13,8 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.Hashtable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import org.apache.commons.io.IOUtils;
 
@@ -21,6 +23,7 @@ import org.apache.commons.io.IOUtils;
  */
 public class DerbyUtils 
 {
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	public static final String DERBY_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
 	public static final String DERBY_SYS_HOME_PROPERTY = "derby.system.home";
 	public static final String DERBY_URL_PREFIX = "jdbc:derby:";
@@ -113,14 +116,14 @@ public class DerbyUtils
 	{
 	    try 
 	    {
-	    	Logger.debug("Loading derby driver: " + DERBY_DRIVER);
+	    	LOGGER.fine("Loading derby driver: " + DERBY_DRIVER);
 	        Class.forName(DERBY_DRIVER);
 	    }
 	    catch( ClassNotFoundException ex ) 
 	    {
-	    	Logger.error("Failed to load derby driver: " + DERBY_DRIVER);
-	    	Logger.error(ex.getMessage());
-	    	Logger.fatal(ex);
+	    	LOGGER.severe("Failed to load derby driver: " + DERBY_DRIVER);
+	    	LOGGER.severe(ex.getMessage());
+	    	LOGGER.log(Level.SEVERE, "ClassNotFoundException", ex);
 	    }
 	}
 
@@ -133,7 +136,7 @@ public class DerbyUtils
 	public static Connection createDBConnection(File path, String DBName) throws SQLException
 	{
 		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_CREATE_URL_SUFFIX, DBName);
-		Logger.debug("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
+		LOGGER.fine("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
 	    return DriverManager.getConnection(dbUrl);
 	}
 
@@ -146,7 +149,7 @@ public class DerbyUtils
 		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_SHUTDOWN_URL_SUFFIX, DBName);
 		try 
 		{
-			Logger.debug("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
+			LOGGER.fine("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
 		    Connection db = DriverManager.getConnection(dbUrl);
 		    db.close();
 		}
@@ -154,17 +157,17 @@ public class DerbyUtils
 		{
 			if(sqle.getErrorCode() == 45000 && sqle.getSQLState().equals("08006"))
 			{
-				Logger.error("Database shutdown successful!");
+				LOGGER.severe("Database shutdown successful!");
 			}
 			else
 			{
 				
-				Logger.error("Failed to shutdown database connection! ");
-				Logger.error("SQL Error Code: " + sqle.getErrorCode());
-				Logger.error("SQL Error State: " + sqle.getSQLState());
+				LOGGER.severe("Failed to shutdown database connection! ");
+				LOGGER.severe("SQL Error Code: " + sqle.getErrorCode());
+				LOGGER.severe("SQL Error State: " + sqle.getSQLState());
 
-				Logger.error(sqle.getMessage());
-				Logger.fatal(sqle);
+				LOGGER.severe(sqle.getMessage());
+				LOGGER.log(Level.SEVERE, "SQLException", sqle);
 			}
 		}		
 	}
@@ -189,7 +192,7 @@ public class DerbyUtils
 		tablesDropped = dropTable.execute(DROP_PROJECT_TABLE);
 		dropTable.close();
 		
-		Logger.debug("Prior Integrity SCM cache tables successfully dropped!");		
+		LOGGER.fine("Prior Integrity SCM cache tables successfully dropped!");		
 		return tablesDropped;
 	}
 	
@@ -213,7 +216,7 @@ public class DerbyUtils
 		tablesCreated = createIndex.execute(CREATE_NAME_INDEX);
 		createIndex.close();
 		
-		Logger.debug("New Integrity SCM cache tables successfully created!");
+		LOGGER.fine("New Integrity SCM cache tables successfully created!");
 		return tablesCreated;
 		
 	}
@@ -234,33 +237,33 @@ public class DerbyUtils
 			{
 				try
 				{
-					Logger.debug("A prior set of Integrity SCM cache tables detected, dropping...");
+					LOGGER.fine("A prior set of Integrity SCM cache tables detected, dropping...");
 					// Close the select statement, so that we can drop the table
 					select.close();
 					tablesCreated = dropTables(db);
-					Logger.debug("Recreating a fresh set of Integrity SCM cache tables...");
+					LOGGER.fine("Recreating a fresh set of Integrity SCM cache tables...");
 					tablesCreated = createTables(db);
 				}
 				catch( SQLException ex )
 				{
-					Logger.error("Failed to create Integrity SCM cache tables!");
-					Logger.fatal(ex);
+					LOGGER.severe("Failed to create Integrity SCM cache tables!");
+					LOGGER.log(Level.SEVERE, "SQLException", ex);
 					tablesCreated = false;
 				}
 			}
 		} 
 		catch( SQLException ex ) 
 		{
-			Logger.debug(ex.getMessage());
+			LOGGER.fine(ex.getMessage());
 			try
 			{
-				Logger.debug("Integrity SCM cache tables do not exist, creating...");				
+				LOGGER.fine("Integrity SCM cache tables do not exist, creating...");				
 				tablesCreated = createTables(db);
 			}
 			catch( SQLException sqlex )
 			{
-				Logger.error("Failed to create Integrity SCM cache tables!");
-				Logger.fatal(sqlex);
+				LOGGER.severe("Failed to create Integrity SCM cache tables!");
+				LOGGER.log(Level.SEVERE, "SQLException", sqlex);
 				tablesCreated = false;
 			}
 		}
@@ -274,8 +277,8 @@ public class DerbyUtils
 				} 
 				catch( SQLException ex )
 				{
-					Logger.error(ex.getMessage());
-					Logger.fatal(ex);
+					LOGGER.severe(ex.getMessage());
+					LOGGER.log(Level.SEVERE, "SQLException", ex);
 					tablesCreated = false;
 				}
 			}
@@ -446,7 +449,7 @@ public class DerbyUtils
 	        if( ! projectDB.isDirectory() )
 	        {
 	        	// There is no project state for this build!
-	        	Logger.debug("Integrity SCM Project DB not found for build " + build.getNumber() + "!");
+	        	LOGGER.fine("Integrity SCM Project DB not found for build " + build.getNumber() + "!");
 	        }
     	}
     	return projectDB;

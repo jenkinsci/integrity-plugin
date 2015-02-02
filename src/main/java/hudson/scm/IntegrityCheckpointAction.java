@@ -14,6 +14,7 @@ import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -21,6 +22,8 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 
@@ -37,37 +40,25 @@ import org.kohsuke.stapler.StaplerRequest;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
-import com.mks.api.util.Base64;
 
-public class IntegrityCheckpointAction extends Notifier implements Serializable, IntegrityConfigurable
+
+public class IntegrityCheckpointAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 3344676447487492553L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private String tagName;
 	private final Log logger = LogFactory.getLog(getClass());
-	private String ipHost;
-	private int ipPort;
-	private String host;
-	private int port;
-	private String userName;
-	private String password;
-	private boolean secure;
+	private String serverConfig;
 	private String configurationName;
 	
 	@Extension
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
 	@DataBoundConstructor
-	public IntegrityCheckpointAction(String tagName, String integrationPointHost, int integrationPointPort, String host,
-			int port, String userName, String password, boolean secure, String configurationName)
+	public IntegrityCheckpointAction(String tagName, String serverConfig, String configurationName)
 	{
 		setTagName(tagName);
-		setIntegrationPointHost(integrationPointHost);
-		setIntegrationPointPort(integrationPointPort);
-		setHost(host);
-		setPort(port);
-		setUserName(userName);
-		setPassword(password);
-		setSecure(secure);
+		setServerConfig(serverConfig);
 		setConfigurationName(configurationName);
 	}
 	
@@ -150,6 +141,42 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 	}
 	
 	/**
+	 * Returns the simple server configuration name
+	 * @return
+	 */
+	public String getServerConfig() 
+	{
+		return serverConfig;
+	}
+	
+	/**
+	 * Sets the simple server configuration name
+	 * @param serverConfig
+	 */
+	public void setServerConfig(String serverConfig) 
+	{
+		this.serverConfig = serverConfig;
+	}
+	
+	/**
+	 * Sets the build configuration name for this project
+	 * @return
+	 */
+	public String getConfigurationName() 
+	{
+		return configurationName;
+	}
+	
+	/**
+	 * Returns the build configuration name for this project
+	 * @param configurationName
+	 */
+	public void setConfigurationName(String configurationName) 
+	{
+		this.configurationName = configurationName;
+	}
+	
+	/**
 	 * Applies a project label to a project or subproject
 	 * @param api Integrity API Session wrapper
 	 * @param listener Jenkins build listener
@@ -182,7 +209,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 			return true;
 		}
 		
-		APISession api = APISession.create(this);
+		APISession api = APISession.create(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
 		if( null != api )
 		{
 			// Evaluate the groovy tag name
@@ -231,25 +258,25 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
     			}
     			else
     			{
-    				logger.error("Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'");    				
+    				LOGGER.severe("Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'");    				
 					listener.getLogger().println("ERROR: Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'!");    				
     			}
     		}
     		catch( APIException aex )
     		{
-        		logger.error("API Exception caught...");
+        		LOGGER.severe("API Exception caught...");
         		ExceptionHandler eh = new ExceptionHandler(aex);
         		aex.printStackTrace(listener.fatalError(eh.getMessage()));
-        		logger.error(eh.getMessage());
-        		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+        		LOGGER.severe(eh.getMessage());
+        		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
         		return false;
     		}
     		catch( SQLException sqlex )
     		{
-		    	Logger.error("SQL Exception caught...");
+		    	LOGGER.severe("SQL Exception caught...");
 	    		listener.getLogger().println("A SQL Exception was caught!"); 
 	    		listener.getLogger().println(sqlex.getMessage());
-	    		Logger.fatal(sqlex);
+	    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
 	    		return false;			
     		}
     		finally
@@ -260,7 +287,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 		}
 		else
 		{
-			logger.error("An API Session could not be established!  Cannot perform checkpoint operation!");
+			LOGGER.severe("An API Session could not be established!  Cannot perform checkpoint operation!");
 			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation!");
 			return false;
 		}
@@ -301,24 +328,22 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 	 */
     public static class IntegrityCheckpointDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private static Log desLogger = LogFactory.getLog(IntegrityCheckpointDescriptorImpl.class);
 		private String defaultTagName;
-		private DescriptorImpl defaults;
+
     	public IntegrityCheckpointDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityCheckpointAction.class);
-			defaults = IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR;
     		this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
 			load();    		
-        	desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
+        	LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
 			IntegrityCheckpointAction chkptAction = (IntegrityCheckpointAction) super.newInstance(req, formData);
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
 			return chkptAction;
 		}    	
     	
@@ -333,54 +358,29 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 		{
 			this.defaultTagName = req.getParameter("tagName");
 			save();
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
+		{
+			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
+		}
+		
 		public String getDefaultTagName()
 		{
 			return defaultTagName;
-		}
-
-		public int getDefaultPort()
-		{
-			return defaults.getDefaultPort();
-		}
-		
-		public String getDefaultHostName()
-		{
-			return defaults.getDefaultHostName();
-		}
-		
-		public boolean getDeafultSecure()
-		{
-			return defaults.getDefaultSecure();
-		}
-		
-		public String getDefaultPassword()
-		{
-			return defaults.getDefaultPassword();
-		}
-		
-		public String getDefaultUserName()
-		{
-			return defaults.getDefaultUserName();
-		}
-		
-		public String getDefaultIPHostName()
-		{
-			return defaults.getDefaultIPHostName();
-		}
-		
-		public int getDefaultIPPort()
-		{
-			return defaults.getDefaultIPPort();
 		}
 		
 		public void setDefaultTagName(String defaultTagName)
@@ -418,92 +418,5 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable,
 			}
 			return FormValidation.ok();
 		}
-    }	
-
-	public String getIntegrationPointHost() 
-	{
-		return this.ipHost;
-	}
-
-	public void setIntegrationPointHost(String host) 
-	{
-		this.ipHost = host;
-	}
-
-	public int getIntegrationPointPort() 
-	{
-		return this.ipPort;
-	}
-
-	public void setIntegrationPointPort(int port) 
-	{
-		this.ipPort = port;
-	}
-
-	public String getHost() 
-	{
-		return this.host;
-	}
-
-	public void setHost(String host) 
-	{
-		this.host = host;
-	}
-
-	public int getPort() 
-	{
-		return this.port;
-	}
-
-	public void setPort(int port) 
-	{
-		this.port = port;
-	}
-
-	public String getUserName() 
-	{
-		return this.userName;
-	}
-
-	public void setUserName(String username) 
-	{
-		this.userName = username;
-	}
-
-	public String getPassword() 
-	{
-    	return APISession.ENC_PREFIX + password;
-	}
-
-	public void setPassword(String password) 
-	{
-    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
-    	{
-    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
-    	}
-    	else
-    	{
-    		this.password = Base64.encode(password);
-    	}
-	}
-
-	public boolean getSecure() 
-	{
-		return this.secure;
-	}
-
-	public void setSecure(boolean secure) 
-	{
-		this.secure = secure;
-	}
-	
-	public String getConfigurationName() 
-	{
-		return configurationName;
-	}
-	
-	public void setConfigurationName(String configurationName) 
-	{
-		this.configurationName = configurationName;
-	}
+    }
 }

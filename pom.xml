@@ -50,7 +50,7 @@
    	<dependency>
   		<groupId>com.mks.api</groupId>
   		<artifactId>mksapi-jar</artifactId>
-  		<version>4.11.3238</version>
+  		<version>4.13.5479</version>
   		<scope>compile</scope>
    	</dependency>
   </dependencies>

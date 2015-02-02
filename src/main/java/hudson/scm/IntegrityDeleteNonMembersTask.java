@@ -6,6 +6,8 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
@@ -18,6 +20,7 @@ import hudson.remoting.VirtualChannel;
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean> 
 {
     private static final long serialVersionUID = 6452098989064436149L;
+    private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
     private final BuildListener listener;
     private final AbstractBuild<?, ?> build;
     private String alternateWorkspaceDir;
@@ -49,7 +52,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         {
             listener.getLogger().println("A SQL Exception was caught!"); 
             listener.getLogger().println(e.getMessage());
-            Logger.fatal(e);
+            LOGGER.log(Level.SEVERE, "SQLException", e);
             return false;       
         }
         return true;
@@ -95,7 +98,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         for (Hashtable<CM_PROJECT, Object> memberInfo : projectMembersList)
         {
             File targetFile = new File(workspace + memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
-            Logger.debug("Project Member: " + targetFile.getAbsolutePath());
+            LOGGER.fine("Project Member: " + targetFile.getAbsolutePath());
             projectMembers.add(new FilePath(targetFile));
         }
         
@@ -104,7 +107,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         for( String folder:folderList )
         {
             File targetFile = new File(workspace + folder);
-            Logger.debug("Project Folder: " + targetFile.getAbsolutePath());
+            LOGGER.fine("Project Folder: " + targetFile.getAbsolutePath());
             projectMembers.add(new FilePath(targetFile));
         }
         
@@ -126,7 +129,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         List<FilePath> workspaceMembers = workspaceFolder.list();
         for( FilePath workspaceMember:workspaceMembers )
         {
-            Logger.debug("Workspace Member: " + workspaceMember);
+            LOGGER.fine("Workspace Member: " + workspaceMember);
             if( workspaceMember.exists() && !projectMembers.contains(workspaceMember) )
             {     
                 if( workspaceMember.isDirectory() )

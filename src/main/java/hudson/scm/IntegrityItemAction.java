@@ -6,7 +6,10 @@ import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
@@ -23,7 +26,9 @@ import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
+import hudson.util.ListBoxModel;
 
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import net.sf.json.JSONObject;
@@ -36,16 +41,12 @@ import com.mks.api.response.Field;
 import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
-import com.mks.api.util.Base64;
 
-public class IntegrityItemAction extends Notifier implements Serializable, IntegrityConfigurable
+public class IntegrityItemAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 7067049279037277420L;
-	private String host;
-	private int port;
-	private boolean secure;
-    private String userName;
-    private String password;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private String serverConfig;
 	private String queryDefinition;
 	private String stateField;
 	private String successValue;
@@ -64,29 +65,13 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	@Extension
 	public static final IntegrityItemDescriptorImpl ITEM_DESCRIPTOR = new IntegrityItemDescriptorImpl();
 
-    public String getHost()
+	/**
+	 * Returns the simple server configuration name
+	 * @return
+	 */
+    public String getServerConfig()
     {
-    	return host;
-    }
-
-    public int getPort()
-    {
-    	return port;
-    }
-
-    public boolean getSecure()
-    {
-    	return secure;
-    }
-
-    public String getUserName()
-    {
-    	return userName;
-    }
-
-    public String getPassword()
-    {
-    	return APISession.ENC_PREFIX + password;
+    	return serverConfig;
     }
 	
 	/**
@@ -235,38 +220,15 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
     	return testSkippedVerdictName;
     }
     
-    public void setHost(String host)
+    /**
+     * Sets the simple server configuration name
+     * @param serverConfig
+     */
+    public void setServerConfig(String serverConfig)
     {
-    	this.host = host;
+    	this.serverConfig = serverConfig;
     }
-    
-    public void setPort(int port)
-    {
-    	this.port = port;
-    }
-
-    public void setSecure(boolean secure)
-    {
-    	this.secure = secure;
-    }
-
-    public void setUserName(String userName)
-    {
-    	this.userName = userName;
-    }
-    
-    public void setPassword(String password)
-    {
-    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
-    	{
-    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
-    	}
-    	else
-    	{
-    		this.password = Base64.encode(password);
-    	}
-    }
-	
+    	
 	/**
 	 * Sets the query definition expression to obtain the build item
 	 * @param queryDefinition Query Definition Expression
@@ -460,7 +422,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		// Finally execute the edit item command
 		Response editIssueResponse = api.runCommand(editIssue);
 		int returnCode = editIssueResponse.getExitCode();
-		Logger.debug(editIssueResponse.getCommandString() + " returned " + returnCode);        					
+		LOGGER.fine(editIssueResponse.getCommandString() + " returned " + returnCode);        					
 		listener.getLogger().println("Updated build item '" + buildItemID + "' with build status!");
 		
 		return (returnCode == 0 ? true :  false);
@@ -488,22 +450,22 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		// Update Integrity for this Test Case result
 		try
 		{
-			Logger.debug("Attempting to update test result for Integrity Test - " + testCaseID);
+			LOGGER.fine("Attempting to update test result for Integrity Test - " + testCaseID);
 			api.runCommand(editresult);
 		}
 		catch (APIException aex)
 		{
-			Logger.debug("Caught API Exception...");
-			Logger.debug(aex);
+			LOGGER.fine("Caught API Exception...");
+			LOGGER.log(Level.SEVERE, "APIException", aex);
 			
 			ExceptionHandler eh = new ExceptionHandler(aex);
-			Logger.debug(eh.getMessage());
+			LOGGER.fine(eh.getMessage());
 			String message = eh.getMessage();
 			if( message.indexOf("MKS124746") > 0 || (message.indexOf("result for test case") > 0 && message.indexOf("does not exist") > 0) )
 			{
-				Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-				Logger.debug(eh.getMessage());
-				Logger.warn("An attempt was made to update a Test Result for non-meaningful content.  Perhaps you've incorrectly configured your Tests?");
+				LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+				LOGGER.fine(eh.getMessage());
+				LOGGER.warning("An attempt was made to update a Test Result for non-meaningful content.  Perhaps you've incorrectly configured your Tests?");
 			}
 			else
 			{
@@ -512,7 +474,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		}
 		catch (Exception e)
 		{
-			Logger.fatal(e);
+			LOGGER.log(Level.SEVERE, "Exception", e);
 		}
 
     }
@@ -560,7 +522,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
     		else
     		{
         		// Seems like a root package type test, but there is no test name - very odd!
-    			Logger.warn("Invalid format for Test Case ID - should be in the format <packagename>.<classname>.<testname>!");
+    			LOGGER.warning("Invalid format for Test Case ID - should be in the format <packagename>.<classname>.<testname>!");
     			junitTestCaseID.append("(root)/" + testCaseID);
     			return junitTestCaseID.toString();
     		}
@@ -601,20 +563,20 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			{
 				String testCaseID = testCaseIDFld.getValueAsString();
 				String junitTestName = getJUnitID(testCaseID);
-				Logger.debug("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
+				LOGGER.fine("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
 				TestResult caseResult = testResult.findCorrespondingResult(junitTestName);
 				// Update Integrity only if we find a matching Test Case Result
 				if( null != caseResult )
 				{
 					// Execute the edit test result command
-					Logger.debug("Located internal JUnit Test - " + junitTestName);
+					LOGGER.fine("Located internal JUnit Test - " + junitTestName);
 					editTestResult(api, (caseResult.isPassed() ? "Test " + caseResult.getId() + " has passed" : caseResult.getErrorDetails()), 
 									(caseResult.isPassed() ? testPassedVerdictName : testFailedVerdictName), testSessionID, test.getId());
 				}
 				else
 				{
 					// Lets mark the Test Result as skipped for this Test Case
-					Logger.warn("Could not locate internal JUnit Test - " + junitTestName);
+					LOGGER.warning("Could not locate internal JUnit Test - " + junitTestName);
 					editTestResult(api, "Test " + getJUnitID(testCaseID) + " was not run!", testSkippedVerdictName, testSessionID, test.getId());
 				}
 			}
@@ -640,16 +602,16 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
             if (childReport.result instanceof TestResult) 
             {
             	TestResult testResult = (TestResult) childReport.result;            	
-        		Logger.debug("Total tests run: " + testResult.getTotalCount());
-        		Logger.debug("Total passed count: " + testResult.getPassCount());
-        		Logger.debug("Total failed count: " + testResult.getFailCount());
-        		Logger.debug("Total skipped count: " + testResult.getSkipCount());
-        		Logger.debug("Failed Test Details:");
+        		LOGGER.fine("Total tests run: " + testResult.getTotalCount());
+        		LOGGER.fine("Total passed count: " + testResult.getPassCount());
+        		LOGGER.fine("Total failed count: " + testResult.getFailCount());
+        		LOGGER.fine("Total skipped count: " + testResult.getSkipCount());
+        		LOGGER.fine("Failed Test Details:");
         		Iterator<? extends TestResult> failedResultIterator = testResult.getFailedTests().iterator();
         		while( failedResultIterator.hasNext() )
         		{
         			TestResult caseResult = failedResultIterator.next();
-        			Logger.debug("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
+        			LOGGER.fine("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
         		}
             	
                 return testResult;
@@ -705,7 +667,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			return true;
 		}
 
-		APISession api = APISession.create(this);
+		APISession api = APISession.create(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
 		if( null != api )
 		{
         	try
@@ -828,11 +790,11 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
         	}
         	catch(APIException aex)
         	{
-            	Logger.error("API Exception caught...");
+            	LOGGER.severe("API Exception caught...");
             	ExceptionHandler eh = new ExceptionHandler(aex);
 	        	aex.printStackTrace(listener.fatalError(aex.getMessage()));            	
-            	Logger.error(eh.getMessage());
-            	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+            	LOGGER.severe(eh.getMessage());
+            	LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
             	return false;
 	        }
         	finally
@@ -842,7 +804,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		}
 		else
 		{
-			Logger.error("An API Session could not be established!  Cannot update Integrity Build Item!");
+			LOGGER.severe("An API Session could not be established!  Cannot update Integrity Build Item!");
 			listener.getLogger().println("An API Session could not be established!  Cannot update Integrity Build Item!");
 			return false;
 		}
@@ -901,18 +863,14 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 	    	defaultTestSkippedVerdictName = "Skipped";
 			
 			load();
-        	Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
+        	LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
 			IntegrityItemAction itemAction = new IntegrityItemAction();
-			itemAction.setHost(formData.getString("host"));
-			itemAction.setPort(formData.getInt("port"));
-			itemAction.setUserName(formData.getString("userName"));
-			itemAction.setPassword(formData.getString("password"));
-			itemAction.setSecure(formData.getBoolean("secure"));
+			itemAction.setServerConfig(formData.getString("serverConfiguration"));
 			itemAction.setQueryDefinition(formData.getString("queryDefinition"));
 			itemAction.setStateField(formData.getString("stateField"));
 			itemAction.setSuccessValue(formData.getString("successValue"));
@@ -928,7 +886,7 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			itemAction.setTestFailedVerdictName(formData.getString("testFailedVerdictName"));
 			itemAction.setTestSkippedVerdictName(formData.getString("testSkippedVerdictName"));
 			
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
 			return itemAction;
 		}    	
     	
@@ -941,68 +899,33 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			defaultQueryDefinition = Util.fixEmptyAndTrim(req.getParameter("mks.queryDefinition"));
-			defaultTestSuiteContainsField = Util.fixEmptyAndTrim(req.getParameter("mks.testSuiteContainsField"));
-	    	defaultTestPassedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testPassedVerdictName"));
-	    	defaultTestFailedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testFailedVerdictName"));
-	    	defaultTestSkippedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testSkippedVerdictName"));
+			defaultQueryDefinition = Util.fixEmptyAndTrim(req.getParameter("queryDefinition"));
+			defaultTestSuiteContainsField = Util.fixEmptyAndTrim(req.getParameter("testSuiteContainsField"));
+	    	defaultTestPassedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testPassedVerdictName"));
+	    	defaultTestFailedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testFailedVerdictName"));
+	    	defaultTestSkippedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testSkippedVerdictName"));
 			
 			save();
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
-	    /**
-	     * By default, return the IntegrtySCM host name for the Integrity Server 
-	     * @return defaultHostName
-	     */
-	    public String getDefaultHostName()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultHostName();
-	    }
-	    
-	    /**
-	     * By default, return the IntegritySCM port for the Integrity Server
-	     * @return defaultPort
-	     */    
-	    public int getDefaultPort()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultPort();
-	    }
-
-	    /**
-	     * By default, return the IntegritySCM secure setting for the Integrity Server
-	     * @return defaultSecure
-	     */        
-	    public boolean getDefaultSecure()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultSecure();
-	    }
-
-	    /**
-	     * By default, return the IntegritySCM for the User connecting to the Integrity Server
-	     * @return defaultUserName
-	     */    
-	    public String getDefaultUserName()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultUserName();
-	    }
-	    
-	    /**
-	     * By default, return the IntegritySCM user's password connecting to the Integrity Server
-	     * @return defaultPassword
-	     */        
-	    public String getDefaultPassword()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultPassword();
-	    }
-
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
+		{
+			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
+		}
+		
 	    /**
 	     * Returns the default query definition that will be used to find the 'build' item
 	     * @return defaultQueryDefinition
@@ -1048,34 +971,4 @@ public class IntegrityItemAction extends Notifier implements Serializable, Integ
 			return defaultTestSkippedVerdictName;
 		}		
     }
-
-	public String getIntegrationPointHost() 
-	{
-		return null;
-	}
-
-	public void setIntegrationPointHost(String host) 
-	{
-		
-	}
-	
-	public int getIntegrationPointPort() 
-	{
-		return 0;
-	}
-	
-	public void setIntegrationPointPort(int port) 
-	{
-		
-	}
-
-	public String getConfigurationName() 
-	{
-		return null;
-	}
-	
-	public void setConfigurationName(String configurationName) 
-	{
-
-	}	
 }

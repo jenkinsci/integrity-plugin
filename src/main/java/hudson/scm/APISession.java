@@ -6,10 +6,11 @@ import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
-import com.mks.api.util.Base64;
 import com.mks.api.Session;
 
 import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class represents an Integration Point to a server.  
@@ -17,13 +18,13 @@ import java.io.IOException;
  */
 public class APISession
 {
-	// Store the API Version
-	public static final String VERSION = "4.11";
-	public static final int MAJOR_VERSION = 4;	
-	public static final int MINOR_VERSION = 11;
+	// Initialize our logger
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	
-	// Encrypted password prefix
-	public static final String ENC_PREFIX = "__PTC__";
+	// Store the API Version
+	public static final String VERSION = "4.13";
+	public static final int MAJOR_VERSION = 4;	
+	public static final int MINOR_VERSION = 13;
 	
 	// Class variables used to create an API Session
 	private String ipHostName;
@@ -49,24 +50,24 @@ public class APISession
 		// Attempt to open a connection to the Integrity Server
     	try
     	{
-    		Logger.debug("Creating Integrity API Session...");
+    		LOGGER.fine("Creating Integrity API Session...");
     		return new APISession(
-    					settings.getIntegrationPointHost(),
-    					settings.getIntegrationPointPort(),
-    					settings.getHost(), 
+    					settings.getIpHostName(),
+    					settings.getIpPort(),
+    					settings.getHostName(), 
     					settings.getPort(),
     					settings.getUserName(),
-    					settings.getPassword(),
+    					settings.getPasswordInPlainText(),
     					settings.getSecure()
     				);
     	}
     	catch(APIException aex)
     	{
-    		Logger.error("API Exception caught...");
+    		LOGGER.severe("API Exception caught...");
     		ExceptionHandler eh = new ExceptionHandler(aex);
-    		Logger.error(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
+    		LOGGER.severe(eh.getMessage());
+    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		LOGGER.log(Level.SEVERE, "APIException", aex);
     		return null;
     	}				
 	}
@@ -84,7 +85,7 @@ public class APISession
 		hostName = host;
 		port = portNum;
 		userName = user;
-		password = Base64.decode(paswd.substring(ENC_PREFIX.length()));
+		password = paswd;
 		this.secure = secure;
 		initAPI();
 	}
@@ -115,10 +116,10 @@ public class APISession
         cmdRunner.setDefaultPassword(password);
         // Execute the connection
         Response res = cmdRunner.execute(ping);
-        Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
+        LOGGER.fine(res.getCommandString() + " returned exit code " + res.getExitCode());
         // Initialize class variables
         cmdRunner.release();
-        Logger.debug("Successfully established connection " + userName + "@" + hostName + ":" + port); 
+        LOGGER.fine("Successfully established connection " + userName + "@" + hostName + ":" + port); 
 	}
 	
 	/**
@@ -135,7 +136,7 @@ public class APISession
 	    cmdRunner.setDefaultUsername(userName);
 	    cmdRunner.setDefaultPassword(password);
 	    Response res = cmdRunner.execute(cmd);
-	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());	    
+	    LOGGER.fine(res.getCommandString() + " returned exit code " + res.getExitCode());	    
 	    cmdRunner.release();
 	    return res;
 	}
@@ -164,7 +165,7 @@ public class APISession
 		icr.setDefaultUsername(userName);
 		icr.setDefaultPassword(password);
 	    Response res = icr.executeWithInterim(cmd, false);
-	    Logger.debug("Executed " + res.getCommandString() + " with interim");
+	    LOGGER.fine("Executed " + res.getCommandString() + " with interim");
 	    return res;
 	}
 	
@@ -184,7 +185,7 @@ public class APISession
 	    cmdRunner.setDefaultPassword(password);
 	    cmdRunner.setDefaultImpersonationUser(impersonateUser);
 	    Response res = cmdRunner.execute(cmd);
-	    Logger.debug(res.getCommandString() + " returned exit code " + res.getExitCode());
+	    LOGGER.fine(res.getCommandString() + " returned exit code " + res.getExitCode());
 	    cmdRunner.release();
 	    return res;
 	}
@@ -227,13 +228,13 @@ public class APISession
 			}
 			catch( APIException aex )
 			{
-			    Logger.debug("Caught API Exception when releasing Command Runner!");
-			    aex.printStackTrace();
+			    LOGGER.fine("Caught API Exception when releasing Command Runner!");
+			    LOGGER.log(Level.SEVERE, "APIException", aex);
 			}
 			catch( Exception ex )
 			{
-				Logger.debug("Caught Exception when releasing Command Runner!");
-				ex.printStackTrace();							
+				LOGGER.fine("Caught Exception when releasing Command Runner!");
+				LOGGER.log(Level.SEVERE, "Exception", ex);						
 			}
 			
 			// Separate try-block to ensure this code is executed even it the previous try-block threw an exception
@@ -253,13 +254,13 @@ public class APISession
 			}
 			catch(APIException aex)
 			{
-			    Logger.debug("Caught API Exception when releasing session!");
-			    aex.printStackTrace();
+			    LOGGER.fine("Caught API Exception when releasing session!");
+			    LOGGER.log(Level.SEVERE, "APIException", aex);
 			}
 			catch(IOException ioe)
 			{
-			    Logger.debug("Caught IO Exception when releasing session!");
-			    ioe.printStackTrace();			
+			    LOGGER.fine("Caught IO Exception when releasing session!");
+			    LOGGER.log(Level.SEVERE, "IOException", ioe);			
 			}
 			
 			
@@ -276,11 +277,11 @@ public class APISession
 			if( cmdRunnerKilled && sessionKilled && intPointKilled )
 			{
 				terminated = true;
-				Logger.debug("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
+				LOGGER.fine("Successfully disconnected connection " + userName + "@" + hostName + ":" + port);
 			}
 			else
 			{
-				Logger.warn("Failed to disconnect connection " + userName + "@" + hostName + ":" + port);
+				LOGGER.warning("Failed to disconnect connection " + userName + "@" + hostName + ":" + port);
 			}
 		}
 	}

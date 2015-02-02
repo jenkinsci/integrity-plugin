@@ -1,138 +1,74 @@
-<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
-	<f:entry title="Configuration Name" field="configurationName">
-		<f:textbox name="scm.configurationName" value="${it.configurationName}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Configuration Name!'))}&amp;value='+encode(this.value)"/>        
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form" xmlns:c="/lib/credentials">
+
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
 	</f:entry>
+
+	<f:entry title="Configuration Name" field="configurationName">
+		<f:textbox class="setting-input required" name="configurationName" value="${scm.configurationName}" />        
+	</f:entry>
+	
 	<f:entry title="Integrity Project" field="configPath">
-		<f:textbox name="mks.configPath" value="${scm.configPath}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Project must be specified!'))}&amp;value='+encode(this.value)"/>        
+		<f:textbox class="setting-input required" name="configPath" value="${scm.configPath}" />        
 	</f:entry>
 
 	<f:entry title="Clean Workspace?" field="cleanCopy">
-		<f:checkbox name="mks.cleanCopy" checked="${scm.cleanCopy}"/>
+		<f:checkbox name="cleanCopy" checked="${scm.cleanCopy}"/>
 	</f:entry>
 
     <f:advanced>
-    
-		<f:entry title="Integrity (CM) Hostname" field="host">
-			<j:set var="host" value="${scm.host}"/>
-			<j:if test="${scm.getHost() == null}">
-				<j:set var="host" value="${descriptor.getDefaultHostName()}"/>
-			</j:if>	    		
-        	<f:textbox name="mks.host" value="${host}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
-    	</f:entry>
-
-    	<f:entry title="Integrity (CM) Port" field="port">
-			<j:set var="port" value="${scm.port}"/>
-			<j:if test="${scm.getPort() == null}">
-				<j:set var="port" value="${descriptor.getDefaultPort()}"/>
-			</j:if>	    		    	
-        	<f:textbox name="mks.port" value="${port}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>
-       
-    	</f:entry>
-
-    	<f:entry title="Integrity (CM) Username" field="userName">
-			<j:set var="userName" value="${scm.userName}"/>
-			<j:if test="${scm.getUserName() == null}">
-				<j:set var="userName" value="${descriptor.getDefaultUserName()}"/>
-			</j:if>	    		    	
-        	<f:textbox name="mks.userName" value="${userName}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
-    	</f:entry>
-
-    	<f:entry title="Integrity (CM) Password" field="password">
-			<j:set var="password" value="${scm.password}"/>
-			<j:if test="${scm.getPassword() == null}">
-				<j:set var="password" value="${descriptor.getDefaultPassword()}"/>
-			</j:if>	    		    	    	
-        	<f:password name="mks.password" value="${password}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
-    	</f:entry>
-    
-        <f:entry title="Integration Point Server Hostname" field="integrationPointHost">
-			<j:set var="integrationPointHost" value="${scm.integrationPointHost}"/>
-			<j:if test="${scm.getIntegrationPointHost() == null}">
-				<j:set var="integrationPointHost" value="${descriptor.getDefaultIPHostName()}"/>
-			</j:if>	    		    	        
-        	<f:textbox name="mks.integrationPointHost" value="${integrationPointHost}"/>
-    	</f:entry>
-
-    	<f:entry title="Integration Point Server Port" field="integrationPointPort">
-			<j:set var="integrationPointPort" value="${scm.integrationPointPort}"/>
-			<j:if test="${scm.getIntegrationPointPort() == null}">
-				<j:set var="integrationPointPort" value="${descriptor.getDefaultIPPort()}"/>
-			</j:if>	    		    	            	
-        	<f:textbox name="mks.integrationPointPort" value="${integrationPointPort}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>        
-    	</f:entry>
-
-        <f:entry title="Use Secure Connection?" field="secure">
-			<j:set var="secure" value="${scm.secure}"/>
-			<j:if test="${scm.getSecure() == null}">
-				<j:set var="secure" value="${descriptor.getDefaultSecure()}"/>
-			</j:if>	    		    	            	
-            <f:checkbox name="mks.secure" checked="${secure}"/>
-        </f:entry>
-
+        
 		<f:entry title="Include List" field="includeList">
-			<f:textbox name="mks.includeList" value="${scm.includeList}"/>
+			<f:textbox class="setting-input" name="includeList" value="${scm.includeList}" />
 		</f:entry>       
 
 		<f:entry title="Exclude List" field="excludeList">
-			<f:textbox name="mks.excludeList" value="${scm.excludeList}"/>    
+			<f:textbox class="setting-input" name="excludeList" value="${scm.excludeList}" />    
 		</f:entry>
         
         <f:entry title="Restore Timestamp?" field="restoreTimestamp">
-            <f:checkbox name="mks.restoreTimestamp" checked="${scm.restoreTimestamp}"/>
+            <f:checkbox name="restoreTimestamp" checked="${scm.restoreTimestamp}"/>
         </f:entry>
         
         <f:entry title="Line Terminator" field="lineTerminator">
-          <select name="mks.lineTerminator">
-			<f:option value="native"  selected="${scm.lineTerminator.equals('native')}" >native</f:option>
-            <f:option value="lf"  selected="${scm.lineTerminator.equals('lf')}" >lf</f:option>
-            <f:option value="cr"  selected="${scm.lineTerminator.equals('cr')}" >cr</f:option>
-            <f:option value="crlf" selected="${scm.lineTerminator.equals('crlf')}">crlf</f:option>
+          <select name="lineTerminator">
+			<f:option value="native" selected="${h.ifThenElse(scm.lineTerminator=='native',true,false)}">native</f:option>
+            <f:option value="lf" selected="${h.ifThenElse(scm.lineTerminator=='lf',true,false)}">lf</f:option>
+            <f:option value="cr" selected="${h.ifThenElse(scm.lineTerminator=='cr',true,false)}">cr</f:option>
+            <f:option value="crlf" selected="${h.ifThenElse(scm.lineTerminator=='crlf',true,false)}">crlf</f:option>
           </select>
         </f:entry>
 
         <f:entry title="Omit Author in Change Log?" field="skipAuthorInfo">
-            <f:checkbox name="mks.skipAuthorInfo" checked="${scm.skipAuthorInfo}"/>
+            <f:checkbox name="skipAuthorInfo" checked="${scm.skipAuthorInfo}"/>
         </f:entry>
         
         <f:entry title="Checkpoint Before Build?" field="checkpointBeforeBuild">
-            <f:checkbox name="mks.checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
+            <f:checkbox name="checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
         </f:entry>
         
 		<f:entry title="Tag Name" field="tagName">
-    		<j:set var="tagName" value="${scm.getTagName()}"/>
-    		<j:if test="${scm.getTagName() == null}">
-        		<j:set var="tagName" value="${descriptor.getDefaultTagName()}"/>
-    		</j:if>
-    		<f:textbox name="mks.tagName" value="${scm.tagName}" 
+    		<f:textbox name="tagName" value="${h.ifThenElse(scm.tagName==null,descriptor.getDefaultTagName(),scm.tagName)}"
 				checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
   		</f:entry>
         
         <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
-            <f:textbox name="mks.alternateWorkspace" value="${scm.alternateWorkspace}"/>
+            <f:textbox name="alternateWorkspace" value="${scm.alternateWorkspace}"/>
         </f:entry>
         
         <f:entry title="Synchronize Changed Workspace Files" field="fetchChangedWorkspaceFiles">
-            <f:checkbox name="mks.fetchChangedWorkspaceFiles" checked="${scm.fetchChangedWorkspaceFiles}"/>
+            <f:checkbox name="fetchChangedWorkspaceFiles" checked="${scm.fetchChangedWorkspaceFiles}"/>
         </f:entry>        
         
         <f:entry title="Delete Non Members" field="deleteNonMembers">
-            <f:checkbox name="mks.deleteNonMembers" checked="${scm.deleteNonMembers}"/>
+            <f:checkbox name="deleteNonMembers" checked="${scm.deleteNonMembers}"/>
         </f:entry>                   
   
-        <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize">
-			<j:set var="checkoutThreadPoolSize" value="${scm.checkoutThreadPoolSize}"/>
-			<j:if test="${scm.getCheckoutThreadPoolSize() &lt; 1}">
-				<j:set var="checkoutThreadPoolSize" value="${descriptor.getDefaultCheckoutThreadPoolSize()}"/>
-			</j:if>	    		    	
-        	<f:textbox name="mks.checkoutThreadPoolSize" value="${checkoutThreadPoolSize}" checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>
+        <f:entry title="Checkout Thread Pool Size" field="checkoutThreadPoolSize"> 		    	
+        	<f:textbox name="checkoutThreadPoolSize" value="${scm.checkoutThreadPoolSize}" checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>
     	</f:entry>
                 
     </f:advanced>
 
-	<t:listScmBrowsers name="mks.browser" />    
+	<t:listScmBrowsers name="browser" />    
 </j:jelly>

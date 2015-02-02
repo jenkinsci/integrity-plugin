@@ -1,11 +1,15 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
+	</f:entry>
 	
 	<f:entry title="Integrity Project" field="ciConfigPath">
 		<j:set var="ciConfigPath" value="${instance.getciConfigPath()}"/>
 		<j:if test="${instance.getciConfigPath() == null}">
 			<j:set var="ciConfigPath" value="${descriptor.getDefaultciConfigPath()}"/>
 		</j:if>
-		<f:textbox name="mks.ciConfigPath" value="${ciConfigPath}" 
+		<f:textbox name="ciConfigPath" value="${ciConfigPath}" 
 			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A Project/Subproject configuration path must be specified!'))}&amp;value='+encode(this.value)"/>
 	</f:entry>
 	
@@ -14,7 +18,7 @@
 		<j:if test="${instance.getciWorkspaceDir() == null}">
 			<j:set var="ciWorkspaceDir" value="${descriptor.getDefaultciWorkspaceDir()}"/>
 		</j:if>
-		<f:textbox name="mks.ciWorkspaceDir" value="${ciWorkspaceDir}" 
+		<f:textbox name="ciWorkspaceDir" value="${ciWorkspaceDir}" 
 			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%A build output directory must be specified!'))}&amp;value='+encode(this.value)"/>
 	</f:entry>
 
@@ -23,7 +27,7 @@
 		<j:if test="${instance.getIncludes() == null}">
 			<j:set var="includes" value="${descriptor.getDefaultIncludes()}"/>
 		</j:if>
-		<f:textbox name="mks.includes" value="${includes}"/> 
+		<f:textbox name="includes" value="${includes}"/> 
 	</f:entry>
 
 	<f:entry title="Excludes Filter" field="excludes">
@@ -31,71 +35,8 @@
 		<j:if test="${instance.getExcludes() == null}">
 			<j:set var="excludes" value="${descriptor.getDefaultExcludes()}"/>
 		</j:if>
-		<f:textbox name="mks.excludes" value="${excludes}"/> 
+		<f:textbox name="excludes" value="${excludes}"/> 
 	</f:entry>
-	<f:advanced>
-    
-		<f:entry title="Integrity (CM) Hostname" field="host">
-			<j:set var="host" value="${it.host}"/>
-			<j:if test="${it.getHost() == null}">
-				<j:set var="host" value="${descriptor.getDefaultHostName()}"/>
-			</j:if>	    		
-        	<f:textbox name="mks.host" value="${host}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
-    	</f:entry>
 
-    	<f:entry title="Integrity (CM) Port" field="port">
-			<j:set var="port" value="${it.port}"/>
-			<j:if test="${it.getPort() == null}">
-				<j:set var="port" value="${descriptor.getDefaultPort()}"/>
-			</j:if>	    		    	
-        	<f:textbox name="mks.port" value="${port}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>
-       
-    	</f:entry>
-
-    	<f:entry title="Integrity (CM) Username" field="userName">
-			<j:set var="userName" value="${it.userName}"/>
-			<j:if test="${it.getUserName() == null}">
-				<j:set var="userName" value="${descriptor.getDefaultUserName()}"/>
-			</j:if>	    		    	
-        	<f:textbox name="mks.userName" value="${userName}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
-    	</f:entry>
-
-    	<f:entry title="Integrity (CM) Password" field="password">
-			<j:set var="password" value="${it.password}"/>
-			<j:if test="${it.getPassword() == null}">
-				<j:set var="password" value="${descriptor.getDefaultPassword()}"/>
-			</j:if>	    		    	    	
-        	<f:password name="mks.password" value="${password}"
-        		checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
-    	</f:entry>
-    
-        <f:entry title="Integration Point Server Hostname" field="integrationPointHost">
-			<j:set var="integrationPointHost" value="${it.integrationPointHost}"/>
-			<j:if test="${it.getIntegrationPointHost() == null}">
-				<j:set var="integrationPointHost" value="${descriptor.getDefaultIPHostName()}"/>
-			</j:if>	    		    	        
-        	<f:textbox name="mks.integrationPointHost" value="${integrationPointHost}"/>
-    	</f:entry>
-
-    	<f:entry title="Integration Point Server Port" field="integrationPointPort">
-			<j:set var="integrationPointPort" value="${it.integrationPointPort}"/>
-			<j:if test="${it.getIntegrationPointPort() == null}">
-				<j:set var="integrationPointPort" value="${descriptor.getDefaultIPPort()}"/>
-			</j:if>	    		    	            	
-        	<f:textbox name="mks.integrationPointPort" value="${integrationPointPort}" checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>        
-    	</f:entry>
-
-        <f:entry title="Use Secure Connection?" field="secure">
-			<j:set var="secure" value="${it.secure}"/>
-			<j:if test="${it.getSecure() == null}">
-				<j:set var="secure" value="${descriptor.getDefaultSecure()}"/>
-			</j:if>	    		    	            	
-            <f:checkbox name="mks.secure" checked="${secure}"/>
-        </f:entry>  
-                
-    </f:advanced>
-		
 </j:jelly>
 

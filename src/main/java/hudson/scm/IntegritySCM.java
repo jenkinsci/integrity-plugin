@@ -3,13 +3,15 @@ package hudson.scm;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.model.BuildListener;
+import hudson.model.ModelObject;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
+import hudson.util.Secret;
+import hudson.util.ListBoxModel;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -19,16 +21,19 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 
-import jenkins.model.Jenkins;
+import javax.servlet.ServletException;
 
+import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
-import org.apache.commons.codec.digest.DigestUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -40,15 +45,15 @@ import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
-import com.mks.api.util.Base64;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and 
  * PTC Integrity for Configuration Management
  */
-public class IntegritySCM extends SCM implements Serializable, IntegrityConfigurable
+public class IntegritySCM extends SCM implements Serializable
 {
 	private static final long serialVersionUID = 7559894846609712683L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private static final Map<String, IntegrityCMProject> projects = new ConcurrentHashMap<String, IntegrityCMProject>();
 	public static final String NL = System.getProperty("line.separator");
 	public static final String FS = System.getProperty("file.separator");
@@ -59,17 +64,11 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	private String ciServerURL;
 	private String integrityURL;
 	private IntegrityRepositoryBrowser browser;
-	private String host;
-	private String integrationPointHost;
-	private int integrationPointPort = 0;
-	private int port;
-	private boolean secure;
+	private String serverConfig;
 	private String configPath;
 	private String includeList;
 	private String excludeList;
 	private String tagName;
-	private String userName;
-	private String password;
 	private String configurationName;
 	private boolean cleanCopy;
 	private boolean skipAuthorInfo = false;
@@ -87,24 +86,16 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * automatically copying values from a web form to a class.
 	 */
     @DataBoundConstructor
-	public IntegritySCM(IntegrityRepositoryBrowser browser, String host, int port, boolean secure, String configPath, String includeList, String excludeList,
-							String userName, String password, String integrationPointHost, int integrationPointPort, boolean cleanCopy,
-							String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String tagName,
-							String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
+	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String configPath, String includeList, String excludeList, boolean cleanCopy, 
+						String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String tagName, 
+						String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
 	{
     	// Log the construction
-    	Logger.debug("IntegritySCM constructor has been invoked!");
+    	LOGGER.fine("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
     	this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
     	this.browser = browser;
-    	setIntegrationPointHost(integrationPointHost);
-    	setHost(host);
-    	setIntegrationPointPort(integrationPointPort);
-    	setPort(port);
-    	setSecure(secure);
-    	setUserName(userName);
-    	setPassword(password);
-    	setConfigurationName(configurationName);
+    	this.serverConfig = serverConfig;
     	this.configPath = configPath;
     	this.includeList = includeList;
     	this.excludeList = excludeList;
@@ -118,34 +109,28 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     	this.deleteNonMembers = deleteNonMembers;
 		this.checkoutThreadPoolSize = (checkoutThreadPoolSize > 0 ? checkoutThreadPoolSize : DEFAULT_THREAD_POOL_SIZE);
+		this.configurationName = configurationName;
 
     	// Initialize the Integrity URL
-    	initIntegrityURL();
-
-    	// Log the parameters received
-    	Logger.debug("CI Server URL: " + this.ciServerURL);
-    	Logger.debug("URL: " + this.integrityURL);
-    	Logger.debug("IP Host: " + getIntegrationPointHost());
-    	Logger.debug("Host: " + getHost());
-    	Logger.debug("IP Port: " + getIntegrationPointPort());
-    	Logger.debug("Port: " + getPort());
-    	Logger.debug("Configuration Name: " + this.configurationName);
-    	Logger.debug("Configuration Path: " + this.configPath);
-    	Logger.debug("Include Filter: " + this.includeList);
-    	Logger.debug("Exclude Filter: " + this.excludeList);
-    	Logger.debug("User: " + getUserName());
-    	Logger.debug("Password: " + DigestUtils.md5Hex(getPassword()));
-    	Logger.debug("Secure: " + getSecure());
-    	Logger.debug("Line Terminator: " + this.lineTerminator);
-    	Logger.debug("Restore Timestamp: " + this.restoreTimestamp);
-    	Logger.debug("Clean: " + this.cleanCopy);
-    	Logger.debug("Skip Author Info: " + this.skipAuthorInfo);
-    	Logger.debug("Checkpoint Before Build: " + this.checkpointBeforeBuild);
-    	Logger.debug("Tag Name: " + this.tagName);    	
-    	Logger.debug("Alternate Workspace Directory: " + this.alternateWorkspace);
-    	Logger.debug("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
-    	Logger.debug("Delete Non Members: " + this.deleteNonMembers);
-    	Logger.debug("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
+    	initIntegrityURL();    	
+    	
+    	LOGGER.fine("CI Server URL: " + this.ciServerURL);
+    	LOGGER.fine("URL: " + this.integrityURL);
+    	LOGGER.fine("Server Configuration: " + this.serverConfig);
+    	LOGGER.fine("Configuration Name: " + this.configurationName);
+    	LOGGER.fine("Configuration Path: " + this.configPath);
+    	LOGGER.fine("Include Filter: " + this.includeList);
+    	LOGGER.fine("Exclude Filter: " + this.excludeList);
+    	LOGGER.fine("Line Terminator: " + this.lineTerminator);
+    	LOGGER.fine("Restore Timestamp: " + this.restoreTimestamp);
+    	LOGGER.fine("Clean: " + this.cleanCopy);
+    	LOGGER.fine("Skip Author Info: " + this.skipAuthorInfo);
+    	LOGGER.fine("Checkpoint Before Build: " + this.checkpointBeforeBuild);
+    	LOGGER.fine("Tag Name: " + this.tagName);    	
+    	LOGGER.fine("Alternate Workspace Directory: " + this.alternateWorkspace);
+    	LOGGER.fine("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
+    	LOGGER.fine("Delete Non Members: " + this.deleteNonMembers);
+    	LOGGER.fine("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
 	}
 
     @Override
@@ -158,31 +143,15 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         return browser == null ? new IntegrityWebUI(null) : browser;
     }
     
-    public String getHost()
+    /**
+     * Returns the simple server configuration name
+     * @return
+     */
+    public String getServerConfig()
     {
-    	return host;
-    }
-
-    public String getIntegrationPointHost()
-    {
-    	return this.integrationPointHost;
-    }
-    
-    public int getPort()
-    {
-    	return port;
+    	return serverConfig;
     }
     
-    public int getIntegrationPointPort()
-    {
-    	return this.integrationPointPort;
-    }
-    
-    public boolean getSecure()
-    {
-    	return secure;
-    }
-
     /**
      * Returns the Project or Configuration Path for a Integrity Source Project
      * @return
@@ -208,16 +177,6 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     public String getExcludeList()
     {
     	return excludeList;
-    }
-
-    public String getUserName()
-    {
-    	return userName;
-    }
-    
-    public String getPassword()
-    {
-    	return APISession.ENC_PREFIX + password;
     }
     
     /**
@@ -319,32 +278,15 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		return configurationName;
 	}
 	
-    public void setHost(String host)
+	/**
+	 * Sets the server configuration name for this project
+	 * @param serverConfig
+	 */
+    public void setServerConfig(String serverConfig)
     {
-    	this.host = host;
-    	initIntegrityURL();
-    }
-
-    public void setIntegrationPointHost(String host)
-    {
-    	this.integrationPointHost = host;
-    }
-    
-    public void setPort(int port)
-    {
-    	this.port = port;
-    	initIntegrityURL();
-    }
-
-    public void setIntegrationPointPort(int port)
-    {
-    	this.integrationPointPort = port;
-    }
-    
-    public void setSecure(boolean secure)
-    {
-    	this.secure = secure;
-    	initIntegrityURL();
+    	this.serverConfig = serverConfig;
+    	IntegrityConfigurable ic = ((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig);
+    	integrityURL = (ic.getSecure() ? "https://" : "http://") + ic.getHostName() + ":" + String.valueOf(ic.getPort());     	
     }
 
     /**
@@ -374,23 +316,6 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     	this.excludeList = excludeList;
     }
 
-    public void setUserName(String userName)
-    {
-    	this.userName = userName;
-    }
-    
-    public void setPassword(String password)
-    {
-    	if( password.indexOf(APISession.ENC_PREFIX) == 0 )
-    	{
-    		this.password = Base64.encode(Base64.decode(password.substring(APISession.ENC_PREFIX.length())));
-    	}
-    	else
-    	{
-    		this.password = Base64.encode(password);
-    	}
-    }
-    
     /**
      * Toggles whether or not the workspace is required to be cleaned
      * @return
@@ -497,14 +422,8 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
     private void initIntegrityURL()
     {
     	// Initialize the Integrity URL
-		if( getSecure() )
-		{
-			integrityURL = "https://" + getHost() + ":" + String.valueOf(getPort()); 
-		}
-		else
-		{
-			integrityURL = "http://" + getHost() + ":" + String.valueOf(getPort());
-		}
+    	IntegrityConfigurable ic = ((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig);
+    	integrityURL = (ic.getSecure() ? "https://" : "http://") + ic.getHostName() + ":" + String.valueOf(ic.getPort()); 
     }
 
     /**
@@ -532,11 +451,12 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	public void buildEnvVars(AbstractBuild<?, ?> build, Map<String, String> env)
 	{ 
 		super.buildEnvVars(build, env);
-		Logger.debug("buildEnvVars() invoked...!");		
+		LOGGER.fine("buildEnvVars() invoked...!");		
+    	IntegrityConfigurable ic = ((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig);		
 		env.put("MKSSI_PROJECT", IntegrityCheckpointAction.evalGroovyExpression(env, configPath));
-		env.put("MKSSI_HOST", getHost());
-		env.put("MKSSI_PORT", String.valueOf(getPort()));
-		env.put("MKSSI_USER", getUserName());
+		env.put("MKSSI_HOST", ic.getHostName());
+		env.put("MKSSI_PORT", String.valueOf(ic.getPort()));
+		env.put("MKSSI_USER", ic.getUserName());
 
 		// Populate with information about the most recent checkpoint
 		IntegrityCMProject siProject = getIntegrityProject();
@@ -555,7 +475,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	public SCMRevisionState calcRevisionsFromBuild(AbstractBuild<?, ?> build, Launcher launcher, TaskListener listener) throws IOException, InterruptedException 
 	{
 		// Log the call for debug purposes
-		Logger.debug("calcRevisionsFromBuild() invoked...!");
+		LOGGER.fine("calcRevisionsFromBuild() invoked...!");
 		return new IntegrityRevisionState(build.getRootDir());
 	}
 
@@ -570,9 +490,9 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		// Get the project information for this project
 		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
 		siProjectInfoCmd.addOption(new Option("project", resolvedConfigPath));	
-		Logger.debug("Preparing to execute si projectinfo for " + resolvedConfigPath);
+		LOGGER.fine("Preparing to execute si projectinfo for " + resolvedConfigPath);
 		Response infoRes = api.runCommand(siProjectInfoCmd);
-		Logger.debug(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
+		LOGGER.fine(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
 		// Initialize our siProject class variable
 		IntegrityCMProject siProject = new IntegrityCMProject(infoRes.getWorkItems().next(), projectDB, getConfigurationName());
 		// Set the project options
@@ -648,7 +568,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		// Apply our include/exclude filters
         applyMemberFilters(siViewProjectCmd);
 	
-		Logger.debug("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+		LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
 		siProject.parseProject(viewRes.getWorkItems());
 		return viewRes;
@@ -679,7 +599,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 							BuildListener listener, File changeLogFile) throws IOException, InterruptedException 
 	{
 		// Log the invocation... 
-		Logger.debug("Start execution of checkout() routine...!");
+		LOGGER.fine("Start execution of checkout() routine...!");
 		
 		// Re-evaluate the config path to resolve any groovy expressions...
 		String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), configPath);
@@ -689,7 +609,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
 		
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
-		APISession api = APISession.create(this);	
+		APISession api = APISession.create(((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));	
 		// Ensure we've successfully created an API Session
 		if( null == api )
 		{
@@ -714,7 +634,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
     				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), tagName));
-    				Logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+    				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
 					listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
@@ -742,7 +662,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        	File prevProjectDB = DerbyUtils.getIntegrityCMProjectDB(previousBuild, getConfigurationName());
 	            if( prevProjectDB.isDirectory() ) 
 	            {
-	            	Logger.debug("Found previous project state in build " + previousBuild.getNumber());
+	            	LOGGER.fine("Found previous project state in build " + previousBuild.getNumber());
 	                break;
 	            }
 				
@@ -760,7 +680,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 			else
 			{
 	            // Not sure what object we've loaded, but its no IntegrityCMProject!
-				Logger.debug("Cannot construct project state for any of the pevious builds!");
+				LOGGER.fine("Cannot construct project state for any of the pevious builds!");
 				// Prime the author information for the current build as this could be the first build
 				if( ! skipAuthorInfo ){ siProject.primeAuthorInformation(api); }
 			}
@@ -776,13 +696,15 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
 				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, this);
+													restoreTimestamp, true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, 
+													((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));
 			}
 			else 
 			{
 				// Otherwise, update the workspace in accordance with the user's cleanCopy option				
 				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, this);
+													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, 
+													((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));
 			}
 			
 			// Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
@@ -813,22 +735,22 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		}
 	    catch(APIException aex)
 	    {
-	    	Logger.error("API Exception caught...");
+	    	LOGGER.severe("API Exception caught...");
     		listener.getLogger().println("An API Exception was caught!"); 
     		ExceptionHandler eh = new ExceptionHandler(aex);
-    		Logger.error(eh.getMessage());
+    		LOGGER.severe(eh.getMessage());
     		listener.getLogger().println(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		Logger.fatal(aex);
+    		
     		return false;
 	    }
 		catch(SQLException sqlex)
 		{
-	    	Logger.error("SQL Exception caught...");
+	    	LOGGER.severe("SQL Exception caught...");
     		listener.getLogger().println("A SQL Exception was caught!"); 
     		listener.getLogger().println(sqlex.getMessage());
-    		Logger.fatal(sqlex);
+    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     		return false;			
 		}
 	    finally
@@ -861,7 +783,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 													final TaskListener listener, SCMRevisionState _baseline) throws IOException, InterruptedException	
 	{
 		// Log the call for now...
-		Logger.debug("compareRemoteRevisionWith() invoked...!");
+		LOGGER.fine("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
         IntegrityCMProject siProject = null;
         // Lets get the baseline from our last build
@@ -873,7 +795,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         	if( null == lastBuild )
         	{
         		// We've got no previous builds, build now!
-        		Logger.debug("No prior successful builds found!  Advise to build now!");
+        		LOGGER.fine("No prior successful builds found!  Advise to build now!");
         		return PollingResult.BUILD_NOW;
         	}
         	else
@@ -884,7 +806,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         		{
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
-        			APISession api = APISession.create(this);	
+        			APISession api = APISession.create(((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));	
         			if( null != api )
         			{
 	        			try
@@ -915,22 +837,22 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	        			}
 	        		    catch(APIException aex)
 	        		    {
-	        		    	Logger.error("API Exception caught...");
+	        		    	LOGGER.severe("API Exception caught...");
 	        	    		listener.getLogger().println("An API Exception was caught!"); 
 	        	    		ExceptionHandler eh = new ExceptionHandler(aex);
-	        	    		Logger.error(eh.getMessage());
+	        	    		LOGGER.severe(eh.getMessage());
 	        	    		listener.getLogger().println(eh.getMessage());
-	        	    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	        	    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	        	    		aex.printStackTrace();
 	        	    		return PollingResult.NO_CHANGES;
 	        		    }
 	        			catch(SQLException sqlex)
 	        			{
-	        		    	Logger.error("SQL Exception caught...");
+	        		    	LOGGER.severe("SQL Exception caught...");
 	        	    		listener.getLogger().println("A SQL Exception was caught!"); 
 	        	    		listener.getLogger().println(sqlex.getMessage());
-	        	    		Logger.fatal(sqlex);
+	        	    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
 	        	    		return PollingResult.NO_CHANGES;		
 	        			}
 	        		    finally
@@ -951,7 +873,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         		else
         		{
         			// Can't construct a previous project state, lets build now!
-        			Logger.debug("No prior Integrity Project state can be found!  Advice to build now!");
+        			LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
         			return PollingResult.BUILD_NOW;
         		}
         	}
@@ -959,7 +881,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         else
         {
         	// This must be an error, no changes to report
-        	Logger.error("This method was called with the wrong SCMRevisionState class!");
+        	LOGGER.severe("This method was called with the wrong SCMRevisionState class!");
         	return PollingResult.NO_CHANGES;
         }
 	}
@@ -973,7 +895,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	public ChangeLogParser createChangeLogParser() 
 	{
 		// Log the call
-		Logger.debug("createChangeLogParser() invoked...!");
+		LOGGER.fine("createChangeLogParser() invoked...!");
 		return new IntegrityChangeLogParser(integrityURL);
 	}
 	
@@ -985,7 +907,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	public SCMDescriptor<IntegritySCM> getDescriptor() 
 	{
 		// Log the call
-		Logger.debug("IntegritySCM.getDescriptor() invoked...!");		
+		LOGGER.fine("IntegritySCM.getDescriptor() invoked...!");		
 	    return DescriptorImpl.INTEGRITY_DESCRIPTOR;
 	}
 
@@ -996,30 +918,19 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 	 * The Descriptor should also contain the global configuration options as fields, 
 	 * just like the SCM class contains the configurations options for a job.
 	 */
-    public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> 
+    public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> implements ModelObject 
     {    	
     	@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
-    	private String defaultHostName;
-    	private String defaultIPHostName;    	
-    	private int defaultPort;
-    	private int defaultIPPort;    	    	
-    	private boolean defaultSecure;
-        private String defaultUserName;
-        private String defaultPassword;
-        private int defaultCheckoutThreadPoolSize = IntegritySCM.DEFAULT_THREAD_POOL_SIZE;
+    	private List<IntegrityConfigurable> configurations;
+        private int defaultCheckoutThreadPoolSize;
         private String defaultTagName;
 		
         protected DescriptorImpl() 
         {
         	super(IntegritySCM.class, IntegrityWebUI.class);
-    		defaultHostName = Util.getHostName();
-    		defaultIPHostName = "";    		
-    		defaultPort = 7001;
-    		defaultIPPort = 0;
-    		defaultSecure = false;
-    		defaultUserName = "";
-    		defaultPassword = "";
+        	configurations = new ArrayList<IntegrityConfigurable>();
+        	defaultCheckoutThreadPoolSize = IntegritySCM.DEFAULT_THREAD_POOL_SIZE;
     		defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
             load();
 
@@ -1028,7 +939,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
             DerbyUtils.loadDerbyDriver();
             
             // Log the construction...
-        	Logger.debug("IntegritySCM DescriptorImpl() constructed!");
+        	LOGGER.fine("IntegritySCM DescriptorImpl() constructed!");
         }
         
         @Override
@@ -1050,7 +961,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		@Override
 		public String getDisplayName() 
 		{
-			return "Integrity - CM";
+			return "Integrity";
 		}
 		
 		/**
@@ -1063,102 +974,72 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
         public boolean configure(StaplerRequest req, JSONObject formData) throws FormException 
         {
         	// Log the request to configure
-        	Logger.debug("Request to configure IntegritySCM (SCMDescriptor) invoked...");
-			
-        	Logger.debug("mks.defaultHostName = " + req.getParameter("mks.defaultHostName"));
-        	defaultHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultHostName"));
-        	Logger.debug("defaultHostName = " + defaultHostName);
-			
-        	Logger.debug("mks.defaultIPHostName = " + req.getParameter("mks.defaultIPHostName"));
-			defaultIPHostName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultIPHostName"));
-			Logger.debug("defaultIPHostName = " + defaultIPHostName);
-			
-			Logger.debug("mks.defaultPort = " + req.getParameter("mks.defaultPort"));
-			defaultPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultPort")));
-			Logger.debug("defaultPort = " + defaultPort);
-			
-			Logger.debug("mks.defaultIPPort = " + req.getParameter("mks.defaultIPPort"));
-			defaultIPPort = Integer.parseInt(Util.fixNull(req.getParameter("mks.defaultIPPort")));
-			Logger.debug("defaultIPPort = " + defaultIPPort);
-			
-			Logger.debug("mks.defaultSecure = " + req.getParameter("mks.defaultSecure"));
-			defaultSecure = "on".equalsIgnoreCase(Util.fixEmptyAndTrim(req.getParameter("mks.defaultSecure"))) ? true : false;
-			Logger.debug("defaultSecure = " + defaultSecure);
-			
-			Logger.debug("mks.defaultUserName = " + req.getParameter("mks.defaultUserName"));
-			defaultUserName = Util.fixEmptyAndTrim(req.getParameter("mks.defaultUserName"));
-			Logger.debug("defaultUserName = " + defaultUserName);
-			
-			setDefaultPassword(Util.fixEmptyAndTrim(req.getParameter("mks.defaultPassword")));
-			Logger.debug("defaultPassword = " + DigestUtils.md5Hex(defaultPassword));
-			
+        	LOGGER.fine("Request to configure IntegritySCM (SCMDescriptor) invoked...");
+        	this.configurations = req.bindJSONToList(IntegrityConfigurable.class, formData.get("serverConfig"));
 			save();
             return true;
         }
-		
-	    /**
-	     * Returns the default host name for the Integrity Server 
-	     * @return defaultHostName
-	     */
-	    public String getDefaultHostName()
-	    {
-	    	return defaultHostName;
-	    }
 
-	    /**
-	     * Returns the default Integration Point host name 
-	     * @return defaultIPHostName
-	     */
-	    public String getDefaultIPHostName()
-	    {
-	    	return defaultIPHostName;
-	    }
-	    
-	    /**
-	     * Returns the default port for the Integrity Server
-	     * @return defaultPort
-	     */    
-	    public int getDefaultPort()
-	    {
-	    	return defaultPort;
-	    }
+		/**
+		 * Returns the list of Integrity Server connections. 
+		 * @return A list of IntegrityConfigurable objects.
+		 */
+		public List<IntegrityConfigurable> getConfigurations()
+		{
+			if( null == this.configurations )
+			{
+				this.configurations = new ArrayList<IntegrityConfigurable>();
+			}
+			
+			return this.configurations;
+		}
 
-	    /**
-	     * Returns the default Integration Point port
-	     * @return defaultIPPort
-	     */    
-	    public int getDefaultIPPort()
-	    {
-	    	return defaultIPPort;
-	    }
-	    
-	    /**
-	     * Returns the default secure setting for the Integrity Server
-	     * @return defaultSecure
-	     */        
-	    public boolean getDefaultSecure()
-	    {
-	    	return defaultSecure;
-	    }
+		/**
+		 * Sets the list of Integrity Server connections. 
+		 * @param configurations A list of IntegrityConfigurable objects.
+		 */
+		public void setConfigurations(List<IntegrityConfigurable> configurations)
+		{
+			this.configurations = configurations;
+		}        
 
-	    /**
-	     * Returns the default User connecting to the Integrity Server
-	     * @return defaultUserName
-	     */    
-	    public String getDefaultUserName()
-	    {
-	    	return defaultUserName;
-	    }
-	    
-	    /**
-	     * Returns the default user's encrypted password connecting to the Integrity Server
-	     * @return defaultPassword
-	     */        
-	    public String getDefaultPassword()
-	    {
-	    	return APISession.ENC_PREFIX + defaultPassword;
-	    }
-	    
+		/**
+		 * Return the IntegrityConfigurable object for the specified simple name
+		 * @param name
+		 * @return
+		 */
+		public IntegrityConfigurable getConfiguration(String name)
+		{
+			for(IntegrityConfigurable configuration : this.configurations )
+			{
+				if( configuration.getName().equals(name) ) 
+				{ 
+					return configuration;
+				}
+			}
+			
+			return null;
+		}
+			
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
+		{
+			ListBoxModel listBox = new ListBoxModel();
+			
+			if( null != this.configurations && this.configurations.size() > 0 )
+			{			
+				for( IntegrityConfigurable config : this.configurations )
+				{
+					listBox.add(config.getName());
+				}				
+			}
+			return listBox;
+		}		
+				
 	    /**
 	     * Return the default checkout thread pool size
 	     * @return
@@ -1176,81 +1057,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		{
 			return defaultTagName;
 		}
-	    
-	    /**
-	     * Sets the default host name for the Integrity Server
-	     * @param defaultHostName
-	     */
-	    public void setDefaultHostName(String defaultHostName)
-	    {
-	    	this.defaultHostName = defaultHostName;
-	    }
-
-	    /**
-	     * Sets the default host name for the Integration Point
-	     * @param defaultIPHostName
-	     */
-	    public void setDefaultIPHostName(String defaultIPHostName)
-	    {
-	    	this.defaultIPHostName = defaultIPHostName;
-	    }
-	    
-	    /**
-	     * Sets the default port for the Integrity Server
-	     * @param defaultPort
-	     */    
-	    public void setDefaultPort(int defaultPort)
-	    {
-	    	this.defaultPort = defaultPort;
-	    }
-
-	    /**
-	     * Sets the default port for the Integration Point
-	     * @param defaultIPPort
-	     */    
-	    public void setDefaultIPPort(int defaultIPPort)
-	    {
-	    	this.defaultIPPort = defaultIPPort;
-	    }
-	    
-	    /**
-	     * Toggles whether or not secure sockets are enabled
-	     * @param defaultSecure
-	     */        
-	    public void setDefaultSecure(boolean defaultSecure)
-	    {
-	    	this.defaultSecure = defaultSecure;
-	    }
-
-	    /**
-	     * Sets the default User connecting to the Integrity Server
-	     * @param defaultUserName
-	     */    
-	    public void setDefaultUserName(String defaultUserName)
-	    {
-	    	this.defaultUserName = defaultUserName;
-	    }
-	    
-	    /**
-	     * Sets the encrypted Password of the default user connecting to the Integrity Server
-	     * @param defaultPassword
-	     */        
-	    public void setDefaultPassword(String defaultPassword)
-	    {
-	    	if (defaultPassword == null)
-            {
-                this.defaultPassword = "";
-            }
-            else if( defaultPassword.indexOf(APISession.ENC_PREFIX) == 0 )
-	    	{
-	    		this.defaultPassword = Base64.encode(Base64.decode(defaultPassword.substring(APISession.ENC_PREFIX.length())));
-	    	}
-	    	else
-	    	{
-	    		this.defaultPassword = Base64.encode(defaultPassword);
-	    	}	    	
-	    }
-	    
+	    	    
 	    /**
          * Sets the default checkout thread pool size
          * @return
@@ -1259,35 +1066,37 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		{
             this.defaultCheckoutThreadPoolSize = defaultCheckoutThreadPoolSize;
         }
-		
-	    /**
-	     * Validates that the port number is numeric and within a valid range 
-	     * @param value Integer value for Port or IP Port
-	     * @return
-	     */
-		public FormValidation doValidPortCheck(@QueryParameter String value)
+        
+        public FormValidation doTestConnection(@QueryParameter("serverConfig.hostName") final String hostName,
+                								@QueryParameter("serverConfig.port") final int port,
+                								@QueryParameter("serverConfig.userName") final String userName,
+                								@QueryParameter("serverConfig.password") final String password,
+                								@QueryParameter("serverConfig.secure") final boolean secure,
+                								@QueryParameter("serverConfig.ipHostName") final String ipHostName,
+                								@QueryParameter("serverConfig.ipPort") final int ipPort) throws IOException, ServletException 
 		{
-			// The field mks.port and mks.ipport will be validated through the checkUrl. 
-			// When the user has entered some information and moves the focus away from field,
-			// Hudson/Jenkins will call DescriptorImpl.doValidPortCheck to validate that data entered.
-			try
+        	LOGGER.fine("Testing Integrity API Connection...");
+        	LOGGER.fine("hostName: " + hostName);
+        	LOGGER.fine("port: " + port);
+        	LOGGER.fine("userName: " + userName);
+        	LOGGER.fine("password: " + Secret.fromString(password).getEncryptedValue());
+        	LOGGER.fine("secure: " + secure);
+        	LOGGER.fine("ipHostName: " + ipHostName);
+        	LOGGER.fine("ipPort: " + ipPort);
+        	
+			IntegrityConfigurable ic = new IntegrityConfigurable(ipHostName, ipPort, hostName, port, secure, userName, password);
+			APISession api = APISession.create(ic);
+			if( null != api )
 			{
-				int intValue = Integer.parseInt(value);
-				// Adding plus 1 to the min value in case the default is left unchanged
-				if( (intValue+1) < MIN_PORT_VALUE || intValue > MAX_PORT_VALUE )
-				{
-					return FormValidation.error("Value must be between " + MIN_PORT_VALUE + " and " + MAX_PORT_VALUE + "!");
-				}
+				api.Terminate();
+				return FormValidation.ok("Connection successful!");
 			}
-			catch(NumberFormatException nfe)
+			else
 			{
-				return FormValidation.error("Value must be numeric!");
+				return FormValidation.error("Failed to establish connection!");
 			}
-			
-			// Validation was successful if we got here, so we'll return all good!
-		    return FormValidation.ok();
 		}
-		
+        
 		/**
 		 * Validates that the thread pool size is numeric and within a valid range
 		 * @param value Integer value for Thread Pool Size
@@ -1295,7 +1104,7 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
 		 */
 		public FormValidation doValidCheckoutThreadPoolSizeCheck(@QueryParameter String value)
         {
-            // The field mks.checkoutThreadPoolSize will be validated through the checkUrl. 
+            // The field checkoutThreadPoolSize will be validated through the checkUrl. 
             // When the user has entered some information and moves the focus away from field,
             // Hudson/Jenkins will call DescriptorImpl.doValidCheckoutThreadPoolSizeCheck to validate that data entered.
             try
@@ -1313,7 +1122,6 @@ public class IntegritySCM extends SCM implements Serializable, IntegrityConfigur
             
             // Validation was successful if we got here, so we'll return all good!
             return FormValidation.ok();
-        }
-		
+        }        
     }
 }

@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
 
@@ -24,6 +25,7 @@ import com.mks.api.response.Response;
  */
 public final class IntegrityCMMember
 {
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private static final String ENCODING = "UTF-8"; 
 	
 	/**
@@ -125,7 +127,7 @@ public final class IntegrityCMMember
 		
 		// Execute the checkout command
 		Response res = api.runCommand(coCMD);
-		Logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
+		LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
 		
 		// Return true if we were successful
 		if( res.getExitCode() == 0 )
@@ -162,7 +164,7 @@ public final class IntegrityCMMember
 		{
 			// Execute the revision-info command
 			Response res = api.runCommand(revInfoCMD);
-			Logger.debug("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
+			LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
 			// Return the author associated with this update
 			if( res.getExitCode() == 0 )
 			{
@@ -172,9 +174,9 @@ public final class IntegrityCMMember
 		catch(APIException aex)
 		{
 			ExceptionHandler eh = new ExceptionHandler(aex);
-			Logger.error("API Exception caught...");
-    		Logger.error(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
+			LOGGER.severe("API Exception caught...");
+    		LOGGER.severe(eh.getMessage());
+    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
     		aex.printStackTrace();
 		}	
 		
@@ -193,7 +195,7 @@ public final class IntegrityCMMember
 		InputStream fis = null;
 		try
 		{
-			Logger.debug("Generating checksum for file " + targetFile.getAbsolutePath());
+			LOGGER.fine("Generating checksum for file " + targetFile.getAbsolutePath());
 			fis =  new FileInputStream(targetFile);
 			result = DigestUtils.md5Hex(fis);
 		}

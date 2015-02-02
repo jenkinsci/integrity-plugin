@@ -5,8 +5,12 @@ import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.remoting.VirtualChannel;
+
 import java.io.File;
 import java.io.IOException;
+import java.util.logging.Logger;
+import java.util.logging.Level;
+
 import com.mks.api.Command;
 import com.mks.api.FileOption;
 import com.mks.api.Option;
@@ -16,6 +20,7 @@ import com.mks.api.response.Response;
 public class IntegrityCheckinTask implements FileCallable<Boolean>
 {
 	private static final long serialVersionUID = 4165773747683187630L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private final String itemID;
 	private final String buildID;
 	private final String ciConfigPath;
@@ -48,7 +53,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		this.ciExcludes = ciExcludes;
 		this.listener = listener;
 		this.integrityConfig = integrityConfig;
-		Logger.debug("Integrity Checkin Task Created!");
+		LOGGER.fine("Integrity Checkin Task Created!");
 	}
 		
     private String createCP(APISession api) throws APIException
@@ -68,13 +73,13 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
     		int intItemID = Integer.parseInt(itemID);
     		if( intItemID <= 0 )
     		{
-    			Logger.debug("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
+    			LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
     			return cpid;
     		}
     	}
     	catch( NumberFormatException nfe )
     	{
-    		Logger.debug("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
+    		LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
     		return cpid;
     	}
     	
@@ -100,12 +105,12 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
     		}
     		else // Abort the script is the command failed
     		{
-    			Logger.error("An error occured creating Change Package to check-in build updates!");
+    			LOGGER.severe("An error occured creating Change Package to check-in build updates!");
     		}
     	}
     	else
     	{
-    		Logger.error("An error occured creating Change Package to check-in build updates!");
+    		LOGGER.severe("An error occured creating Change Package to check-in build updates!");
     	}
 
     	return cpid;
@@ -157,7 +162,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 								// Execute the lock command
 								api.runCommand(lock);
 								// If the lock was successful, check-in the updates
-								Logger.debug("Attempting to checkin file: " + member);
+								LOGGER.fine("Attempting to checkin file: " + member);
 								
 								// Construct the project check-in command
 								Command ci = new Command(Command.SI, "projectci");
@@ -187,8 +192,8 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 								// Ensure exception is due to member does not exist
 								if( exceptionString.indexOf("is not a current or destined or pending member") > 0 )
 								{
-									Logger.debug("Lock failed: " + exceptionString);
-									Logger.debug("Attempting to add file: " + member);
+									LOGGER.fine("Lock failed: " + exceptionString);
+									LOGGER.fine("Attempting to add file: " + member);
 								
 									// Construct the project add command
 									Command add = new Command(Command.SI, "projectadd");
@@ -216,9 +221,9 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 					}
 					
 					// Finally submit the build updates Change Package
-					if( !cpid.equals(":none") )
+					if( !cpid.equals(":none") && !cpid.equals(":bypass") )
 					{
-						Logger.debug("Submitting Change Package: " + cpid);
+						LOGGER.fine("Submitting Change Package: " + cpid);
 						
 						// Construct the close cp command
 						Command closecp = new Command(Command.SI, "closecp");
@@ -240,8 +245,8 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 							// Ensure exception is due to member does not exist
 							if( exceptionString.indexOf("has pending entries and can not be closed") > 0 )
 							{
-								Logger.debug("Close cp failed: " + exceptionString);
-								Logger.debug("Attempting to submit cp: " + cpid);
+								LOGGER.fine("Close cp failed: " + exceptionString);
+								LOGGER.fine("Attempting to submit cp: " + cpid);
 								
 								// Construct the submit cp command
 								Command submitcp = new Command(Command.SI, "submitcp");
@@ -279,8 +284,8 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 						catch( APIException ae )
 						{
 				    		ExceptionHandler eh = new ExceptionHandler(ae);
-				    		Logger.error(eh.getMessage());
-				    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());							
+				    		LOGGER.severe(eh.getMessage());
+				    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());							
 						}
 					}
 	
@@ -291,23 +296,23 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 			}
 			catch( InterruptedException iex )
 			{
-	    		Logger.error("Interrupted Exception caught...");
+				LOGGER.severe("Interrupted Exception caught...");
 	    		listener.getLogger().println("An Interrupted Exception was caught!"); 
-	    		Logger.error(iex.getMessage());
+	    		LOGGER.log(Level.SEVERE, "InterruptedException", iex);
 	    		listener.getLogger().println(iex.getMessage());
 	    		listener.getLogger().println("Failed to update Integrity project '" + ciConfigPath + "' with contents of workspace (" + workspace + ")!");
 	    		return false;			
 			}
 	    	catch( APIException aex )
 	    	{
-	    		Logger.error("API Exception caught...");
+	    		LOGGER.severe("API Exception caught...");
 	    		listener.getLogger().println("An API Exception was caught!"); 
 	    		ExceptionHandler eh = new ExceptionHandler(aex);
-	    		Logger.error(eh.getMessage());
+	    		LOGGER.severe(eh.getMessage());
 	    		listener.getLogger().println(eh.getMessage());
 	    		listener.getLogger().println("Failed to update Integrity project '" + ciConfigPath + "' with contents of workspace (" + workspace + ")!");
-	    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-	    		Logger.fatal(aex);
+	    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+	    		LOGGER.log(Level.SEVERE, "APIException", aex);
 	    		return false;
 	    	}		
 			finally

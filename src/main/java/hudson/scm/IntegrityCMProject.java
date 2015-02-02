@@ -21,6 +21,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -52,6 +53,8 @@ import com.mks.api.si.SIModelTypeName;
 public class IntegrityCMProject implements Serializable
 {
 	private static final long serialVersionUID = 6452315129657215760L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	
 	public static final String NORMAL_PROJECT = "Normal";
 	public static final String VARIANT_PROJECT = "Variant";
 	public static final String BUILD_PROJECT = "Build";
@@ -114,7 +117,7 @@ public class IntegrityCMProject implements Serializable
 			}
 			else
 			{
-				Logger.warn("Project info did not provide a value for the 'projectName' field!");
+				LOGGER.warning("Project info did not provide a value for the 'projectName' field!");
 				projectName = "";
 			}
 			// Next, we'll need to know the project type
@@ -132,13 +135,13 @@ public class IntegrityCMProject implements Serializable
 					else
 					{
 						projectRevision = "";
-						Logger.warn("Project info did not provide a vale for the 'revision' field!");
+						LOGGER.warning("Project info did not provide a vale for the 'revision' field!");
 					}
 				}				
 			}
 			else
 			{
-				Logger.warn("Project info did not provide a value for the 'projectType' field!");
+				LOGGER.warning("Project info did not provide a value for the 'projectType' field!");
 				projectType = "";
 			}
 			// Most important is the configuration path
@@ -148,7 +151,7 @@ public class IntegrityCMProject implements Serializable
 			}
 			else
 			{
-				Logger.error("Project info did not provide a value for the 'fullConfigSyntax' field!");
+				LOGGER.severe("Project info did not provide a value for the 'fullConfigSyntax' field!");
 				fullConfigSyntax = "";				
 			}
 			// Finally, we'll need to store the last checkpoint to figure out differences, etc.
@@ -158,13 +161,13 @@ public class IntegrityCMProject implements Serializable
 			}
 			else
 			{
-				Logger.warn("Project info did not provide a value for the 'lastCheckpoint' field!");
+				LOGGER.warning("Project info did not provide a value for the 'lastCheckpoint' field!");
 				lastCheckpoint = Calendar.getInstance().getTime();				
 			}			
 		}
 		catch(NoSuchElementException nsee)
 		{
-			Logger.error("Project info did not provide a value for field " + nsee.getMessage());
+			LOGGER.severe("Project info did not provide a value for field " + nsee.getMessage());
 		}		
 	}
 	
@@ -254,7 +257,7 @@ public class IntegrityCMProject implements Serializable
 			String projectRoot = projectName.substring(0, projectName.lastIndexOf('/'));
 	
 			// Iterate through the list of members returned by the API
-			Logger.debug("Attempting to execute query " + DerbyUtils.INSERT_MEMBER_RECORD);
+			LOGGER.fine("Attempting to execute query " + DerbyUtils.INSERT_MEMBER_RECORD);
 			insert = db.prepareStatement(DerbyUtils.INSERT_MEMBER_RECORD);
 			
 			
@@ -268,7 +271,7 @@ public class IntegrityCMProject implements Serializable
 					// Ignore pending subprojects in the tree...
 					if( entryType.equalsIgnoreCase("pending-sharesubproject") )
 					{
-						Logger.warn("Skipping " + entryType + " " + wi.getId());
+						LOGGER.warning("Skipping " + entryType + " " + wi.getId());
 					}
 					else
 					{
@@ -305,7 +308,7 @@ public class IntegrityCMProject implements Serializable
 							entryType.equalsIgnoreCase("pending-move-to-update") || 
 							entryType.equalsIgnoreCase("pending-rename-update") )
 					{
-						Logger.warn("Skipping " + entryType + " " + wi.getId());
+						LOGGER.warning("Skipping " + entryType + " " + wi.getId());
 					}
 					else
 					{
@@ -314,9 +317,9 @@ public class IntegrityCMProject implements Serializable
 						// Save this member entry
 						String memberName = wi.getField("name").getValueAsString();
 						// Figure out the full member path
-						Logger.debug("Member context: " + wi.getContext());
-						Logger.debug("Member parent: " + parentProject);
-						Logger.debug("Member name: " + memberName);
+						LOGGER.fine("Member context: " + wi.getContext());
+						LOGGER.fine("Member parent: " + parentProject);
+						LOGGER.fine("Member name: " + memberName);
 						
 						// Process this member only if we can figure out where to put it in the workspace
 						if( memberName.startsWith(projectRoot) )
@@ -335,13 +338,13 @@ public class IntegrityCMProject implements Serializable
 							catch( NoSuchElementException e ) 
 							{
 								// Ignore exception
-								Logger.warn("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
-								Logger.info("API Response has the following fields available: ");
+								LOGGER.warning("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
+								LOGGER.info("API Response has the following fields available: ");
 								for( @SuppressWarnings("unchecked")
 								final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext(); )
 								{
 									Field apiField = fieldsIterator.next();
-									Logger.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
+									LOGGER.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
 								}
 							}
 							
@@ -359,8 +362,8 @@ public class IntegrityCMProject implements Serializable
 							catch( Exception e )
 							{
 								// Ignore exception
-								Logger.warn("Cannot obtain the value for 'membertimestamp' in API response for member: "+ memberName);
-								Logger.warn("Defaulting 'membertimestamp' to now - " + timestamp);
+								LOGGER.warning("Cannot obtain the value for 'membertimestamp' in API response for member: "+ memberName);
+								LOGGER.warning("Defaulting 'membertimestamp' to now - " + timestamp);
 							}
 							
 							insert.clearParameters();
@@ -377,13 +380,13 @@ public class IntegrityCMProject implements Serializable
 						else
 						{
 							// Issue warning...
-							Logger.warn("Skipping " + memberName + " it doesn't appear to exist within this project " + projectRoot + "!");
+							LOGGER.warning("Skipping " + memberName + " it doesn't appear to exist within this project " + projectRoot + "!");
 						}
 					}
 				}
 				else
 				{
-					Logger.warn("View project output contains an invalid model type: " + wi.getModelType());
+					LOGGER.warning("View project output contains an invalid model type: " + wi.getModelType());
 				}
 			}
 			
@@ -400,7 +403,7 @@ public class IntegrityCMProject implements Serializable
 		}
 
 		// Log the completion of this operation
-		Logger.debug("Parsing project " + fullConfigSyntax + " complete!");		
+		LOGGER.fine("Parsing project " + fullConfigSyntax + " complete!");		
 	}
 
 	/**
@@ -514,7 +517,7 @@ public class IntegrityCMProject implements Serializable
 		{			
 			// Create the select statement for the previous baseline
 			baselineSelect = baselineDB.createStatement();
-			Logger.debug("Attempting to execute query " + DerbyUtils.BASELINE_SELECT);
+			LOGGER.fine("Attempting to execute query " + DerbyUtils.BASELINE_SELECT);
 			baselineRS = baselineSelect.executeQuery(DerbyUtils.BASELINE_SELECT);
 		
 			// Create a hashtable to hold the old baseline for easy comparison
@@ -536,7 +539,7 @@ public class IntegrityCMProject implements Serializable
 			
 			// Create the select statement for the current project
 			pjSelect = db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-			Logger.debug("Attempting to execute query " + DerbyUtils.DELTA_SELECT);
+			LOGGER.fine("Attempting to execute query " + DerbyUtils.DELTA_SELECT);
 			rs = pjSelect.executeQuery(DerbyUtils.DELTA_SELECT);
 			
 			// Now we will compare the adds and updates between the current project and the baseline
@@ -548,7 +551,7 @@ public class IntegrityCMProject implements Serializable
 				// Obtain the member we're working with
 				String memberName = rowHash.get(CM_PROJECT.NAME).toString();
 				// Get the baseline project information for this member
-				Logger.debug("Comparing file against baseline " + memberName);
+				LOGGER.fine("Comparing file against baseline " + memberName);
 				Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
 				// This file was in the previous baseline as well...
 				if( null != baselineMemberInfo )
@@ -567,7 +570,7 @@ public class IntegrityCMProject implements Serializable
 													rowHash.get(CM_PROJECT.REVISION).toString())); }
 						// Initialize the delta flag for this member
 						rs.updateShort(CM_PROJECT.DELTA.toString(), (short)2);
-						Logger.debug("... " + memberName + " revision changed - new revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
+						LOGGER.fine("... " + memberName + " revision changed - new revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
 						changeCount++;
 					}
 					else
@@ -599,7 +602,7 @@ public class IntegrityCMProject implements Serializable
 												rowHash.get(CM_PROJECT.REVISION).toString())); }				
 					// Initialize the delta flag for this member
 					rs.updateShort(CM_PROJECT.DELTA.toString(), (short)1);
-					Logger.debug("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());					
+					LOGGER.fine("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());					
 					changeCount++;
 				}
 				
@@ -634,7 +637,7 @@ public class IntegrityCMProject implements Serializable
 				rs.insertRow();
 				rs.moveToCurrentRow();
 				
-				Logger.debug("... " + memberName + " file dropped - revision was " + memberInfo.get(CM_PROJECT.REVISION).toString());
+				LOGGER.fine("... " + memberName + " file dropped - revision was " + memberInfo.get(CM_PROJECT.REVISION).toString());
 			}
 
 			// Commit changes to the database...
@@ -808,18 +811,18 @@ public class IntegrityCMProject implements Serializable
 		}
 		catch(ParserConfigurationException pce)
 		{
-			Logger.warn("Caught Parser Configuration Exception while generating Change Log!");
-			Logger.warn(pce.getMessage());			
+			LOGGER.warning("Caught Parser Configuration Exception while generating Change Log!");
+			LOGGER.warning(pce.getMessage());			
 		}
 		catch(TransformerException tfe)
 		{
-			Logger.warn("Caught Transformer Exception while generating Change Log!");
-			Logger.warn(tfe.getMessage());			
+			LOGGER.warning("Caught Transformer Exception while generating Change Log!");
+			LOGGER.warning(tfe.getMessage());			
 		}
 		catch(IOException ioe)
 		{
-			Logger.warn("Caught IO Exception while generating Change Log!");
-			Logger.warn(ioe.getMessage());			
+			LOGGER.warning("Caught IO Exception while generating Change Log!");
+			LOGGER.warning(ioe.getMessage());			
 		}		
 				
 		return changeLog.toString();
@@ -880,8 +883,8 @@ public class IntegrityCMProject implements Serializable
 		}
 		catch(UnsupportedEncodingException uee)
 		{
-			Logger.warn("Caught Unsupported Encoding Exception while generating Integrity Source links!");
-			Logger.warn(uee.getMessage());			
+			LOGGER.warning("Caught Unsupported Encoding Exception while generating Integrity Source links!");
+			LOGGER.warning(uee.getMessage());			
 		}
 		
 		// Finally, create and append the <msg> element
