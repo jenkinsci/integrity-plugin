@@ -220,7 +220,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 						}	
 					}
 					
-					// Finally submit the build updates Change Package
+					// Finally submit the build updates Change Package if its not :none or :bypass
 					if( !cpid.equals(":none") && !cpid.equals(":bypass") )
 					{
 						LOGGER.fine("Submitting Change Package: " + cpid);
