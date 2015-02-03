@@ -3,11 +3,13 @@ package hudson.scm;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.ModelObject;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
+import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
 import hudson.util.Secret;
@@ -230,6 +232,10 @@ public class IntegritySCM extends SCM implements Serializable
      */
     public String getTagName()
     {
+		if( tagName == null || tagName.length() == 0 )
+		{
+			return IntegrityCheckpointDescriptorImpl.defaultTagName;
+		}    	
     	return tagName;
     }
     
@@ -923,15 +929,11 @@ public class IntegritySCM extends SCM implements Serializable
     	@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
     	private List<IntegrityConfigurable> configurations;
-        private int defaultCheckoutThreadPoolSize;
-        private String defaultTagName;
 		
         protected DescriptorImpl() 
         {
         	super(IntegritySCM.class, IntegrityWebUI.class);
         	configurations = new ArrayList<IntegrityConfigurable>();
-        	defaultCheckoutThreadPoolSize = IntegritySCM.DEFAULT_THREAD_POOL_SIZE;
-    		defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
             load();
 
             // Initialize our derby environment
@@ -945,12 +947,34 @@ public class IntegritySCM extends SCM implements Serializable
         @Override
         public SCM newInstance(StaplerRequest req, JSONObject formData) throws FormException 
         {
+        	LOGGER.fine("newInstance() on IntegritySCM (SCMDescriptor) invoked...");
         	IntegritySCM scm = (IntegritySCM) super.newInstance(req, formData);
         	scm.browser = RepositoryBrowsers.createInstance(IntegrityWebUI.class, req, formData, "browser");
         	if (scm.browser == null)
         	{
         		scm.browser = new IntegrityWebUI(null);
         	}
+        	
+            // The field configurationName will be validated to ensure it is unique 
+            // When the user has entered some information in the Configuration Name field and moves the focus away from field,
+            // Jenkins will call DescriptorImpl.doUniqueConfigurationNameCheck to ensure uniqueness.
+        	String thisProjectName = Util.fixEmptyAndTrim(req.getParameter("name"));
+        	LOGGER.fine("The current project is " + thisProjectName);
+			for( AbstractProject<?, ?> project : Jenkins.getInstance().getItems(AbstractProject.class) )
+			{
+				if( project.getScm() instanceof IntegritySCM )
+				{
+					if( !project.getName().equals(thisProjectName) )
+					{
+						LOGGER.fine("Looking for duplicate configuration names - Project = " + project.getUrl());
+						if( ((IntegritySCM)project.getScm()).getConfigurationName().equalsIgnoreCase(scm.getConfigurationName()) )
+						{
+							throw new FormException("Configuration Name '" + scm.getConfigurationName() + "' is not unique!", "configurationName");
+						}
+					}
+				}
+			}
+
             return scm;
         }
         
@@ -980,6 +1004,24 @@ public class IntegritySCM extends SCM implements Serializable
             return true;
         }
 
+        /**
+         * Returns the default groovy expression for the checkpoint label
+         * @return
+         */
+        public String getTagName()
+        {
+        	return IntegrityCheckpointDescriptorImpl.defaultTagName;
+        }
+        
+        /**
+         * Returns the default thread pool size for a new project
+         * @return
+         */
+        public int getCheckoutThreadPoolSize()
+        {
+        	return DEFAULT_THREAD_POOL_SIZE;
+        }
+                
 		/**
 		 * Returns the list of Integrity Server connections. 
 		 * @return A list of IntegrityConfigurable objects.
@@ -1039,34 +1081,7 @@ public class IntegritySCM extends SCM implements Serializable
 			}
 			return listBox;
 		}		
-				
-	    /**
-	     * Return the default checkout thread pool size
-	     * @return
-	     */
-	    public int getDefaultCheckoutThreadPoolSize()
-		{
-	        return defaultCheckoutThreadPoolSize;
-	    }
-	    
-	    /**
-	     * Returns the default checkpoint label groovy script
-	     * @return
-	     */
-		public String getDefaultTagName()
-		{
-			return defaultTagName;
-		}
-	    	    
-	    /**
-         * Sets the default checkout thread pool size
-         * @return
-         */
-        public void setDefaultCheckoutThreadPoolSize(int defaultCheckoutThreadPoolSize)
-		{
-            this.defaultCheckoutThreadPoolSize = defaultCheckoutThreadPoolSize;
-        }
-        
+					    	    
         public FormValidation doTestConnection(@QueryParameter("serverConfig.hostName") final String hostName,
                 								@QueryParameter("serverConfig.port") final int port,
                 								@QueryParameter("serverConfig.userName") final String userName,
@@ -1106,7 +1121,7 @@ public class IntegritySCM extends SCM implements Serializable
         {
             // The field checkoutThreadPoolSize will be validated through the checkUrl. 
             // When the user has entered some information and moves the focus away from field,
-            // Hudson/Jenkins will call DescriptorImpl.doValidCheckoutThreadPoolSizeCheck to validate that data entered.
+            // Jenkins will call DescriptorImpl.doValidCheckoutThreadPoolSizeCheck to validate that data entered.
             try
             {
                 int intValue = Integer.parseInt(value);
@@ -1122,6 +1137,6 @@ public class IntegritySCM extends SCM implements Serializable
             
             // Validation was successful if we got here, so we'll return all good!
             return FormValidation.ok();
-        }        
+        }        		
     }
 }
