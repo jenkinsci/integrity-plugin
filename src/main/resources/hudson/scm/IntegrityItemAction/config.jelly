@@ -5,79 +5,59 @@
 	</f:entry>
 	
 	<f:entry title="Query Definition" field="queryDefinition">
-		<j:set var="queryDefinition" value="${instance.getQueryDefinition()}"/>
-		<j:if test="${instance.getQueryDefinition() == null}">
-			<j:set var="queryDefinition" value="${descriptor.getDefaultQueryDefinition()}"/>
-		</j:if>
-		<f:textbox name="queryDefinition" value="${queryDefinition}"/>
+		<f:textbox name="queryDefinition" value="${h.ifThenElse(instance.queryDefinition==null,descriptor.queryDefinition,instance.queryDefinition)}"/>
 	</f:entry>
 	
 	<f:entry title="Status Field Name" field="stateField">
-		<f:textbox name="stateField" value="${instance.getStateField()}"/>
+		<f:textbox name="stateField" value="${instance.stateField}"/>
 	</f:entry>
 	
 	<f:entry title="Success Value" field="successValue">
-		<f:textbox name="successValue" value="${instance.getSuccessValue()}"/>
+		<f:textbox name="successValue" value="${instance.successValue}"/>
 	</f:entry>
 
 	<f:entry title="Failure Value" field="failureValue">
-		<f:textbox name="failureValue" value="${instance.getFailureValue()}"/>
+		<f:textbox name="failureValue" value="${instance.failureValue}"/>
 	</f:entry>
 
 	<f:entry title="Log Field Name (Rich Content)" field="logField">
-		<f:textbox name="logField" value="${instance.getLogField()}"/>
+		<f:textbox name="logField" value="${instance.logField}"/>
 	</f:entry>	
 
 	<f:entry title="Test Session Field" field="testSessionField">
-		<f:textbox name="testSessionField" value="${instance.getTestSessionField()}"/>
+		<f:textbox name="testSessionField" value="${instance.testSessionField}"/>
 	</f:entry>	
 
 	<f:entry title="Test Session State Field" field="testSessionStateField">
-		<f:textbox name="testSessionStateField" value="${instance.getTestSessionStateField()}"/>
+		<f:textbox name="testSessionStateField" value="${instance.testSessionStateField}"/>
 	</f:entry>	
 
 	<f:entry title="Test Session Active State" field="testSessionActiveState">
-		<f:textbox name="testSessionActiveState" value="${instance.getTestSessionActiveState()}"/>
+		<f:textbox name="testSessionActiveState" value="${instance.testSessionActiveState}"/>
 	</f:entry>	
 
 	<f:entry title="Test Session Tests Field" field="testSessionTestsField">
-		<f:textbox name="testSessionTestsField" value="${instance.getTestSessionTestsField()}"/>
+		<f:textbox name="testSessionTestsField" value="${instance.testSessionTestsField}"/>
 	</f:entry>	
 
 	<f:entry title="Test Case Test Name Field (External ID)" field="testCaseTestNameField">
-		<f:textbox name="testCaseTestNameField" value="${instance.getTestCaseTestNameField()}"/>
+		<f:textbox name="testCaseTestNameField" value="${instance.testCaseTestNameField}"/>
 	</f:entry>	
 	
 	<f:entry title="Contains Field" field="testSuiteContainsField">
-		<j:set var="testSuiteContainsField" value="${instance.getTestSuiteContainsField()}"/>
-		<j:if test="${instance.getTestSuiteContainsField() == null}">
-			<j:set var="testSuiteContainsField" value="${descriptor.getDefaultTestSuiteContainsField()}"/>
-		</j:if>
-		<f:textbox name="testSuiteContainsField" value="${testSuiteContainsField}"/>
+		<f:textbox name="testSuiteContainsField" value="${h.ifThenElse(instance.testSuiteContainsField==null,descriptor.testSuiteContainsField,instance.testSuiteContainsField)}"/>
 	</f:entry>
 
 	<f:entry title="Passed Verdict Name" field="testPassedVerdictName">
-		<j:set var="testPassedVerdictName" value="${instance.getTestPassedVerdictName()}"/>
-		<j:if test="${instance.getTestPassedVerdictName() == null}">
-			<j:set var="testPassedVerdictName" value="${descriptor.getDefaultTestPassedVerdictName()}"/>
-		</j:if>
-		<f:textbox name="testPassedVerdictName" value="${testPassedVerdictName}"/>
+		<f:textbox name="testPassedVerdictName" value="${h.ifThenElse(instance.testPassedVerdictName==null,descriptor.testPassedVerdictName,instance.testPassedVerdictName)}"/>
 	</f:entry>
 
 	<f:entry title="Failed Verdict Name" field="testFailedVerdictName">
-		<j:set var="testFailedVerdictName" value="${instance.getTestFailedVerdictName()}"/>
-		<j:if test="${instance.getTestFailedVerdictName() == null}">
-			<j:set var="testFailedVerdictName" value="${descriptor.getDefaultTestFailedVerdictName()}"/>
-		</j:if>
-		<f:textbox name="testFailedVerdictName" value="${testFailedVerdictName}"/>
+		<f:textbox name="testFailedVerdictName" value="${h.ifThenElse(instance.testFailedVerdictName==null,descriptor.testFailedVerdictName,instance.testFailedVerdictName)}"/>
 	</f:entry>
 
 	<f:entry title="Skipped Verdict Name" field="testSkippedVerdictName">
-		<j:set var="testSkippedVerdictName" value="${instance.getTestSkippedVerdictName()}"/>
-		<j:if test="${instance.getTestSkippedVerdictName() == null}">
-			<j:set var="testSkippedVerdictName" value="${descriptor.getDefaultTestSkippedVerdictName()}"/>
-		</j:if>
-		<f:textbox name="testSkippedVerdictName" value="${testSkippedVerdictName}"/>
+		<f:textbox name="testSkippedVerdictName" value="${h.ifThenElse(instance.testSkippedVerdictName==null,descriptor.testSkippedVerdictName,instance.testSkippedVerdictName)}"/>
 	</f:entry>
 
 </j:jelly>

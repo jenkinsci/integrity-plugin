@@ -40,8 +40,8 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	@DataBoundConstructor
 	public IntegrityCheckinAction(String ciConfigPath, String ciWorkspaceDir, String includes, String excludes, String serverConfig, String configurationName)
 	{
-		setciConfigPath(ciConfigPath);
-		setciWorkspaceDir(ciWorkspaceDir);
+		setCiConfigPath(ciConfigPath);
+		setCiWorkspaceDir(ciWorkspaceDir);
 		setIncludes(includes);
 		setExcludes(excludes);
 		setServerConfig(serverConfig);
@@ -53,28 +53,18 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	 * Returns the configuration path for the project to check-in artifacts after the build
 	 * @return
 	 */
-    public String getciConfigPath()
+    public String getCiConfigPath()
     {
-		if( ciConfigPath == null || ciConfigPath.length() == 0 )
-		{
-			ciConfigPath = CHECKIN_DESCRIPTOR.getDefaultciConfigPath();
-		}
-		
-    	return ciConfigPath;
+    	return this.ciConfigPath;
     }
    
     /**
 	 * Returns the workspace directory containing the check-in artifacts created as a result of the build
 	 * @return
 	 */
-    public String getciWorkspaceDir()
+    public String getCiWorkspaceDir()
     {
-		if( ciWorkspaceDir == null || ciWorkspaceDir.length() == 0 )
-		{
-			ciWorkspaceDir = CHECKIN_DESCRIPTOR.getDefaultciWorkspaceDir();
-		}
-		
-    	return ciWorkspaceDir;
+    	return this.ciWorkspaceDir;
     }   
 
     /**
@@ -83,12 +73,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
      */
     public String getIncludes()
     {
-    	if( includes == null || includes.length() == 0 )
-    	{
-    		includes = CHECKIN_DESCRIPTOR.getDefaultIncludes();
-    	}
-    	
-    	return includes;
+    	return this.includes;
     }
     
     /**
@@ -97,12 +82,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
      */
     public String getExcludes()
     {
-    	if( includes == null || includes.length() == 0 )
-    	{
-    		excludes = CHECKIN_DESCRIPTOR.getDefaultExcludes();
-    	}
-    	
-    	return excludes;
+    	return this.excludes;
     }
     
     /**
@@ -127,7 +107,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	 * Sets the configuration path for the project to check-in artifacts after the build
 	 * @param ciConfigPath
 	 */
-    public void setciConfigPath(String ciConfigPath)
+    public void setCiConfigPath(String ciConfigPath)
     {
     	this.ciConfigPath = ciConfigPath;
     }
@@ -136,7 +116,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	 * Sets the workspace directory containing the check-in artifacts created as a result of the build
 	 * @param ciWorkspaceDir
 	 */
-    public void setciWorkspaceDir(String ciWorkspaceDir)
+    public void setCiWorkspaceDir(String ciWorkspaceDir)
     {
     	this.ciWorkspaceDir = ciWorkspaceDir;
     }   
@@ -232,18 +212,10 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	 */
     public static class IntegrityCheckinDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-		private String defaultciConfigPath;
-		private String defaultciWorkspaceDir;
-		private String defaultIncludes;
-		private String defaultExcludes;
     	public IntegrityCheckinDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityCheckinAction.class);
-			this.defaultciConfigPath = "";
-			this.defaultciWorkspaceDir = "";
-			this.defaultIncludes = "";
-			this.defaultExcludes = "";
 			load();    		
         	LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl() constructed!");        	            
     	}
@@ -265,8 +237,6 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			this.defaultciConfigPath = req.getParameter("ciConfigPath");
-			this.defaultciWorkspaceDir = req.getParameter("ciWorkspaceDir");
 			save();
 			LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
@@ -286,46 +256,6 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
 		{
 			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
-		}
-		
-		public String getDefaultciConfigPath()
-		{
-			return defaultciConfigPath;
-		}
-
-		public String getDefaultciWorkspaceDir()
-		{
-			return defaultciWorkspaceDir;
-		}
-		
-		public String getDefaultIncludes()
-		{
-			return defaultIncludes;
 		}		
-
-		public String getDefaultExcludes()
-		{
-			return defaultExcludes;
-		}	
-
-		public void setDefaultciConfigPath(String defaultciConfigPath)
-		{
-			this.defaultciConfigPath = defaultciConfigPath;
-		}
-
-		public void setDefaultciWorkspaceDir(String defaultciWorkspaceDir)
-		{
-			this.defaultciWorkspaceDir = defaultciWorkspaceDir;
-		}
-		
-		public void setDefaultIncludes(String defaultIncludes)
-		{
-			this.defaultIncludes = defaultIncludes;
-		}
-		
-		public void setDefaultExcludes(String defaultExcludes)
-		{
-			this.defaultExcludes = defaultExcludes;
-		}			
     }	
 }

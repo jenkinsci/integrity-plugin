@@ -18,7 +18,6 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.Extension;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -170,11 +169,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
     public String getTestSuiteContainsField()
     {
-		if( testSuiteContainsField == null || testSuiteContainsField.length() == 0 )
-		{
-			testSuiteContainsField = ITEM_DESCRIPTOR.getDefaultTestSuiteContainsField();
-		}
-		
     	return testSuiteContainsField;
     }
 
@@ -184,11 +178,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
     public String getTestPassedVerdictName()
     {
-		if( testPassedVerdictName == null || testPassedVerdictName.length() == 0 )
-		{
-			testPassedVerdictName = ITEM_DESCRIPTOR.getDefaultTestPassedVerdictName();
-		}
-		
     	return testPassedVerdictName;
     }
 
@@ -198,11 +187,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
     public String getTestFailedVerdictName()
     {
-		if( testFailedVerdictName == null || testFailedVerdictName.length() == 0 )
-		{
-			testFailedVerdictName = ITEM_DESCRIPTOR.getDefaultTestFailedVerdictName();
-		}
-		
     	return testFailedVerdictName;
     }
 
@@ -212,11 +196,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
     public String getTestSkippedVerdictName()
     {
-		if( testSkippedVerdictName == null || testSkippedVerdictName.length() == 0 )
-		{
-			testSkippedVerdictName = ITEM_DESCRIPTOR.getDefaultTestSkippedVerdictName();
-		}
-		
     	return testSkippedVerdictName;
     }
     
@@ -845,23 +824,16 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	 */
     public static class IntegrityItemDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private String defaultQueryDefinition;
-    	private String defaultTestSuiteContainsField;
-    	private String defaultTestPassedVerdictName;
-    	private String defaultTestFailedVerdictName;
-    	private String defaultTestSkippedVerdictName;
+    	public static final String defaultQueryDefinition = "((field[Type] = \"Build Request\") and (field[State] = \"Approved\"))";
+    	public static final String defaultTestSuiteContainsField = "Contains";
+    	public static final String defaultTestPassedVerdictName = "Passed";
+    	public static final String defaultTestFailedVerdictName = "Failed";
+    	public static final String defaultTestSkippedVerdictName = "Skipped";
     			
     	public IntegrityItemDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityItemAction.class);
-    		// Initial variable initializations
-			defaultQueryDefinition = "((field[Type] = \"Build Request\") and (field[State] = \"Approved\"))";
-			defaultTestSuiteContainsField = "Contains";
-	    	defaultTestPassedVerdictName = "Passed";
-	    	defaultTestFailedVerdictName = "Failed";
-	    	defaultTestSkippedVerdictName = "Skipped";
-			
 			load();
         	LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
     	}
@@ -870,7 +842,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
 			IntegrityItemAction itemAction = new IntegrityItemAction();
-			itemAction.setServerConfig(formData.getString("serverConfiguration"));
+			itemAction.setServerConfig(formData.getString("serverConfig"));
 			itemAction.setQueryDefinition(formData.getString("queryDefinition"));
 			itemAction.setStateField(formData.getString("stateField"));
 			itemAction.setSuccessValue(formData.getString("successValue"));
@@ -899,12 +871,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			defaultQueryDefinition = Util.fixEmptyAndTrim(req.getParameter("queryDefinition"));
-			defaultTestSuiteContainsField = Util.fixEmptyAndTrim(req.getParameter("testSuiteContainsField"));
-	    	defaultTestPassedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testPassedVerdictName"));
-	    	defaultTestFailedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testFailedVerdictName"));
-	    	defaultTestSkippedVerdictName = Util.fixEmptyAndTrim(req.getParameter("testSkippedVerdictName"));
-			
 			save();
 			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
@@ -930,45 +896,45 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	     * Returns the default query definition that will be used to find the 'build' item
 	     * @return defaultQueryDefinition
 	     */
-		public String getDefaultQueryDefinition()
+		public String getQueryDefinition()
 		{
-			return defaultQueryDefinition;
+			return IntegrityItemDescriptorImpl.defaultQueryDefinition;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Contains' field
 		 * @return
 		 */
-		public String getDefaultTestSuiteContainsField()
+		public String getTestSuiteContainsField()
 		{
-			return defaultTestSuiteContainsField;
+			return IntegrityItemDescriptorImpl.defaultTestSuiteContainsField;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Passed' verdict
 		 * @return
 		 */
-		public String getDefaultTestPassedVerdictName()
+		public String getTestPassedVerdictName()
 		{
-			return defaultTestPassedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestPassedVerdictName;
 		}
 
 		/**
 		 * Returns the default name for the Integrity 'Failed' verdict
 		 * @return
 		 */
-		public String getDefaultTestFailedVerdictName()
+		public String getTestFailedVerdictName()
 		{
-			return defaultTestFailedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestFailedVerdictName;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Skipped' verdict
 		 * @return
 		 */
-		public String getDefaultTestSkippedVerdictName()
+		public String getTestSkippedVerdictName()
 		{
-			return defaultTestSkippedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestSkippedVerdictName;
 		}		
     }
 }

@@ -55,11 +55,10 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
 	@DataBoundConstructor
-	public IntegrityCheckpointAction(String tagName, String serverConfig, String configurationName)
+	public IntegrityCheckpointAction(String serverConfig, String tagName)
 	{
 		setTagName(tagName);
 		setServerConfig(serverConfig);
-		setConfigurationName(configurationName);
 	}
 	
 	/**
@@ -125,7 +124,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	{
 		if( tagName == null || tagName.length() == 0 )
 		{
-			return CHECKPOINT_DESCRIPTOR.getDefaultTagName();
+			return IntegrityCheckpointDescriptorImpl.defaultTagName;
 		}
 
 		return tagName;
@@ -159,7 +158,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	}
 	
 	/**
-	 * Sets the build configuration name for this project
+	 * Returns the build configuration name for this project
 	 * @return
 	 */
 	public String getConfigurationName() 
@@ -168,12 +167,21 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	}
 	
 	/**
-	 * Returns the build configuration name for this project
+	 * Sets the build configuration name for this project
 	 * @param configurationName
 	 */
-	public void setConfigurationName(String configurationName) 
+	private void setConfigurationName(AbstractBuild<?,?> thisBuild) 
 	{
-		this.configurationName = configurationName;
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			this.configurationName = ((IntegritySCM)thisProject.getScm()).getConfigurationName();
+			LOGGER.fine("IntegrityCheckpointAction - Configuration Name = " + configurationName);
+		}
+		else
+		{
+			LOGGER.severe("IntegrityCheckpointAction - Configuration Name could not be initialized!");
+		}
 	}
 	
 	/**
@@ -203,6 +211,9 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
+		// Set the configuration name for this build
+		setConfigurationName(build);
+		
 		if( ! Result.SUCCESS.equals(build.getResult()) )
 		{
 			listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
@@ -328,13 +339,12 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 */
     public static class IntegrityCheckpointDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-		private String defaultTagName;
+		public static final String defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
 
     	public IntegrityCheckpointDescriptorImpl()
     	{
         	// Log the construction...
-    		super(IntegrityCheckpointAction.class);
-    		this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
+    		super(IntegrityCheckpointAction.class); 
 			load();    		
         	LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
     	}
@@ -356,7 +366,6 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			this.defaultTagName = req.getParameter("tagName");
 			save();
 			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
@@ -369,6 +378,15 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 		}
 
 		/**
+		 * Returns the defaultTagName for a checkpoint
+		 * @return
+		 */
+		public String getTagName()
+		{
+			return defaultTagName;
+		}
+		
+		/**
 		 * Provides a list box for users to choose from a list of Integrity Server configurations
 		 * @param configuration Simple configuration name
 		 * @return
@@ -378,16 +396,6 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
 		}
 		
-		public String getDefaultTagName()
-		{
-			return defaultTagName;
-		}
-		
-		public void setDefaultTagName(String defaultTagName)
-		{
-			this.defaultTagName = defaultTagName;
-		}
-		 
 		public FormValidation doTagNameCheck(@QueryParameter("value") final String tagName) throws IOException, ServletException
 		{
 			if( tagName == null || tagName.length() == 0 )

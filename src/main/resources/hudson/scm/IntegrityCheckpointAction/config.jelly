@@ -4,17 +4,9 @@
 		<f:select />
 	</f:entry>
 	
-	<f:entry title="Configuration Name" field="configurationName">
-		<f:textbox name="scm.configurationName" value="${instance.getConfigurationName()}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Configuration Name!'))}&amp;value='+encode(this.value)"/>        
-	</f:entry>
-	
 	<f:entry title="Tag Name" field="tagName">
-    	<j:set var="tagName" value="${instance.getTagName()}"/>
-    		<j:if test="${instance.getTagName() == null}">
-        	<j:set var="tagName" value="${descriptor.getDefaultTagName()}"/>
-    	</j:if>
-    	<f:textbox name="tagName" value="${tagName}" checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
+    	<f:textbox clazz="required" checkMessage="'Tag Name' is a required field!" name="tagName" value="${h.ifThenElse(instance.tagName==null,descriptor.tagName,instance.tagName)}" 
+    		checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
  	</f:entry>
 
 </j:jelly>

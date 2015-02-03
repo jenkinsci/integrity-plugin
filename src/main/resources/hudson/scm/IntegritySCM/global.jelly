@@ -7,26 +7,26 @@
 		<f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
 			<table width="100%">
 				<f:entry title="Hostname" field="hostName">
-					<input class="setting-input required" type="text" name="serverConfig.hostName" value="${serverConfig.hostName}" />
+					<f:textbox clazz="required" checkMessage="'Hostname' is a required field!" name="serverConfig.hostName" value="${serverConfig.hostName}" />
 				</f:entry>
 				<f:entry title="Port" field="port">
-					<input class="setting-input required positive-number" type="text" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
+					<f:textbox clazz="required positive-number" checkMessage="'Port' value must be a positive number!" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
 				</f:entry>				
 				<f:entry title="Username" field="userName">
-					<input class="setting-input required" type="text" name="serverConfig.userName" value="${serverConfig.userName}" />
+					<f:textbox clazz="required" checkMessage="'Username' is a required field!" name="serverConfig.userName" value="${serverConfig.userName}" />
 				</f:entry>
 				<f:entry title="Password" field="password">
-					<input class="setting-input required" type="password" name="serverConfig.password" value="${serverConfig.password}" />
+					<f:password clazz="required" checkMessage="'Password' is a required field!" name="serverConfig.password" value="${serverConfig.password}" />
 				</f:entry>
 				<f:advanced>
 					<f:entry title="Use Secure Connection?" field="secure">
 						<f:checkbox name="serverConfig.secure" checked="${serverConfig.secure}" default="false"/>
 					</f:entry>
 					<f:entry title="Integration Point Hostname" field="ipHostName">
-						<input class="setting-input" type="text" name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
+						<f:textbox name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
 					</f:entry>
 					<f:entry title="Integration Point Port" field="ipPort">
-						<input class="setting-input number" type="text" name="serverConfig.ipPort" value="${h.ifThenElse(serverConfig==null,0,serverConfig.ipPort)}"/>
+						<f:textbox clazz="number" name="serverConfig.ipPort" value="${h.ifThenElse(serverConfig==null,0,serverConfig.ipPort)}"/>
 					</f:entry>
 				</f:advanced>
 				<f:validateButton title="${%Test Connection}" progress="${%Connecting...}" method="testConnection" 
