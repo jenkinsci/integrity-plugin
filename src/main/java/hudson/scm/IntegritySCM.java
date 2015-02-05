@@ -29,9 +29,11 @@ import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 
 import javax.servlet.ServletException;
+import javax.sql.ConnectionPoolDataSource;
 
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
@@ -482,7 +484,23 @@ public class IntegritySCM extends SCM implements Serializable
 	{
 		// Log the call for debug purposes
 		LOGGER.fine("calcRevisionsFromBuild() invoked...!");
-		return new IntegrityRevisionState(build.getRootDir());
+		// Get the project cache table name for this build
+		String projectCacheTable = null;
+		String jobName = ((AbstractProject<?,?>)build.getProject()).getName();
+		
+		try
+		{
+			projectCacheTable = DerbyUtils.getProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
+																jobName, configurationName, build.getNumber());
+		}
+		catch (SQLException sqlex)
+		{
+	    	LOGGER.severe("SQL Exception caught...");
+    		listener.getLogger().println("A SQL Exception was caught!"); 
+    		listener.getLogger().println(sqlex.getMessage());
+    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}				
+		return new IntegrityRevisionState(jobName, configurationName, projectCacheTable);
 	}
 
 	/**
@@ -491,7 +509,7 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
-	private Response initializeCMProject(APISession api, File projectDB, String resolvedConfigPath) throws APIException
+	private Response initializeCMProject(APISession api, String projectCacheTable, String resolvedConfigPath) throws APIException
 	{
 		// Get the project information for this project
 		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
@@ -500,7 +518,7 @@ public class IntegritySCM extends SCM implements Serializable
 		Response infoRes = api.runCommand(siProjectInfoCmd);
 		LOGGER.fine(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
 		// Initialize our siProject class variable
-		IntegrityCMProject siProject = new IntegrityCMProject(infoRes.getWorkItems().next(), projectDB, getConfigurationName());
+		IntegrityCMProject siProject = new IntegrityCMProject(infoRes.getWorkItems().next(), projectCacheTable);
 		// Set the project options
 		siProject.setLineTerminator(lineTerminator);
 		siProject.setRestoreTimestamp(restoreTimestamp);
@@ -627,9 +645,13 @@ public class IntegritySCM extends SCM implements Serializable
 		PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
 		try
 		{
+			// Register the project cache for this build
+			String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
+															((AbstractProject<?,?>)build.getProject()).getName(), configurationName, build.getNumber());			
+			
 			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
-			initializeCMProject(api, build.getRootDir(), resolvedConfigPath);
+			initializeCMProject(api, projectCacheTable, resolvedConfigPath);
 			IntegrityCMProject siProject = getIntegrityProject();
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
@@ -650,7 +672,7 @@ public class IntegritySCM extends SCM implements Serializable
 					siProjectInfoCmd.addOption(new Option("project", siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));	
 
 					Response infoRes = api.runCommand(siProjectInfoCmd);
-					siProject.initializeProject(infoRes.getWorkItems().next(), getConfigurationName());
+					siProject.initializeProject(infoRes.getWorkItems().next());
 				}
 				else
 				{
@@ -662,11 +684,13 @@ public class IntegritySCM extends SCM implements Serializable
 					
 	    	// Now, we need to find the project state from the previous build.
 			AbstractBuild<?,?> previousBuild = build.getPreviousBuild();
+			String prevProjectCache = null;
 	        while( null != previousBuild )
 	        {
 	        	// Go back through each previous build to find a useful project state
-	        	File prevProjectDB = DerbyUtils.getIntegrityCMProjectDB(previousBuild, getConfigurationName());
-	            if( prevProjectDB.isDirectory() ) 
+	        	prevProjectCache = DerbyUtils.getProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
+	        											((AbstractProject<?,?>)build.getProject()).getName(), configurationName, previousBuild.getNumber());
+	            if( null != prevProjectCache && prevProjectCache.length() > 0 ) 
 	            {
 	            	LOGGER.fine("Found previous project state in build " + previousBuild.getNumber());
 	                break;
@@ -675,13 +699,11 @@ public class IntegritySCM extends SCM implements Serializable
 	            previousBuild = previousBuild.getPreviousBuild();	            
 	        }
 	        
-	        // Load up the project state for this previous build...
-			File prevProjectDB = DerbyUtils.getIntegrityCMProjectDB(previousBuild, getConfigurationName());
 			// Now that we've loaded the object, lets make sure it is an IntegrityCMProject!
-			if( null != prevProjectDB && prevProjectDB.isDirectory())
+			if( null != prevProjectCache && prevProjectCache.length() > 0 )
 			{
 				// Compare this project with the old 
-				siProject.compareBaseline(prevProjectDB.getParentFile().getParentFile(), api);		
+				siProject.compareBaseline(prevProjectCache, api);		
 			}
 			else
 			{
@@ -697,7 +719,7 @@ public class IntegritySCM extends SCM implements Serializable
 			List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
 			List<String> dirList = siProject.getDirList();
 			IntegrityCheckoutTask coTask = null;
-			if( null == prevProjectDB )
+			if( null == prevProjectCache || prevProjectCache.length() == 0 )
 			{ 
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
@@ -765,10 +787,6 @@ public class IntegritySCM extends SCM implements Serializable
 			{
 	            writer.close();
 	        }
-	    	if( getIntegrityProject() != null )
-			{
-	    		getIntegrityProject().closeProjectDB();
-	    	}
 	    	api.Terminate();
 	    }
 
@@ -808,7 +826,7 @@ public class IntegritySCM extends SCM implements Serializable
         	{
         		// Lets trying to get the baseline associated with the last build
         		baseline = (IntegrityRevisionState)calcRevisionsFromBuild(lastBuild, launcher, listener);
-        		if( null != baseline && null != baseline.getProjectDB() )
+        		if( null != baseline && null != baseline.getProjectCache() )
         		{
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
@@ -817,18 +835,18 @@ public class IntegritySCM extends SCM implements Serializable
         			{
 	        			try
 	        			{
+	        				// Get the project cache table name
+	        				String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), project.getName(), configurationName, 0);				        				
 	        				// Re-evaluate the config path to resolve any groovy expressions...
 	        				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(project.getCharacteristicEnvVars(), configPath);
 	        				listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
-	        				initializeCMProject(api, new File(lastBuild.getRootDir(), "PollingResult"), resolvedConfigPath);
+	        				initializeCMProject(api, projectCacheTable, resolvedConfigPath);
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
 	        				initializeCMProjectMembers(api);
 	        				// Get the current project information after all the cache priming...
 	        				siProject = getIntegrityProject();
-	        				// Obtain the details on the old project configuration
-	            			File projectDB = baseline.getProjectDB();
 	        				// Compare this project with the old project 
-	        				int changeCount = siProject.compareBaseline(projectDB, api);		
+	        				int changeCount = siProject.compareBaseline(baseline.getProjectCache(), api);		
 	        				// Finally decide whether or not we need to build again
 	        				if( changeCount > 0 )
 	        				{
@@ -864,10 +882,6 @@ public class IntegritySCM extends SCM implements Serializable
 	        		    finally
 	        		    {
 	        				api.Terminate();
-	        				if( null != siProject )
-	        				{
-	        					siProject.closeProjectDB();	
-	        				}
 	        		    }
         			}
         			else
@@ -928,6 +942,7 @@ public class IntegritySCM extends SCM implements Serializable
     {    	
     	@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
+    	private ConnectionPoolDataSource dataSource;
     	private List<IntegrityConfigurable> configurations;
 		
         protected DescriptorImpl() 
@@ -937,8 +952,12 @@ public class IntegritySCM extends SCM implements Serializable
             load();
 
             // Initialize our derby environment
-            DerbyUtils.setDerbySystemDir(Jenkins.getInstance().getRootDir());
+            System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY, Jenkins.getInstance().getRootDir().getAbsolutePath());;
             DerbyUtils.loadDerbyDriver();
+    		LOGGER.info("Creating Integrity SCM cache db connection...");
+    		dataSource = DerbyUtils.createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
+    		LOGGER.info("Creating Integrity SCM cache registry...");
+    		DerbyUtils.createRegistry(dataSource);            
             
             // Log the construction...
         	LOGGER.fine("IntegritySCM DescriptorImpl() constructed!");
@@ -960,7 +979,7 @@ public class IntegritySCM extends SCM implements Serializable
             // Jenkins will call DescriptorImpl.doUniqueConfigurationNameCheck to ensure uniqueness.
         	String thisProjectName = Util.fixEmptyAndTrim(req.getParameter("name"));
         	LOGGER.fine("The current project is " + thisProjectName);
-			for( AbstractProject<?, ?> project : Jenkins.getInstance().getItems(AbstractProject.class) )
+			for( AbstractProject<?, ?> project :  Jenkins.getInstance().getItems(AbstractProject.class) )
 			{
 				if( project.getScm() instanceof IntegritySCM )
 				{
@@ -975,6 +994,9 @@ public class IntegritySCM extends SCM implements Serializable
 				}
 			}
 
+			// Clear old project cache
+			doClearInactiveCacheData();
+			
             return scm;
         }
         
@@ -1005,6 +1027,15 @@ public class IntegritySCM extends SCM implements Serializable
         }
 
         /**
+         * Returns the pooled connection data source for the derby db
+         * @return
+         */
+        public ConnectionPoolDataSource getDataSource()
+        {
+        	return dataSource;
+        }
+        
+        /**
          * Returns the default groovy expression for the checkpoint label
          * @return
          */
@@ -1020,6 +1051,15 @@ public class IntegritySCM extends SCM implements Serializable
         public int getCheckoutThreadPoolSize()
         {
         	return DEFAULT_THREAD_POOL_SIZE;
+        }
+        
+        /**
+         * Returns a default value for the Configuration Name
+         * @return
+         */
+        public String getConfigurationName()
+        {
+        	return UUID.randomUUID().toString();
         }
                 
 		/**
@@ -1081,7 +1121,61 @@ public class IntegritySCM extends SCM implements Serializable
 			}
 			return listBox;
 		}		
-					    	    
+
+		/**
+		 * A maintenance function to help keep cache tables under control
+		 * @return
+		 */
+		public FormValidation doClearInactiveCacheData()
+		{
+			// Clean up any projects that aren't active anymore
+        	@SuppressWarnings("rawtypes")
+			List<AbstractProject> projectsList = Jenkins.getInstance().getItems(AbstractProject.class);
+        	LOGGER.fine("Total number of Jenkins projects = " + projectsList.size());
+			try
+			{
+				List<String> jobsList = DerbyUtils.getDistinctJobNames(dataSource);
+				for( String job : jobsList )
+				{
+					boolean active = false;
+					for( AbstractProject<?, ?> project : projectsList )
+					{
+						if( project.getName().equals(job) )
+						{
+							active = true;
+							break;
+						}
+					}
+					
+					if( !active )
+					{
+						LOGGER.fine(String.format("Job '%s' is inactive, deleting cache entries...", job));
+						DerbyUtils.deleteProjectCache(dataSource, job);
+					}
+				}
+			}
+			catch (SQLException e)
+			{
+				LOGGER.log(Level.SEVERE, "SQLException", e);
+				return FormValidation.error(e.getMessage());
+			}
+			
+			return FormValidation.ok("Inactive cache successfully purged!");
+		}
+		
+		/**
+		 * A credentials validation helper
+		 * @param hostName
+		 * @param port
+		 * @param userName
+		 * @param password
+		 * @param secure
+		 * @param ipHostName
+		 * @param ipPort
+		 * @return
+		 * @throws IOException
+		 * @throws ServletException
+		 */
         public FormValidation doTestConnection(@QueryParameter("serverConfig.hostName") final String hostName,
                 								@QueryParameter("serverConfig.port") final int port,
                 								@QueryParameter("serverConfig.userName") final String userName,

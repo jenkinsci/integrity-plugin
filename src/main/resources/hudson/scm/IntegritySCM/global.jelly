@@ -39,6 +39,10 @@
 		
 	</f:entry>
 	
+	<f:entry title="Integrity Cache Management">
+		<f:validateButton title="${%Clear Inactive Cache}" progress="${%Deleting...}" method="clearInactiveCacheData" />
+	</f:entry>
+						
   </f:section>
 
 </j:jelly>

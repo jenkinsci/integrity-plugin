@@ -4,9 +4,9 @@
 		<f:select />
 	</f:entry>
 
-	<f:entry title="Configuration Name" field="configurationName">
-		<f:textbox name="configurationName" value="${scm.configurationName}" clazz="required" checkMessage="'Configuration Name' is a required field!" />         
-	</f:entry>
+	<f:invisibleEntry title="Configuration Name" field="configurationName">
+		<input class="setting-input" name="configurationName" type="hidden" value="${h.ifThenElse(scm.configurationName==null,descriptor.configurationName,scm.configurationName)}" />         
+	</f:invisibleEntry>
 	
 	<f:entry title="Integrity Project" field="configPath">
 		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'Integrity Project' is a required field!" />        

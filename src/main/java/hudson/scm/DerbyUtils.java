@@ -1,22 +1,25 @@
 package hudson.scm;
 
-import hudson.model.AbstractBuild;
-
 import java.io.BufferedReader;
-import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
 import java.sql.Connection;
-import java.sql.DriverManager;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.UUID;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.sql.ConnectionPoolDataSource;
+
 import org.apache.commons.io.IOUtils;
+import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource;
 
 /**
  * This class provides certain utility functions for working with the embedded derby database
@@ -27,10 +30,20 @@ public class DerbyUtils
 	public static final String DERBY_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
 	public static final String DERBY_SYS_HOME_PROPERTY = "derby.system.home";
 	public static final String DERBY_URL_PREFIX = "jdbc:derby:";
-	public static final String DERBY_USER_PASWD = ";user=dbuser;password=dbuserpwd";
-	private static final String DERBY_DB_FOLDER = "IntegritySCM/%s";
-	private static final String DERBY_CREATE_URL_SUFFIX = DERBY_DB_FOLDER + ";create=true" + DERBY_USER_PASWD;
-	private static final String DERBY_SHUTDOWN_URL_SUFFIX = DERBY_DB_FOLDER + ";shutdown=true" + DERBY_USER_PASWD;
+	private static final String DERBY_DB_NAME = "IntegritySCM";
+	public static final String CREATE_INTEGRITY_SCM_REGISTRY = "CREATE TABLE INTEGRITY_SCM_REGISTRY (" +
+																	"ID INTEGER NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), " +
+																	"JOB_NAME VARCHAR(256) NOT NULL, " +
+																	"CONFIGURATION_NAME VARCHAR(50) NOT NULL, " +
+																	"PROJECT_CACHE_TABLE VARCHAR(50) NOT NULL, " +
+																	"BUILD_NUMBER BIGINT NOT NULL)";
+	public static final String SELECT_REGISTRY_1 = "SELECT ID FROM INTEGRITY_SCM_REGISTRY WHERE ID = 1";	
+	public static final String SELECT_REGISTRY_TABLE = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ? AND CONFIGURATION_NAME = ? AND BUILD_NUMBER = ?";
+	public static final String INSERT_REGISTRY_ENTRY = "INSERT INTO INTEGRITY_SCM_REGISTRY (JOB_NAME, CONFIGURATION_NAME, PROJECT_CACHE_TABLE, BUILD_NUMBER) " + "VALUES (?, ?, ?, ?)";
+	public static final String SELECT_REGISTRY_DISTINCT_PROJECTS = "SELECT DISTINCT JOB_NAME FROM INTEGRITY_SCM_REGISTRY";
+	public static final String SELECT_REGISTRY_PROJECTS = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ? AND CONFIGURATION_NAME = ? ORDER BY BUILD_NUMBER DESC";
+	public static final String SELECT_REGISTRY_PROJECT = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ?";
+	public static final String DROP_REGISTRY_ENTRY = "DELETE FROM INTEGRITY_SCM_REGISTRY WHERE PROJECT_CACHE_TABLE = ?"; 
 	public static final String CREATE_PROJECT_TABLE = "CREATE TABLE CM_PROJECT (" +
 														CM_PROJECT.ID + " INTEGER NOT NULL " + 
 														"PRIMARY KEY GENERATED ALWAYS AS IDENTITY " + 
@@ -48,8 +61,6 @@ public class DerbyUtils
 														CM_PROJECT.CHECKSUM + " VARCHAR(32), " +
 														CM_PROJECT.DELTA + " SMALLINT)"; 		/* 0 = Unchanged; 1 = Added; 2 = Changed; 3 = Dropped */
 	public static final String DROP_PROJECT_TABLE = "DROP TABLE CM_PROJECT";
-	public static final String CREATE_NAME_INDEX = "CREATE INDEX MEMBER_NAME ON CM_PROJECT (" + CM_PROJECT.NAME + " ASC)";
-	public static final String DROP_NAME_INDEX = "DROP INDEX MEMBER_NAME";
 	public static final String SELECT_MEMBER_1 = "SELECT " + CM_PROJECT.ID + " FROM CM_PROJECT WHERE " + CM_PROJECT.ID + " = 1";	
 	public static final String INSERT_MEMBER_RECORD = "INSERT INTO CM_PROJECT " +
 														"(" + CM_PROJECT.TYPE + ", " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " +
@@ -81,7 +92,7 @@ public class DerbyUtils
 												CM_PROJECT.TYPE + " = 1 ORDER BY " + CM_PROJECT.RELATIVE_FILE + " ASC";
 	public static final String CHECKSUM_UPDATE = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.CHECKSUM + " FROM CM_PROJECT WHERE " + 
 													CM_PROJECT.TYPE + " = 0 AND (" + CM_PROJECT.DELTA + " IS NULL OR " + CM_PROJECT.DELTA + " <> 3)";	
-
+	
 	/**
 	 * Returns the CM_PROJECT column name for the string column name
 	 * @param name
@@ -101,14 +112,14 @@ public class DerbyUtils
 	}
 
 	/**
-	 * Utility function that sets the derby DB home
-	 * @param dir
+	 * Random unique id generator for cache table names
+	 * @return
 	 */
-	public static void setDerbySystemDir(File dir)
+	public static final String getUUIDTableName()
 	{
-		System.setProperty(DERBY_SYS_HOME_PROPERTY, dir.getAbsolutePath());
+		return "SCM_" + UUID.randomUUID().toString().replace('-', '_');
 	}
-
+	
 	/**
 	 * Utility function to load the Java DB Driver
 	 */
@@ -128,127 +139,377 @@ public class DerbyUtils
 	}
 
 	/**
-	 * Opens a connection to the derby database represented with the File 'path'
-	 * @param path Job directory where the derby db will be saved
-	 * @return SQL Connection to the derby db
-	 * @throws SQLException 
+	 * Creates a pooled connection data source for the derby database
+	 * @return
 	 */
-	public static Connection createDBConnection(File path, String DBName) throws SQLException
+	public static ConnectionPoolDataSource createConnectionPoolDataSource(String derbyHome)
 	{
-		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_CREATE_URL_SUFFIX, DBName);
-		LOGGER.fine("Attempting to open connection to database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
-	    return DriverManager.getConnection(dbUrl);
+		EmbeddedConnectionPoolDataSource dataSource = new EmbeddedConnectionPoolDataSource();
+		dataSource.setCreateDatabase("create");
+		dataSource.setDataSourceName(DERBY_URL_PREFIX + derbyHome.replace('\\',  '/') + "/" + DERBY_DB_NAME);
+		dataSource.setDatabaseName(derbyHome.replace('\\',  '/') + "/" + DERBY_DB_NAME);
+
+		return dataSource;
+		
 	}
 
 	/**
-	 * Shuts down the embedded derby database represented with the File 'path'
-	 * @param path Job directory where the derby db can be located
+	 * Generic SQL statement execution function
+	 * @param dataSource A pooled connection data source
+	 * @param sql String sql statement
+	 * @return
+	 * @throws SQLException
 	 */
-	public static void shutdownDB(File path, String DBName)
+	public static synchronized boolean executeStmt(ConnectionPoolDataSource dataSource, String sql) throws SQLException
 	{
-		String dbUrl = DERBY_URL_PREFIX + path.getAbsolutePath().replace('\\', '/') + "/" + String.format(DERBY_SHUTDOWN_URL_SUFFIX, DBName);
-		try 
+		boolean success = false;
+		Connection db = null;
+		Statement stmt = null;
+		try
 		{
-			LOGGER.fine("Attempting to shut down database: " + path.getAbsolutePath() + IntegritySCM.FS + String.format(DERBY_DB_FOLDER, DBName));
-		    Connection db = DriverManager.getConnection(dbUrl);
-		    db.close();
+			LOGGER.fine("Preparing to execute " + sql);
+			db = dataSource.getPooledConnection().getConnection();
+			stmt = db.createStatement();
+			success = stmt.execute(sql);
+			LOGGER.fine("Executed...!");
 		}
-		catch( SQLException sqle )
+		catch(SQLException sqlex)
 		{
-			if(sqle.getErrorCode() == 45000 && sqle.getSQLState().equals("08006"))
+			throw sqlex;
+		}
+		finally
+		{
+			if( null != stmt )
 			{
-				LOGGER.severe("Database shutdown successful!");
+				stmt.close();
 			}
-			else
+			
+			if( null != db )
 			{
+				db.close();
+			}
+		}
+		
+		return success;
+	}
+
+	/**
+	 * Creates the Integrity SCM cache registry table
+	 * @param dataSource
+	 * @return
+	 */
+	public static synchronized boolean createRegistry(ConnectionPoolDataSource dataSource)
+	{
+		boolean tableCreated = false;
+		try
+		{
+			if( executeStmt(dataSource, SELECT_REGISTRY_1) )
+			{
+				LOGGER.fine("Integrity SCM cache registry table exists...");
+				tableCreated = true;
+			}
+		} 
+		catch( SQLException ex ) 
+		{
+			LOGGER.fine(ex.getMessage());
+			try
+			{
+				LOGGER.fine("Integrity SCM cache registry doesn't exist, creating...");				
+				tableCreated = executeStmt(dataSource, CREATE_INTEGRITY_SCM_REGISTRY);
+			}
+			catch( SQLException sqlex )
+			{
+				LOGGER.fine("Failed to create Integrity SCM cache registry table!");
+				LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+				tableCreated = false;
+			}
+		}
+		
+		return tableCreated;
+	}	
+	
+	/**
+	 * Creates a single Integrity SCM Project/Configuration cache table
+	 * @param dataSource
+	 * @param jobName
+	 * @param configurationName
+	 * @param buildNumber
+	 * @return
+	 * @throws SQLException
+	 */
+	public static synchronized String registerProjectCache(ConnectionPoolDataSource dataSource, String jobName, String configurationName, long buildNumber) throws SQLException
+	{
+		String cacheTableName = "";
+		Connection db = null;
+		PreparedStatement select = null;
+		PreparedStatement insert = null;
+		ResultSet rs = null;
+		
+		try
+		{
+			// First Check to see if the current project registry exists
+			db = dataSource.getPooledConnection().getConnection();
+			cacheTableName = getProjectCache(dataSource, jobName, configurationName, buildNumber);
+			if( null == cacheTableName || cacheTableName.length() == 0 )
+			{
+				// Insert a new row in the registry
+				String uuid = getUUIDTableName();
+				insert = db.prepareStatement(INSERT_REGISTRY_ENTRY);
+				insert.clearParameters();
+				insert.setString(1, jobName);			// JOB_NAME
+				insert.setString(2, configurationName);	// CONFIGURATION_NAME
+				insert.setString(3, uuid);				// PROJECT_CACHE_TABLE
+				insert.setLong(4, buildNumber);			// BUILD_NUMBER
+				insert.executeUpdate();
+				cacheTableName = uuid;
+			}
+		}
+		catch( SQLException sqlex )
+		{
+			LOGGER.fine(String.format("Failed to create Integrity SCM cache registry entry for %s/%s/%d!", jobName, configurationName, buildNumber));
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}
+		finally
+		{
+			if( null != select ){ select.close(); }
+			if( null != rs ){ rs.close(); }
+			if( null != insert ){ insert.close(); }
+			if( null != db ){ db.close(); }
+		}	
+		
+		return cacheTableName;
+	}
+	
+	/**
+	 * Returns the name of the project cache table for the specified job/configuration and build
+	 * @param dataSource
+	 * @param jobName
+	 * @param configurationName
+	 * @param buildNumber
+	 * @return
+	 * @throws SQLException
+	 */
+	public static synchronized String getProjectCache(ConnectionPoolDataSource dataSource, String jobName, String configurationName, long buildNumber) throws SQLException
+	{
+		String cacheTableName = "";
+		Connection db = null;
+		PreparedStatement select = null;
+		PreparedStatement insert = null;
+		ResultSet rs = null;
+		
+		try
+		{
+			db = dataSource.getPooledConnection().getConnection();
+			select = db.prepareStatement(SELECT_REGISTRY_TABLE, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			select.setString(1, jobName);
+			select.setString(2, configurationName);
+			select.setLong(3, buildNumber);
+			rs = select.executeQuery();
+			if( getRowCount(rs) > 0 )
+			{
+				rs.next();
+				cacheTableName = rs.getString("PROJECT_CACHE_TABLE");	
+			}
+		}
+		catch( SQLException sqlex )
+		{
+			LOGGER.fine(String.format("Failed to get Integrity SCM cache registry entry for %s/%s/%d!", jobName, configurationName, buildNumber));
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);	
+		}
+		finally
+		{
+			if( null != select ){ select.close(); }
+			if( null != rs ){ rs.close(); }
+			if( null != insert ){ insert.close(); }
+			if( null != db ){ db.close(); }
+		}	
+		
+		return cacheTableName;
+	}	
+	
+	/**
+	 * Maintenance function that returns a list of distinct job names 
+	 * for additional checking to see which ones are inactive
+	 * @param dataSource
+	 * @return
+	 * @throws SQLException
+	 */
+	public static synchronized List<String> getDistinctJobNames(ConnectionPoolDataSource dataSource) throws SQLException
+	{
+		List<String> jobsList = new ArrayList<String>();
+		Connection db = null;
+		PreparedStatement select = null;
+		PreparedStatement delete = null;
+		ResultSet rs = null;
+		
+		try
+		{
+			// Get a connection from the pool
+			db = dataSource.getPooledConnection().getConnection();
+			// First Check to see if the current project registry exists
+			LOGGER.fine("Preparing to execute " + SELECT_REGISTRY_DISTINCT_PROJECTS);
+			select = db.prepareStatement(SELECT_REGISTRY_DISTINCT_PROJECTS);
+			rs = select.executeQuery();
+			LOGGER.fine("Executed!");
+			while( rs.next() )
+			{
+				String job = rs.getString("JOB_NAME");
+				jobsList.add(job);
+				LOGGER.fine(String.format("Adding job '%s' from the list of registered projects cache",  job));
+			}
+		}
+		catch( SQLException sqlex )
+		{
+			LOGGER.fine("Failed to run distinct jobs query!");
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}
+		finally
+		{
+			if( null != select ){ select.close(); }
+			if( null != rs ){ rs.close(); }
+			if( null != delete ){ delete.close(); }
+			if( null != db ){ db.close(); }
+		}
+		
+		return jobsList;
+	}
+	
+	/**
+	 * Maintenance function to delete all inactive project cache tables
+	 * @param dataSource
+	 * @param jobName
+	 * @throws SQLException
+	 */
+	public static synchronized void deleteProjectCache(ConnectionPoolDataSource dataSource, String jobName) throws SQLException
+	{
+		Connection db = null;
+		PreparedStatement select = null;
+		PreparedStatement delete = null;
+		ResultSet rs = null;
+		
+		try
+		{
+			// Get a connection from the pool
+			db = dataSource.getPooledConnection().getConnection();
+			// First Check to see if the current project registry exists
+			select = db.prepareStatement(SELECT_REGISTRY_PROJECT, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			select.setString(1, jobName);
+			delete = db.prepareStatement(DROP_REGISTRY_ENTRY);
+			rs = select.executeQuery();
+			if( getRowCount(rs) > 0 )
+			{
+				while( rs.next() )
+				{
+					String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");	
+					executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
+					delete.setString(1, cacheTableName);
+					delete.addBatch();
+				}
 				
-				LOGGER.severe("Failed to shutdown database connection! ");
-				LOGGER.severe("SQL Error Code: " + sqle.getErrorCode());
-				LOGGER.severe("SQL Error State: " + sqle.getSQLState());
-
-				LOGGER.severe(sqle.getMessage());
-				LOGGER.log(Level.SEVERE, "SQLException", sqle);
+				delete.executeBatch();
 			}
-		}		
+		}
+		catch( SQLException sqlex )
+		{
+			LOGGER.fine("Failed to purge project '" + jobName + "' from Integrity SCM cache registry!");
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}
+		finally
+		{
+			if( null != select ){ select.close(); }
+			if( null != rs ){ rs.close(); }
+			if( null != delete ){ delete.close(); }
+			if( null != db ){ db.close(); }
+		}
 	}
 	
 	/**
-	 * Helper function that simply drops tables and indexes
-	 * @param db Derby database connection
-	 * @return true/false depending on the success of the operation
+	 * Maintenance function to limit project cache to the most recent two builds
+	 * @param dataSource
+	 * @param jobName
+	 * @param configurationName
 	 * @throws SQLException
 	 */
-	private static boolean dropTables(Connection db) throws SQLException
+	public static synchronized void cleanupProjectCache(ConnectionPoolDataSource dataSource, String jobName, String configurationName) throws SQLException
 	{
-		boolean tablesDropped = false;
+		Connection db = null;
+		PreparedStatement select = null;
+		PreparedStatement delete = null;
+		ResultSet rs = null;
 		
-		// First drop the Member_Name index
-		Statement dropIndx = db.createStatement();
-		tablesDropped = dropIndx.execute(DROP_NAME_INDEX);
-		dropIndx.close();
-		
-		// Second drop the CM_Project table
-		Statement dropTable = db.createStatement();
-		tablesDropped = dropTable.execute(DROP_PROJECT_TABLE);
-		dropTable.close();
-		
-		LOGGER.fine("Prior Integrity SCM cache tables successfully dropped!");		
-		return tablesDropped;
+		try
+		{
+			// Get a connection from the pool			
+			db = dataSource.getPooledConnection().getConnection();
+			
+			// First Check to see if the current project registry exists
+			select = db.prepareStatement(SELECT_REGISTRY_PROJECTS, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			select.setString(1, jobName);
+			select.setString(2, configurationName);
+			delete = db.prepareStatement(DROP_REGISTRY_ENTRY);
+			rs = select.executeQuery();
+			int rowCount = getRowCount(rs);
+			LOGGER.fine("Cache entries for " + jobName + "/" + configurationName + " = " + rowCount);
+			if( rowCount > 2 )
+			{
+				int deleteCount = 0;
+				// Keeping only two cached records
+				rs.next();
+				rs.next(); 
+				while( rs.next() )
+				{
+					deleteCount++;
+					String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");	
+					executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
+					LOGGER.fine(String.format("Deleting old cache entry for %s/%s/%s", jobName, configurationName, cacheTableName));
+					delete.setString(1, cacheTableName);
+					delete.addBatch();
+				}
+				
+				if( deleteCount > 0 )
+				{
+					delete.executeBatch();
+				}
+			}
+		}
+		catch( SQLException sqlex )
+		{
+			LOGGER.fine(String.format("Failed to clear old cache for project '%s' from Integrity SCM cache registry!", jobName));
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}
+		finally
+		{
+			if( null != select ){ select.close(); }
+			if( null != rs ){ rs.close(); }
+			if( null != delete ){ delete.close(); }
+			if( null != db ){ db.close(); }
+		}
 	}
 	
-	/**
-	 * Helper function that simply creates new tables and indexes
-	 * @param db Derby database connection
-	 * @return true/false depending on the success of the operation
-	 * @throws SQLException
-	 */
-	private static boolean createTables(Connection db) throws SQLException
-	{
-		boolean tablesCreated = false;
-		
-		// First create the CM_Project table
-		Statement createTable = db.createStatement();
-		tablesCreated = createTable.execute(CREATE_PROJECT_TABLE);
-		createTable.close();
-		
-		// Create an index on the Member Name column
-		Statement createIndex = db.createStatement();
-		tablesCreated = createIndex.execute(CREATE_NAME_INDEX);
-		createIndex.close();
-		
-		LOGGER.fine("New Integrity SCM cache tables successfully created!");
-		return tablesCreated;
-		
-	}
-
 	/**
 	 * Establishes a fresh set of Integrity SCM cache tables
 	 * @param db Derby database connection
 	 * @return true/false depending on the success of the operation
 	 */
-	public static boolean createCMProjectTables(Connection db)
+	public static synchronized boolean createCMProjectTables(ConnectionPoolDataSource dataSource, String tableName)
 	{
-		boolean tablesCreated = false;
-		Statement select = null;
+		boolean tableCreated = false;
 		try
 		{
-			select = db.createStatement();
-			if( select.execute(SELECT_MEMBER_1) )
+			if( executeStmt(dataSource, SELECT_MEMBER_1.replaceFirst("CM_PROJECT", tableName)) )
 			{
 				try
 				{
 					LOGGER.fine("A prior set of Integrity SCM cache tables detected, dropping...");
-					// Close the select statement, so that we can drop the table
-					select.close();
-					tablesCreated = dropTables(db);
+					tableCreated = executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
 					LOGGER.fine("Recreating a fresh set of Integrity SCM cache tables...");
-					tablesCreated = createTables(db);
+					tableCreated = executeStmt(dataSource, CREATE_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
 				}
 				catch( SQLException ex )
 				{
-					LOGGER.severe("Failed to create Integrity SCM cache tables!");
+					LOGGER.fine(String.format("Failed to create Integrity SCM project cache table '%s'", tableName));
 					LOGGER.log(Level.SEVERE, "SQLException", ex);
-					tablesCreated = false;
+					tableCreated = false;
 				}
 			}
 		} 
@@ -257,34 +518,18 @@ public class DerbyUtils
 			LOGGER.fine(ex.getMessage());
 			try
 			{
-				LOGGER.fine("Integrity SCM cache tables do not exist, creating...");				
-				tablesCreated = createTables(db);
+				LOGGER.fine(String.format("Integrity SCM cache table '%s' does not exist, creating...", tableName));				
+				tableCreated = executeStmt(dataSource, CREATE_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
 			}
 			catch( SQLException sqlex )
 			{
-				LOGGER.severe("Failed to create Integrity SCM cache tables!");
+				LOGGER.fine(String.format("Failed to create Integrity SCM project cache table '%s'", tableName));
 				LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-				tablesCreated = false;
-			}
-		}
-		finally
-		{
-			if( null != select )
-			{
-				try 
-				{
-					select.close();
-				} 
-				catch( SQLException ex )
-				{
-					LOGGER.severe(ex.getMessage());
-					LOGGER.log(Level.SEVERE, "SQLException", ex);
-					tablesCreated = false;
-				}
+				tableCreated = false;
 			}
 		}
 		
-		return tablesCreated;
+		return tableCreated;
 	}
 	
 	/**
@@ -319,19 +564,16 @@ public class DerbyUtils
 					break;
 					
 				case java.sql.Types.BLOB:
-					value = rs.getBlob(i);
-					if( ! rs.wasNull() )
+					InputStream is = null;
+					try
 					{
-						InputStream is = rs.getBlob(i).getBinaryStream();
-						try
-						{
-							byte[] bytes = IOUtils.toByteArray(is);
-							rowData.put(getEnum(rsMetaData.getColumnLabel(i)), bytes);
-						}
-						finally
-						{
-							is.close();
-						}
+						is = rs.getBlob(i).getBinaryStream();
+						byte[] bytes = IOUtils.toByteArray(is);
+						rowData.put(getEnum(rsMetaData.getColumnLabel(i)), bytes);
+					}
+					finally
+					{
+						if( null != is ){ is.close(); }
 					}
 					break;
 					
@@ -341,21 +583,18 @@ public class DerbyUtils
 					break;
 					
 				case java.sql.Types.CLOB:
-					value = rs.getClob(i);
-					if( ! rs.wasNull() )
+					BufferedReader reader = null;
+					try
 					{
-						BufferedReader reader = new java.io.BufferedReader(rs.getClob(i).getCharacterStream());
+						reader = new java.io.BufferedReader(rs.getClob(i).getCharacterStream());
 						String line = null;
 						StringBuilder sb = new StringBuilder();
-						try
-						{
-							while( null != (line=reader.readLine()) ){ sb.append(line + IntegritySCM.NL); }
-							rowData.put(getEnum(rsMetaData.getColumnLabel(i)), sb.toString());
-						}
-						finally
-						{
-							reader.close();
-						}
+						while( null != (line=reader.readLine()) ){ sb.append(line + IntegritySCM.NL); }
+						rowData.put(getEnum(rsMetaData.getColumnLabel(i)), sb.toString());
+					}
+					finally
+					{
+						if( null != reader ){ reader.close(); }
 					}
 					break;
 					
@@ -385,8 +624,14 @@ public class DerbyUtils
 					break;
 					
 				case java.sql.Types.JAVA_OBJECT:
-					value = rs.getObject(i);
-					if( !rs.wasNull() ){ rowData.put(getEnum(rsMetaData.getColumnLabel(i)), rs.getObject(i)); }
+					try
+					{
+						rowData.put(getEnum(rsMetaData.getColumnLabel(i)), rs.getObject(i));
+					}
+					finally
+					{
+						
+					}
 					break;
 					
 				case java.sql.Types.SMALLINT:
@@ -436,22 +681,5 @@ public class DerbyUtils
 		}
 		
 		return rowCount;   
-	} 
-	
-	public static  File getIntegrityCMProjectDB(AbstractBuild<?,?> build, String DBName)
-    {
-    	// Make sure this build is not null, before processing it!
-    	File projectDB = null;
-    	if( null != build )
-    	{
-	        // Lets make absolutely certain we've found a useful build, 
-	        projectDB = new File(build.getRootDir(), String.format(DERBY_DB_FOLDER, DBName));
-	        if( ! projectDB.isDirectory() )
-	        {
-	        	// There is no project state for this build!
-	        	LOGGER.fine("Integrity SCM Project DB not found for build " + build.getNumber() + "!");
-	        }
-    	}
-    	return projectDB;
-    }
+	}	
 }

@@ -1,6 +1,7 @@
 package hudson.scm;
 
-import java.io.File;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+
 import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringReader;
@@ -59,7 +60,7 @@ public class IntegrityCMProject implements Serializable
 	public static final String VARIANT_PROJECT = "Variant";
 	public static final String BUILD_PROJECT = "Build";
 
-	private File projectDB;
+	private String projectCacheTable;
 	private String projectName;
 	private String projectType;
 	private String projectRevision;	
@@ -73,15 +74,14 @@ public class IntegrityCMProject implements Serializable
 	private Document xmlDoc;
 	private StringBuffer changeLog;
 	private transient int changeCount;
-	private String dbName;
 	
 	/**
 	 * Creates an instance of an Integrity CM Project
 	 * and extracts all information from the API Response Field
 	 * @param wi Work Item associated with the response from running si projectinfo
-	 * @param projectDB Location of where the embedded derby database for this project
+	 * @param projectCacheTable SCM cache table name for this project configuration
 	 */
-	public IntegrityCMProject(WorkItem wi, File projectDB, String dbName)
+	public IntegrityCMProject(WorkItem wi, String projectCacheTable)
 	{
 		// Initialize the project with default options
 		lineTerminator = "native";
@@ -89,16 +89,16 @@ public class IntegrityCMProject implements Serializable
 		skipAuthorInfo = false;
 		
 		// Initialize the project's DB location
-		this.projectDB = projectDB;
+		this.projectCacheTable = projectCacheTable;
 		// Initialize the change log report, if we need to compare with a baseline
 		changeLog = new StringBuffer();
 		changeCount = 0;
 		
 		// Parse the current output from si projectinfo and cache the contents
-		initializeProject(wi, dbName);
+		initializeProject(wi);
 	}
 
-	public void initializeProject(WorkItem wi, String dbName)
+	public void initializeProject(WorkItem wi)
 	{
 		// Parse the current project information
 		try
@@ -108,7 +108,6 @@ public class IntegrityCMProject implements Serializable
 			Field pjTypeFld = wi.getField("projectType");
 			Field pjCfgPathFld = wi.getField("fullConfigSyntax");
 			Field pjChkptFld = wi.getField("lastCheckpoint");
-			this.dbName = dbName;
 			// Convert to our class fields
 			// First obtain the project name field
 			if( null != pjNameFld && null != pjNameFld.getValueAsString() )
@@ -217,38 +216,22 @@ public class IntegrityCMProject implements Serializable
 	}
 	
 	/**
-	 * Opens a new connection to the embedded Integrity SCM Project cache db
-	 * @return Connection to the embedded derby database
-	 * @throws SQLException 
-	 */
-	public Connection openProjectDB() throws SQLException
-	{
-	    return DerbyUtils.createDBConnection(projectDB, dbName);
-	}
-	
-	/**
-	 * Closes the connections to the embedded derby database
-	 */
-	public void closeProjectDB()
-	{
-		DerbyUtils.shutdownDB(projectDB, dbName);
-	}
-	
-	/**
 	 * Parses the output from the si viewproject command to get a list of members
 	 * @param wit WorkItemIterator
 	 * @throws APIException 
 	 * @throws SQLException 
 	 */
-	public void parseProject(WorkItemIterator wit) throws APIException, SQLException
+	public synchronized void parseProject(WorkItemIterator wit) throws APIException, SQLException
 	{
 		// Setup the Derby DB for this Project
-		Connection db = openProjectDB();
+		Connection db = null;
 		PreparedStatement insert = null;
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
 			// Create a fresh set of tables for this project
-			DerbyUtils.createCMProjectTables(db);
+			DerbyUtils.createCMProjectTables(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(), projectCacheTable);
 			// Initialize the project config hash
 			Hashtable<String, String> pjConfigHash = new Hashtable<String, String>();
 			// Add the mapping for the current project
@@ -257,8 +240,9 @@ public class IntegrityCMProject implements Serializable
 			String projectRoot = projectName.substring(0, projectName.lastIndexOf('/'));
 	
 			// Iterate through the list of members returned by the API
-			LOGGER.fine("Attempting to execute query " + DerbyUtils.INSERT_MEMBER_RECORD);
-			insert = db.prepareStatement(DerbyUtils.INSERT_MEMBER_RECORD);
+			String insertSQL = DerbyUtils.INSERT_MEMBER_RECORD.replaceFirst("CM_PROJECT", projectCacheTable);
+			LOGGER.fine("Attempting to execute query " + insertSQL);
+			insert = db.prepareStatement(insertSQL);
 			
 			
 			while( wit.hasNext() )
@@ -412,16 +396,18 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public void primeAuthorInformation(APISession api) throws SQLException, IOException
+	public synchronized void primeAuthorInformation(APISession api) throws SQLException, IOException
 	{
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement authSelect = null;
 		ResultSet rs = null;
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();			
 			// Create the select statement for the current project
 			authSelect = db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-			rs = authSelect.executeQuery(DerbyUtils.AUTHOR_SELECT);
+			rs = authSelect.executeQuery(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
 			while( rs.next() )
 			{
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -455,16 +441,18 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public void updateChecksum(ConcurrentHashMap<String, String> checksumHash) throws SQLException, IOException
+	public synchronized void updateChecksum(ConcurrentHashMap<String, String> checksumHash) throws SQLException, IOException
 	{
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement checksumSelect = null;
 		ResultSet rs = null;
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();				
 			// Create the select statement for the current project
 			checksumSelect = db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-			rs = checksumSelect.executeQuery(DerbyUtils.CHECKSUM_UPDATE);
+			rs = checksumSelect.executeQuery(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable));
 			while( rs.next() )
 			{
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -500,14 +488,12 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public int compareBaseline(File baselineProjectDB, APISession api) throws SQLException, IOException
+	public synchronized int compareBaseline(String baselineProjectCache, APISession api) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		changeCount = 0;
 		
-		// Open connections to the embedded Integrity SCM Project cache databases
-		Connection baselineDB = DerbyUtils.createDBConnection(baselineProjectDB, dbName);
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement baselineSelect = null;
 		Statement pjSelect = null;
 		ResultSet baselineRS = null;
@@ -515,10 +501,13 @@ public class IntegrityCMProject implements Serializable
 		
 		try
 		{			
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();				
 			// Create the select statement for the previous baseline
-			baselineSelect = baselineDB.createStatement();
-			LOGGER.fine("Attempting to execute query " + DerbyUtils.BASELINE_SELECT);
-			baselineRS = baselineSelect.executeQuery(DerbyUtils.BASELINE_SELECT);
+			baselineSelect = db.createStatement();
+			String baselineSelectSql = DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
+			LOGGER.fine("Attempting to execute query " + baselineSelectSql);
+			baselineRS = baselineSelect.executeQuery(baselineSelectSql);
 		
 			// Create a hashtable to hold the old baseline for easy comparison
 			Hashtable<String, Hashtable<CM_PROJECT,Object>> baselinePJ = new Hashtable<String, Hashtable<CM_PROJECT,Object>>();
@@ -539,8 +528,9 @@ public class IntegrityCMProject implements Serializable
 			
 			// Create the select statement for the current project
 			pjSelect = db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-			LOGGER.fine("Attempting to execute query " + DerbyUtils.DELTA_SELECT);
-			rs = pjSelect.executeQuery(DerbyUtils.DELTA_SELECT);
+			String pjSelectSql = DerbyUtils.DELTA_SELECT.replaceFirst("CM_PROJECT", projectCacheTable);
+			LOGGER.fine("Attempting to execute query " + pjSelectSql);
+			rs = pjSelect.executeQuery(pjSelectSql);
 			
 			// Now we will compare the adds and updates between the current project and the baseline
 			for( int i = 1; i <= DerbyUtils.getRowCount(rs); i++ )
@@ -651,12 +641,8 @@ public class IntegrityCMProject implements Serializable
 			if( null != baselineSelect ){ baselineSelect.close(); }
 			if( null != pjSelect ){ pjSelect.close(); }			
 			
-			// Close DB connections
-			if( null != baselineDB ){ baselineDB.close(); }
-			if( null != db ){ db.close(); }
-			
-			// Shutdown the baseline project DB
-			DerbyUtils.shutdownDB(baselineProjectDB, dbName);
+			// Close DB connection
+			if( null != db ){ db.close(); }			
 		}
 		
 		return changeCount;
@@ -669,20 +655,22 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public List<Hashtable<CM_PROJECT, Object>> viewProject() throws SQLException, IOException
+	public synchronized List<Hashtable<CM_PROJECT, Object>> viewProject() throws SQLException, IOException
 	{
 		// Initialize our return variable
 		List<Hashtable<CM_PROJECT, Object>> projectMembersList = new ArrayList<Hashtable<CM_PROJECT, Object>>();
 		
 		// Initialize our db connection
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();				
 			stmt = db.createStatement();
-			rs = stmt.executeQuery(DerbyUtils.PROJECT_SELECT);
+			rs = stmt.executeQuery(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
 			while( rs.next() )
 			{
 				projectMembersList.add(DerbyUtils.getRowData(rs));
@@ -712,14 +700,16 @@ public class IntegrityCMProject implements Serializable
 		List<Hashtable<CM_PROJECT, Object>> subprojectsList = new ArrayList<Hashtable<CM_PROJECT, Object>>();
 		
 		// Initialize our db connection
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();			
 			stmt = db.createStatement();
-			rs = stmt.executeQuery(DerbyUtils.SUB_PROJECT_SELECT);
+			rs = stmt.executeQuery(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
 			while( rs.next() )
 			{
 				subprojectsList.add(DerbyUtils.getRowData(rs));
@@ -948,20 +938,22 @@ public class IntegrityCMProject implements Serializable
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public List<String> getDirList() throws SQLException, IOException
+	public synchronized List<String> getDirList() throws SQLException, IOException
 	{
 		// Initialize our return variable
 		List<String> dirList = new ArrayList<String>();
 		
 		// Initialize our db connection
-		Connection db = openProjectDB();
+		Connection db = null;
 		Statement stmt = null;
 		ResultSet rs = null;
 		
 		try
 		{
+			// Get a connection from our pool
+			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();			
 			stmt = db.createStatement();
-			rs = stmt.executeQuery(DerbyUtils.DIR_SELECT);
+			rs = stmt.executeQuery(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
 			while( rs.next() )
 			{
 				Hashtable<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs); 
