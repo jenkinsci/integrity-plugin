@@ -594,7 +594,7 @@ public class IntegritySCM extends SCM implements Serializable
 	
 		LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
 		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
-		siProject.parseProject(viewRes.getWorkItems());
+		DerbyUtils.parseProject(siProject, viewRes.getWorkItems());
 		return viewRes;
 	}
 	
@@ -703,21 +703,21 @@ public class IntegritySCM extends SCM implements Serializable
 			if( null != prevProjectCache && prevProjectCache.length() > 0 )
 			{
 				// Compare this project with the old 
-				siProject.compareBaseline(prevProjectCache, api);		
+				DerbyUtils.compareBaseline(prevProjectCache, projectCacheTable, skipAuthorInfo, api);	
 			}
 			else
 			{
 	            // Not sure what object we've loaded, but its no IntegrityCMProject!
 				LOGGER.fine("Cannot construct project state for any of the pevious builds!");
 				// Prime the author information for the current build as this could be the first build
-				if( ! skipAuthorInfo ){ siProject.primeAuthorInformation(api); }
+				if( ! skipAuthorInfo ){ DerbyUtils.primeAuthorInformation(projectCacheTable, api); }
 			}
 			
 	        // After all that insane interrogation, we have the current Project state that is
 	        // correctly initialized and either compared against its baseline or is a fresh baseline itself
 	        // Now, lets figure out how to populate the workspace...
-			List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
-			List<String> dirList = siProject.getDirList();
+			List<Hashtable<CM_PROJECT, Object>> projectMembersList = DerbyUtils.viewProject(projectCacheTable);
+			List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
 			IntegrityCheckoutTask coTask = null;
 			if( null == prevProjectCache || prevProjectCache.length() == 0 )
 			{ 
@@ -740,7 +740,7 @@ public class IntegritySCM extends SCM implements Serializable
 			{ 
 				// Now that the workspace is updated, lets save the current project state for future comparisons
 				listener.getLogger().println("Saving current Integrity Project configuration...");
-				if( fetchChangedWorkspaceFiles ){ siProject.updateChecksum(coTask.getChecksumUpdates()); }
+				if( fetchChangedWorkspaceFiles ){ DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates()); }
 				// Write out the change log file, which will be used by the parser to report the updates
 				listener.getLogger().println("Writing build change log...");
 				writer.println(siProject.getChangeLog(String.valueOf(build.getNumber()), projectMembersList));				
@@ -809,7 +809,7 @@ public class IntegritySCM extends SCM implements Serializable
 		// Log the call for now...
 		LOGGER.fine("compareRemoteRevisionWith() invoked...!");
         IntegrityRevisionState baseline;
-        IntegrityCMProject siProject = null;
+
         // Lets get the baseline from our last build
         if( _baseline instanceof IntegrityRevisionState )
         {
@@ -843,10 +843,9 @@ public class IntegritySCM extends SCM implements Serializable
 	        				initializeCMProject(api, projectCacheTable, resolvedConfigPath);
 	        				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
 	        				initializeCMProjectMembers(api);
-	        				// Get the current project information after all the cache priming...
-	        				siProject = getIntegrityProject();
+
 	        				// Compare this project with the old project 
-	        				int changeCount = siProject.compareBaseline(baseline.getProjectCache(), api);		
+	        				int changeCount = DerbyUtils.compareBaseline(baseline.getProjectCache(), projectCacheTable, skipAuthorInfo, api);		
 	        				// Finally decide whether or not we need to build again
 	        				if( changeCount > 0 )
 	        				{

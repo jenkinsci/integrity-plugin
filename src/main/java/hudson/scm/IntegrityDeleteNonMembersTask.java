@@ -85,7 +85,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
      */
     public void deleteNonMembers(AbstractBuild<?, ?> build,BuildListener listener) throws SQLException, IOException, InterruptedException
     {
-        List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
+        List<Hashtable<CM_PROJECT, Object>> projectMembersList = DerbyUtils.viewProject(siProject.getProjectCacheTable());
         FilePath workspace = build.getWorkspace();
         
         if( null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0 )
@@ -103,7 +103,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         }
         
         // Get all Integrity projects of the current build
-        List<String> folderList = siProject.getDirList();
+        List<String> folderList = DerbyUtils.getDirList(siProject.getProjectCacheTable());
         for( String folder:folderList )
         {
             File targetFile = new File(workspace + folder);
