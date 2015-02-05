@@ -60,7 +60,6 @@ public class IntegrityCMProject implements Serializable
 
 	private Document xmlDoc;
 	private StringBuffer changeLog;
-	private transient int changeCount;
 	
 	/**
 	 * Creates an instance of an Integrity CM Project
@@ -79,7 +78,6 @@ public class IntegrityCMProject implements Serializable
 		this.projectCacheTable = projectCacheTable;
 		// Initialize the change log report, if we need to compare with a baseline
 		changeLog = new StringBuffer();
-		changeCount = 0;
 		
 		// Parse the current output from si projectinfo and cache the contents
 		initializeProject(wi);
@@ -231,20 +229,19 @@ public class IntegrityCMProject implements Serializable
 			// Add the <changelog> to the xmlDoc
 			xmlDoc.appendChild(changeLogElem);
 
-			// Add the change log details, if the project has changed 
-			if( changeCount > 0 )
+			// Create the <items> element
+			Element items = xmlDoc.createElement("items");	
+			// Set the version attribute to the <items> element
+			items.setAttribute("version", version);
+			// Append the <items> to the root element <changelog>
+			changeLogElem.appendChild(items);
+			
+			// Process the changes...
+			for( Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it.hasNext(); )
 			{
-				// Create the <items> element
-				Element items = xmlDoc.createElement("items");	
-				// Set the version attribute to the <items> element
-				items.setAttribute("version", version);
-				// Append the <items> to the root element <changelog>
-				changeLogElem.appendChild(items);
-				
-				// Process the changes...
-				for( Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it.hasNext(); )
+				Hashtable<CM_PROJECT, Object> memberInfo = it.next();
+				if( null != memberInfo.get(CM_PROJECT.DELTA) )
 				{
-					Hashtable<CM_PROJECT, Object> memberInfo = it.next();
 					short deltaFlag = Short.valueOf(memberInfo.get(CM_PROJECT.DELTA).toString());
 					if( deltaFlag > 0 )
 					{

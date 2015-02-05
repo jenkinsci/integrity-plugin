@@ -83,7 +83,7 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
     @Override
     public boolean needsToRunAfterFinalized()
     {
-        return true;
+        return false;
     }
 
     /**

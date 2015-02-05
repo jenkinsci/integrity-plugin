@@ -312,7 +312,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**

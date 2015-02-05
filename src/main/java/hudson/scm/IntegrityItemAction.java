@@ -797,7 +797,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**
