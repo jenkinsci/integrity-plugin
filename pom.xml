@@ -79,6 +79,14 @@
           <skip>true</skip>
         </configuration>
       </plugin>
+      <plugin>
+        <groupId>org.jenkins-ci.tools</groupId>
+        <artifactId>maven-hpi-plugin</artifactId>
+        <extensions>true</extensions>
+        <configuration>
+          <compatibleSinceVersion>1.29</compatibleSinceVersion>
+        </configuration>
+      </plugin>
     </plugins>
   </build>
   
