@@ -1,7 +1,10 @@
 <div>
 Provides tagging functionality for Integrity CM. 
 <p>	
-A 'tag' translates to an Integrity CM Project Checkpoint with a project label and without cascading the label to all members.  The Integrity CM plug-in supports tagging with a user defined tag name/pattern. For example:
+A 'tag' translates to an Integrity CM Project Checkpoint with a project label and without cascading the label to all members.
+If the “Integrity - CM Checkpoint” Post-build Action is configured for a build configuration or if the Jenkins job is configured for a pre-build checkpoint,
+then the post-build action simply labels the project and no new checkpoint is attempted.
+The Integrity CM plug-in supports tagging with a user defined tag name/pattern. For example:
 </p>
 <p> 
 &nbsp;&nbsp;&nbsp;&nbsp;${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat("yyyy_MM_dd").format(new Date())}
