@@ -4,9 +4,9 @@
 		<f:select />
 	</f:entry>
 	
-	<f:entry title="Tag Name" field="tagName">
-    	<f:textbox clazz="required" checkMessage="'Tag Name' is a required field!" name="tagName" value="${h.ifThenElse(instance.tagName==null,descriptor.tagName,instance.tagName)}" 
-    		checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
+	<f:entry title="Checkpoint Label" field="checkpointLabel">
+    	<f:textbox clazz="required" checkMessage="'Checkpoint Label' is a required field!" name="checkpointLabel" value="${h.ifThenElse(instance.checkpointLabel==null,descriptor.checkpointLabel,instance.checkpointLabel)}" 
+    		checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/checkpointLabelCheck?value='+escape(this.value)" />
  	</f:entry>
 
 </j:jelly>

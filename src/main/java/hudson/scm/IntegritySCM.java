@@ -72,7 +72,7 @@ public class IntegritySCM extends SCM implements Serializable
 	private String configPath;
 	private String includeList;
 	private String excludeList;
-	private String tagName;
+	private String checkpointLabel;
 	private String configurationName;
 	private boolean cleanCopy;
 	private boolean skipAuthorInfo = false;
@@ -91,7 +91,7 @@ public class IntegritySCM extends SCM implements Serializable
 	 */
     @DataBoundConstructor
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String configPath, String includeList, String excludeList, boolean cleanCopy, 
-						String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String tagName, 
+						String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String checkpointLabel, 
 						String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
 	{
     	// Log the construction
@@ -108,7 +108,7 @@ public class IntegritySCM extends SCM implements Serializable
     	this.restoreTimestamp = restoreTimestamp;
     	this.skipAuthorInfo = skipAuthorInfo;
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
-    	this.tagName = tagName;    	
+    	this.checkpointLabel = checkpointLabel;    	
     	this.alternateWorkspace = alternateWorkspace;
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     	this.deleteNonMembers = deleteNonMembers;
@@ -130,7 +130,7 @@ public class IntegritySCM extends SCM implements Serializable
     	LOGGER.fine("Clean: " + this.cleanCopy);
     	LOGGER.fine("Skip Author Info: " + this.skipAuthorInfo);
     	LOGGER.fine("Checkpoint Before Build: " + this.checkpointBeforeBuild);
-    	LOGGER.fine("Tag Name: " + this.tagName);    	
+    	LOGGER.fine("Tag Name: " + this.checkpointLabel);    	
     	LOGGER.fine("Alternate Workspace Directory: " + this.alternateWorkspace);
     	LOGGER.fine("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
     	LOGGER.fine("Delete Non Members: " + this.deleteNonMembers);
@@ -232,13 +232,13 @@ public class IntegritySCM extends SCM implements Serializable
      * Returns the label string for the checkpoint performed before the build
      * @return
      */
-    public String getTagName()
+    public String getCheckpointLabel()
     {
-		if( tagName == null || tagName.length() == 0 )
+		if( checkpointLabel == null || checkpointLabel.length() == 0 )
 		{
-			return IntegrityCheckpointDescriptorImpl.defaultTagName;
+			return IntegrityCheckpointDescriptorImpl.defaultCheckpointLabel;
 		}    	
-    	return tagName;
+    	return checkpointLabel;
     }
     
     /**
@@ -371,11 +371,11 @@ public class IntegritySCM extends SCM implements Serializable
     
     /**
      * Sets the label string for the checkpoint performed before the build
-     * @param tagName
+     * @param checkpointLabel
      */
-    public void setTagName(String tagName)
+    public void setCheckpointLabel(String checkpointLabel)
     {
-    	this.tagName = tagName;
+    	this.checkpointLabel = checkpointLabel;
     }
     
     /**
@@ -661,7 +661,7 @@ public class IntegritySCM extends SCM implements Serializable
 				{
 					// Execute a pre-build checkpoint...
     				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), tagName));
+    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), checkpointLabel));
     				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
 					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 					String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -976,22 +976,23 @@ public class IntegritySCM extends SCM implements Serializable
             // The field configurationName will be validated to ensure it is unique 
             // When the user has entered some information in the Configuration Name field and moves the focus away from field,
             // Jenkins will call DescriptorImpl.doUniqueConfigurationNameCheck to ensure uniqueness.
-        	String thisProjectName = Util.fixEmptyAndTrim(req.getParameter("name"));
-        	LOGGER.fine("The current project is " + thisProjectName);
-			for( AbstractProject<?, ?> project :  Jenkins.getInstance().getItems(AbstractProject.class) )
-			{
-				if( project.getScm() instanceof IntegritySCM )
-				{
-					if( !project.getName().equals(thisProjectName) )
-					{
-						LOGGER.fine("Looking for duplicate configuration names - Project = " + project.getUrl());
-						if( ((IntegritySCM)project.getScm()).getConfigurationName().equalsIgnoreCase(scm.getConfigurationName()) )
-						{
-							throw new FormException("Configuration Name '" + scm.getConfigurationName() + "' is not unique!", "configurationName");
-						}
-					}
-				}
-			}
+// Disabling unique name check since it makes it difficult for folks to upgrade to 1.31 from releases older than 1.29
+//        	String thisProjectName = Util.fixEmptyAndTrim(req.getParameter("name"));
+//        	LOGGER.fine("The current project is " + thisProjectName);
+//			for( AbstractProject<?, ?> project :  Jenkins.getInstance().getItems(AbstractProject.class) )
+//			{
+//				if( project.getScm() instanceof IntegritySCM )
+//				{
+//					if( !project.getName().equals(thisProjectName) )
+//					{
+//						LOGGER.fine("Looking for duplicate configuration names - Project = " + project.getUrl());
+//						if( ((IntegritySCM)project.getScm()).getConfigurationName().equalsIgnoreCase(scm.getConfigurationName()) )
+//						{
+//							throw new FormException("Configuration Name '" + scm.getConfigurationName() + "' is not unique!", "configurationName");
+//						}
+//					}
+//				}
+//			}
 
 			// Clear old project cache
 			doClearInactiveCacheData();
@@ -1038,9 +1039,9 @@ public class IntegritySCM extends SCM implements Serializable
          * Returns the default groovy expression for the checkpoint label
          * @return
          */
-        public String getTagName()
+        public String getCheckpointLabel()
         {
-        	return IntegrityCheckpointDescriptorImpl.defaultTagName;
+        	return IntegrityCheckpointDescriptorImpl.defaultCheckpointLabel;
         }
         
         /**

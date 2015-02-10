@@ -46,7 +46,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 3344676447487492553L;
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
-	private String tagName;
+	private String checkpointLabel;
 	private final Log logger = LogFactory.getLog(getClass());
 	private String serverConfig;
 	private String configurationName;
@@ -55,9 +55,9 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
 	@DataBoundConstructor
-	public IntegrityCheckpointAction(String serverConfig, String tagName)
+	public IntegrityCheckpointAction(String serverConfig, String checkpointLabel)
 	{
-		setTagName(tagName);
+		setCheckpointLabel(checkpointLabel);
 		setServerConfig(serverConfig);
 	}
 	
@@ -89,17 +89,17 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	/**
 	 * Checks if the given value is a valid Integrity Label.
 	 * If it's invalid, this method gives you the reason as string.
-	 * @param tagName The checkpoint label name
+	 * @param checkpointLabel The checkpoint label name
 	 * @return the error message, or null if label is valid
 	 */
-	public static String isInvalidTag(String tagName)
+	public static String isInvalidTag(String checkpointLabel)
 	{
-		if (tagName == null || tagName.length() == 0)
+		if (checkpointLabel == null || checkpointLabel.length() == 0)
 		{
 			return "The label string is empty!";
 		}
 
-		char ch = tagName.charAt(0);
+		char ch = checkpointLabel.charAt(0);
 		if (!(('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z')))
 		{
 			return "The label must start with an alpha character!";
@@ -107,7 +107,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 
 		for (char invalid : "$,.:;/\\@".toCharArray())
 		{
-			if (tagName.indexOf(invalid) >= 0)
+			if (checkpointLabel.indexOf(invalid) >= 0)
 			{
 				return "The label may cannot contain one of the following characters: $ , . : ; / \\ @";
 			}
@@ -120,23 +120,23 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 * Returns the label pattern for the Checkpoint
 	 * @return Checkpoint Label
 	 */
-	public String getTagName()
+	public String getCheckpointLabel()
 	{
-		if( tagName == null || tagName.length() == 0 )
+		if( checkpointLabel == null || checkpointLabel.length() == 0 )
 		{
-			return IntegrityCheckpointDescriptorImpl.defaultTagName;
+			return IntegrityCheckpointDescriptorImpl.defaultCheckpointLabel;
 		}
 
-		return tagName;
+		return checkpointLabel;
 	}
 	
 	/**
 	 * Sets the label for the Checkpoint
-	 * @param tagName The Checkpoint Label
+	 * @param checkpointLabel The Checkpoint Label
 	 */
-	public void setTagName(String tagName)
+	public void setCheckpointLabel(String checkpointLabel)
 	{
-		this.tagName = tagName;
+		this.checkpointLabel = checkpointLabel;
 	}
 	
 	/**
@@ -225,7 +225,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 		{
 			// Evaluate the groovy tag name
 			Map<String, String> env = build.getEnvironment(listener);
-			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, tagName);
+			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, checkpointLabel);
     		try
     		{
     			// Get information about the project
@@ -339,7 +339,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 */
     public static class IntegrityCheckpointDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-		public static final String defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
+		public static final String defaultCheckpointLabel = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
 
     	public IntegrityCheckpointDescriptorImpl()
     	{
@@ -378,12 +378,12 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 		}
 
 		/**
-		 * Returns the defaultTagName for a checkpoint
+		 * Returns the defaultCheckpointLabel for a checkpoint
 		 * @return
 		 */
-		public String getTagName()
+		public String getCheckpointLabel()
 		{
-			return defaultTagName;
+			return defaultCheckpointLabel;
 		}
 		
 		/**
@@ -396,9 +396,9 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
 		}
 		
-		public FormValidation doTagNameCheck(@QueryParameter("value") final String tagName) throws IOException, ServletException
+		public FormValidation doCheckpointLabelCheck(@QueryParameter("value") final String checkpointLabel) throws IOException, ServletException
 		{
-			if( tagName == null || tagName.length() == 0 )
+			if( checkpointLabel == null || checkpointLabel.length() == 0 )
 			{
 				return FormValidation.error("Please specify a label for this Checkpoint!");
 			}
@@ -408,7 +408,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 				String s = null;
 				try
 				{
-					s = evalGroovyExpression(new HashMap<String, String>(), tagName);
+					s = evalGroovyExpression(new HashMap<String, String>(), checkpointLabel);
 				}
 				catch(CompilationFailedException e)
 				{

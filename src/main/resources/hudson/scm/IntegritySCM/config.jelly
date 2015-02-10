@@ -47,9 +47,9 @@
             <f:checkbox name="checkpointBeforeBuild" checked="${scm.checkpointBeforeBuild}"/>
         </f:entry>
         
-		<f:entry title="Tag Name" field="tagName">
-    		<f:textbox name="tagName" value="${h.ifThenElse(scm.tagName==null,descriptor.tagName,scm.tagName)}" 
-    			checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
+		<f:entry title="Checkpoint Label" field="checkpointLabel">
+    		<f:textbox name="checkpointLabel" value="${h.ifThenElse(scm.checkpointLabel==null,descriptor.checkpointLabel,scm.checkpointLabel)}" 
+    			checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/checkpointLabelCheck?value='+escape(this.value)" />
   		</f:entry>
         
         <f:entry title="Alternate Workspace Directory" field="alternateWorkspace">
