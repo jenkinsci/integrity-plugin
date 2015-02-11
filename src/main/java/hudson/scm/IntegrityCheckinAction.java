@@ -16,6 +16,7 @@ import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
@@ -93,7 +94,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	{
 		return this.serverConfig;
 	}
-
+	
 	/**
 	 * Returns the build configuration name for this project
 	 * @return
@@ -159,6 +160,36 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 	}
 
 	/**
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
+	 * @return
+	 */
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
+	{
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityCheckinAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityCheckinAction - Project User password = " + password.getEncryptedValue());
+		}
+		else
+		{
+			LOGGER.severe("IntegrityCheckinAction - Failed to initialize project specific connection settings!");
+			return desSettings;
+		}
+		
+		return ciSettings;
+	}
+	
+	/**
 	 * Executes the actual Integrity Checkpoint operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
@@ -171,8 +202,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 		}
 
 		// Create our Integrity check-in task
-        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener, 
-        														DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener, getProjectSettings(build));
         
         // Execute the check-in task and return the overall result
         return build.getWorkspace().act(ciTask);

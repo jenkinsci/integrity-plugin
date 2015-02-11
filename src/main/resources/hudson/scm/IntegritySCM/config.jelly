@@ -18,6 +18,14 @@
 
     <f:advanced>
         
+		<f:entry title="Project Specific Username" field="userName">
+			<f:textbox name="userName" value="${scm.userName}" />        
+		</f:entry>
+	        
+		<f:entry title="Project Specific Password" field="password">        
+			<f:password name="password" value="${scm.password}" />
+		</f:entry>
+		        
 		<f:entry title="Include List" field="includeList">
 			<f:textbox name="includeList" value="${scm.includeList}" />
 		</f:entry>       

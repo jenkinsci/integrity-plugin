@@ -15,6 +15,7 @@ import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
 import java.io.IOException;
 import java.io.Serializable;
@@ -207,6 +208,36 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	}
 	
 	/**
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
+	 * @return
+	 */
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
+	{
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityCheckpointAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityCheckpointAction - Project User password = " + password.getEncryptedValue());
+		}
+		else
+		{
+			LOGGER.severe("IntegrityCheckpointAction - Failed to initialize project specific connection settings!");
+			return desSettings;
+		}
+		
+		return ciSettings;
+	}
+	
+	/**
 	 * Executes the actual Integrity Checkpoint operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
@@ -220,7 +251,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 			return true;
 		}
 		
-		APISession api = APISession.create(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+		APISession api = APISession.create(getProjectSettings(build));
 		if( null != api )
 		{
 			// Evaluate the groovy tag name

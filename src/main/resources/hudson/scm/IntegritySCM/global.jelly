@@ -13,10 +13,10 @@
 					<f:textbox clazz="required positive-number" checkMessage="'Port' value must be a positive number!" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
 				</f:entry>				
 				<f:entry title="Username" field="userName">
-					<f:textbox clazz="required" checkMessage="'Username' is a required field!" name="serverConfig.userName" value="${serverConfig.userName}" />
+					<f:textbox name="serverConfig.userName" value="${serverConfig.userName}" />
 				</f:entry>
 				<f:entry title="Password" field="password">
-					<f:password clazz="required" checkMessage="'Password' is a required field!" name="serverConfig.password" value="${serverConfig.password}" />
+					<f:password name="serverConfig.password" value="${serverConfig.password}" />
 				</f:entry>
 				<f:advanced>
 					<f:entry title="Use Secure Connection?" field="secure">

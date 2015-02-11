@@ -3,7 +3,6 @@ package hudson.scm;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.model.BuildListener;
 import hudson.model.ModelObject;
 import hudson.model.TaskListener;
@@ -69,6 +68,8 @@ public class IntegritySCM extends SCM implements Serializable
 	private String integrityURL;
 	private IntegrityRepositoryBrowser browser;
 	private String serverConfig;
+	private String userName;
+	private Secret password;
 	private String configPath;
 	private String includeList;
 	private String excludeList;
@@ -90,9 +91,10 @@ public class IntegritySCM extends SCM implements Serializable
 	 * automatically copying values from a web form to a class.
 	 */
     @DataBoundConstructor
-	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String configPath, String includeList, String excludeList, boolean cleanCopy, 
-						String lineTerminator, boolean restoreTimestamp, boolean skipAuthorInfo, boolean checkpointBeforeBuild, String checkpointLabel, 
-						String alternateWorkspace, boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
+	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String userName, String password, String configPath, 
+						String includeList, String excludeList, boolean cleanCopy, String lineTerminator, boolean restoreTimestamp, 
+						boolean skipAuthorInfo, boolean checkpointBeforeBuild, String checkpointLabel, String alternateWorkspace, 
+						boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
 	{
     	// Log the construction
     	LOGGER.fine("IntegritySCM constructor has been invoked!");
@@ -100,6 +102,23 @@ public class IntegritySCM extends SCM implements Serializable
     	this.ciServerURL = Jenkins.getInstance().getRootUrlFromRequest();
     	this.browser = browser;
     	this.serverConfig = serverConfig;
+    	if( null != userName && userName.length() > 0 )
+    	{
+    		this.userName = userName;
+    	}
+    	else
+    	{
+    		this.userName = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getUserName();
+    	}
+    	if( null != password && password.length() > 0 )
+    	{
+    		this.password = Secret.fromString(password);
+    	}
+    	else
+    	{
+    		this.password = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getSecretPassword(); 
+    	}
+    	
     	this.configPath = configPath;
     	this.includeList = includeList;
     	this.excludeList = excludeList;
@@ -121,6 +140,8 @@ public class IntegritySCM extends SCM implements Serializable
     	LOGGER.fine("CI Server URL: " + this.ciServerURL);
     	LOGGER.fine("URL: " + this.integrityURL);
     	LOGGER.fine("Server Configuration: " + this.serverConfig);
+    	LOGGER.fine("Project User: " + this.userName);
+    	LOGGER.fine("Project User Password: " + this.password);
     	LOGGER.fine("Configuration Name: " + this.configurationName);
     	LOGGER.fine("Configuration Path: " + this.configPath);
     	LOGGER.fine("Include Filter: " + this.includeList);
@@ -156,6 +177,33 @@ public class IntegritySCM extends SCM implements Serializable
     	return serverConfig;
     }
     
+	/**
+     * Returns the project specific User connecting to the Integrity Server
+     * @return
+     */
+	public String getUserName()
+	{
+		return this.userName;
+	}
+	
+	 /**
+     * Returns the project specific encrypted password of the user connecting to the Integrity Server
+     * @return
+     */
+	public String getPassword()
+	{
+		return this.password.getEncryptedValue();
+	}
+	
+	 /**
+     * Returns the project specific Secret password of the user connecting to the Integrity Server
+     * @return
+     */
+	public Secret getSecretPassword()
+	{
+		return this.password;
+	}	
+	
     /**
      * Returns the Project or Configuration Path for a Integrity Source Project
      * @return
@@ -297,6 +345,24 @@ public class IntegritySCM extends SCM implements Serializable
     	integrityURL = (ic.getSecure() ? "https://" : "http://") + ic.getHostName() + ":" + String.valueOf(ic.getPort());     	
     }
 
+	/**
+     * Sets the project specific User connecting to the Integrity Server
+     * @return
+     */
+	public void setUserName(String userName)
+	{
+		this.userName = userName;
+	}
+	 
+	/**
+     * Sets the project specific encrypted Password of the user connecting to the Integrity Server
+     * @param password - The clear password
+     */
+	public void setPassword(String password)
+	{
+		this.password = Secret.fromString(password);
+	}
+	
     /**
      * Sets the Project or Configuration Path for an Integrity Source Project
      * @return
@@ -633,7 +699,11 @@ public class IntegritySCM extends SCM implements Serializable
 		listener.getLogger().println("Build Log: " + ciServerURL + build.getUrl() + "console");
 		
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
-		APISession api = APISession.create(((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));	
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable coSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());				
+		APISession api = APISession.create(coSettings);
+		
 		// Ensure we've successfully created an API Session
 		if( null == api )
 		{
@@ -830,7 +900,10 @@ public class IntegritySCM extends SCM implements Serializable
         		{
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
-        			APISession api = APISession.create(((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));	
+        			IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+        			IntegrityConfigurable coSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+        																			desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());		        			
+        			APISession api = APISession.create(coSettings);	
         			if( null != api )
         			{
 	        			try

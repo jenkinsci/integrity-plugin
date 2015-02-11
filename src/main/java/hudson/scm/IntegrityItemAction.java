@@ -26,6 +26,7 @@ import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -634,6 +635,36 @@ public class IntegrityItemAction extends Notifier implements Serializable
     }
     
 	/**
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
+	 * @return
+	 */
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
+	{
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityItemAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityItemAction - Project User password = " + password.getEncryptedValue());
+		}
+		else
+		{
+			LOGGER.severe("IntegrityItemAction - Failed to initialize project specific connection settings!");
+			return desSettings;
+		}
+		
+		return ciSettings;
+	}
+	
+	/**
 	 * Executes the actual Integrity Update Item operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
@@ -646,7 +677,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 			return true;
 		}
 
-		APISession api = APISession.create(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+		APISession api = APISession.create(getProjectSettings(build));
 		if( null != api )
 		{
         	try

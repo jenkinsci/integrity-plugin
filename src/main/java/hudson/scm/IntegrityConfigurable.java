@@ -129,6 +129,15 @@ public final class IntegrityConfigurable implements Serializable
 	}
 	
 	/**
+	 * Returns the Secret password in its raw form
+	 * @return
+	 */
+	public Secret getSecretPassword()
+	{
+		return this.password;
+	}
+	
+	/**
 	 * Returns the password (plain text) of the user connecting to the Integrity Server 
 	 * @return
 	 */
