@@ -215,8 +215,8 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
 	{
 		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-		IntegrityConfigurable ciSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
-																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), 
+																		desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "");		
 		AbstractProject<?,?> thisProject = thisBuild.getProject();
 		if( thisProject.getScm() instanceof IntegritySCM )
 		{

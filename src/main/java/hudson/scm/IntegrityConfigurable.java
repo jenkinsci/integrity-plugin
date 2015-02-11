@@ -1,12 +1,16 @@
 package hudson.scm;
 
 import java.io.Serializable;
+import java.util.UUID;
+
 import hudson.util.Secret;
+
 import org.kohsuke.stapler.DataBoundConstructor;
 
 public final class IntegrityConfigurable implements Serializable 
 {
 	private static final long serialVersionUID = 3627193531372714191L;
+	private String configId;
 	private String name;
 	private String ipHostName;
 	private int ipPort = 0;
@@ -17,8 +21,9 @@ public final class IntegrityConfigurable implements Serializable
 	private Secret password;
 
 	@DataBoundConstructor
-	public IntegrityConfigurable(String ipHostName, int ipPort, String hostName, int port, boolean secure, String userName, String password) 
+	public IntegrityConfigurable(String configId, String ipHostName, int ipPort, String hostName, int port, boolean secure, String userName, String password) 
 	{
+		this.configId = (null == configId || configId.length() == 0 ? UUID.randomUUID().toString() : configId);
 		this.ipHostName = ipHostName;
 		this.ipPort = ipPort;
 		this.hostName = hostName;
@@ -29,6 +34,24 @@ public final class IntegrityConfigurable implements Serializable
 		this.name = String.format("%s@%s:%d", userName, hostName, port);
 	}
 
+	/**
+	 * Returns the unique id associated with this configuration
+	 * @return
+	 */
+	public String getConfigId()
+	{
+		return this.configId;
+	}
+	
+	/**
+	 * Sets the unique id for this configuration
+	 * @param id
+	 */
+	public void setConfigId(String id)
+	{
+		this.configId = id;
+	}
+	
     /**
      * Returns the Integration Point host name for the connection
      * @return
@@ -37,7 +60,7 @@ public final class IntegrityConfigurable implements Serializable
 	{
 		return this.ipHostName;
 	}
-	
+		
 	/**
      * Sets the Integration Point host name of the API Session
      * @return

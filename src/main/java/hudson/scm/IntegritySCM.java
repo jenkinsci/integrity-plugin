@@ -700,7 +700,7 @@ public class IntegritySCM extends SCM implements Serializable
 		
 		// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
 		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-		IntegrityConfigurable coSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+		IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
 																		desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());				
 		APISession api = APISession.create(coSettings);
 		
@@ -901,7 +901,7 @@ public class IntegritySCM extends SCM implements Serializable
         			// Next, load up the information for the current Integrity Project
         			// Lets start with creating an authenticated Integrity API Session for various parts of this operation...
         			IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-        			IntegrityConfigurable coSettings = new IntegrityConfigurable(desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+        			IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
         																			desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());		        			
         			APISession api = APISession.create(coSettings);	
         			if( null != api )
@@ -1167,7 +1167,7 @@ public class IntegritySCM extends SCM implements Serializable
 		{
 			for(IntegrityConfigurable configuration : this.configurations )
 			{
-				if( configuration.getName().equals(name) ) 
+				if( name.equals(configuration.getConfigId()) ) 
 				{ 
 					return configuration;
 				}
@@ -1189,7 +1189,7 @@ public class IntegritySCM extends SCM implements Serializable
 			{			
 				for( IntegrityConfigurable config : this.configurations )
 				{
-					listBox.add(config.getName());
+					listBox.add(config.getName(), config.getConfigId());
 				}				
 			}
 			return listBox;
@@ -1266,7 +1266,7 @@ public class IntegritySCM extends SCM implements Serializable
         	LOGGER.fine("ipHostName: " + ipHostName);
         	LOGGER.fine("ipPort: " + ipPort);
         	
-			IntegrityConfigurable ic = new IntegrityConfigurable(ipHostName, ipPort, hostName, port, secure, userName, password);
+			IntegrityConfigurable ic = new IntegrityConfigurable("TEMP_ID", ipHostName, ipPort, hostName, port, secure, userName, password);
 			APISession api = APISession.create(ic);
 			if( null != api )
 			{

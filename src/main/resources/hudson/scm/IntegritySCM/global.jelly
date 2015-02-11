@@ -6,6 +6,10 @@
 	
 		<f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
 			<table width="100%">
+				<f:invisibleEntry title="Configuration ID" field="configId">
+					<input class="setting-input" name="serverConfig.configId" type="hidden" value="${serverConfig.configId}" />         
+				</f:invisibleEntry>
+				
 				<f:entry title="Hostname" field="hostName">
 					<f:textbox clazz="required" checkMessage="'Hostname' is a required field!" name="serverConfig.hostName" value="${serverConfig.hostName}" />
 				</f:entry>
