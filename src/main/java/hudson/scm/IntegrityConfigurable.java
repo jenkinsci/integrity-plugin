@@ -23,6 +23,7 @@ public final class IntegrityConfigurable implements Serializable
 		this.ipPort = ipPort;
 		this.hostName = hostName;
 		this.port = port;
+		this.secure = secure;
 		this.userName = userName;
 		this.password = Secret.fromString(password);
 		this.name = String.format("%s@%s:%d", userName, hostName, port);

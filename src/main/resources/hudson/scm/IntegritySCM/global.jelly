@@ -20,7 +20,7 @@
 				</f:entry>
 				<f:advanced>
 					<f:entry title="Use Secure Connection?" field="secure">
-						<f:checkbox name="serverConfig.secure" checked="${serverConfig.secure}" default="false"/>
+						<f:checkbox name="serverConfig.secure" checked="${h.ifThenElse(serverConfig==null,false,serverConfig.secure)}"/>
 					</f:entry>
 					<f:entry title="Integration Point Hostname" field="ipHostName">
 						<f:textbox name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
