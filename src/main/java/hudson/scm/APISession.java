@@ -45,7 +45,7 @@ public class APISession
      * Creates an authenticated API Session against the Integrity Server
      * @return An authenticated API Session
      */
-	public static APISession create(IntegrityConfigurable settings)
+	public static synchronized APISession create(IntegrityConfigurable settings)
 	{
 		// Attempt to open a connection to the Integrity Server
     	try
