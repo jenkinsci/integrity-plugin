@@ -530,7 +530,7 @@ public class IntegritySCM extends SCM implements Serializable
 		env.put("MKSSI_PROJECT", IntegrityCheckpointAction.evalGroovyExpression(env, configPath));
 		env.put("MKSSI_HOST", ic.getHostName());
 		env.put("MKSSI_PORT", String.valueOf(ic.getPort()));
-		env.put("MKSSI_USER", ic.getUserName());
+		env.put("MKSSI_USER", userName);
 
 		// Populate with information about the most recent checkpoint
 		IntegrityCMProject siProject = getIntegrityProject();
@@ -793,16 +793,14 @@ public class IntegritySCM extends SCM implements Serializable
 			{ 
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
-				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, 
-													((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, restoreTimestamp,
+													true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, coSettings);
 			}
 			else 
 			{
 				// Otherwise, update the workspace in accordance with the user's cleanCopy option				
-				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, 
-													restoreTimestamp, cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, 
-													((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig));
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, restoreTimestamp, 
+													cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, coSettings); 
 			}
 			
 			// Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
