@@ -9,7 +9,7 @@
   
   <artifactId>integrity-plugin</artifactId>
   <name>PTC Integrity CM - Jenkins Plugin</name>
-  <version>1.32-SNAPSHOT</version>
+  <version>1.32</version>
   <packaging>hpi</packaging>
 
   <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>
