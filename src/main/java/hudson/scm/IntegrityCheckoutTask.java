@@ -7,6 +7,7 @@ import hudson.remoting.VirtualChannel;
 
 import java.io.File;
 import java.io.IOException;
+import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -198,11 +199,12 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         private final String memberID;
         private final String memberName;
         private final String memberRev;
+        private final Timestamp memberTimestamp;
         private final File targetFile;
         private final boolean calculateChecksum;
         
-        public CheckOutTask(ThreadLocalAPISession apiSession, ThreadLocalOpenFileHandler openFileHandler,
-        					String memberName, String configPath, String memberID, String memberRev, File targetFile, boolean calculateChecksum)
+        public CheckOutTask(ThreadLocalAPISession apiSession, ThreadLocalOpenFileHandler openFileHandler, String memberName, String configPath, 
+        					String memberID, String memberRev, Timestamp memberTimestamp, File targetFile, boolean calculateChecksum)
         {
             this.apiSession = apiSession;
             this.openFileHandler = openFileHandler;
@@ -210,6 +212,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             this.memberID = memberID;
             this.memberName = memberName;
             this.memberRev = memberRev;
+            this.memberTimestamp = memberTimestamp;
             this.targetFile = targetFile;
             this.calculateChecksum = calculateChecksum;
         }
@@ -230,7 +233,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             	LOGGER.fine("Checkout on API thread: " + api.toString());
             	try
             	{
-            		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, targetFile, restoreTimestamp, lineTerminator);
+            		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp, targetFile, restoreTimestamp, lineTerminator);
             	}
             	catch( APIException aex )
             	{
@@ -295,33 +298,34 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 				String memberName = memberInfo.get(CM_PROJECT.NAME).toString();
 				String memberID = memberInfo.get(CM_PROJECT.MEMBER_ID).toString();
 				String memberRev = memberInfo.get(CM_PROJECT.REVISION).toString();
+				Timestamp memberTimestamp = (Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP);
 				String configPath = memberInfo.get(CM_PROJECT.CONFIG_PATH).toString();
 				String checksum = (null == memberInfo.get(CM_PROJECT.CHECKSUM) ? "" : memberInfo.get(CM_PROJECT.CHECKSUM).toString());
 			
 				if( cleanCopy && deltaFlag != 3 )
 				{
 					LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);		
-					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, targetFile, fetchChangedWorkspaceFiles)));			
+					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));			
 				}
 				else if( deltaFlag == 0 && fetchChangedWorkspaceFiles && checksum.length() > 0 )
 				{
 					if( ! checksum.equals(IntegrityCMMember.getMD5Checksum(targetFile)) )
 					{
 						LOGGER.fine("Attempting to restore changed workspace file: " + targetFile.getAbsolutePath() + " to revision " + memberRev);
-						coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, targetFile, false)));
+						coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, false)));
 						fetchCount++;
 					}
 				}
 				else if( deltaFlag == 1 )
 				{
 					LOGGER.fine("Attempting to get new file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);
-					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, targetFile, fetchChangedWorkspaceFiles)));
+					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
 					addCount++;									
 				}
 				else if( deltaFlag == 2 )
 				{
 					LOGGER.fine("Attempting to update file: " + targetFile.getAbsolutePath() + " to revision " + memberRev);
-					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, targetFile, fetchChangedWorkspaceFiles)));
+					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
 					updateCount++;														
 				}
 				else if( deltaFlag == 3 )					

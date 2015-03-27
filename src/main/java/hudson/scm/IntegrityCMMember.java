@@ -7,6 +7,7 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.sql.Timestamp;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -105,7 +106,7 @@ public final class IntegrityCMMember
 	 * @return true if the operation succeeded or false if failed
 	 * @throws APIException
 	 */
-	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, 
+	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
 		// Make sure the directory is created
@@ -132,6 +133,12 @@ public final class IntegrityCMMember
 		// Return true if we were successful
 		if( res.getExitCode() == 0 )
 		{
+			// Per JENKINS-13765 - providing a workaround due to API bug
+			// Update the timestamp for the file, if appropriate
+			if( restoreTimestamp )
+			{
+				targetFile.setLastModified(memberTimestamp.getTime());
+			}
 			return true;
 		}
 		// Otherwise return false...
