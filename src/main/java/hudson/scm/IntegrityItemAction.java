@@ -335,23 +335,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
     	this.testSkippedVerdictName = testSkippedVerdictName;
     }
     
-	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
-	 * @return
-	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-	{
-		if (abstractProject.getParent() instanceof Hudson)
-		{
-			return abstractProject;
-		}
-		else
-		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-		}
-	}
-	
     /**
      * Wrapper function to edit a specific Integrity Build Item with a status and log
      * @param build Jenkins abstract build item
@@ -670,7 +653,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
 		boolean success = true;
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
+		AbstractProject<?,?> rootProject = build.getProject().getRootProject();
 		if( !(rootProject.getScm() instanceof IntegritySCM) )
 		{
 			listener.getLogger().println("Integrity Item update is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
