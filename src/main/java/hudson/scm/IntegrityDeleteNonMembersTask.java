@@ -14,7 +14,6 @@ import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
-import hudson.model.Hudson;
 import hudson.remoting.VirtualChannel;
 
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean> 
@@ -36,7 +35,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
 
     public Boolean invoke(File f, VirtualChannel channel) throws IOException, InterruptedException 
     { 
-        AbstractProject<?, ?> rootProject = getRootProject(build.getProject());
+        AbstractProject<?, ?> rootProject = build.getProject().getRootProject();
 
         if (!(rootProject.getScm() instanceof IntegritySCM))
         {
@@ -56,23 +55,6 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
             return false;       
         }
         return true;
-    }
-    
-    /**
-     * Obtains the root project for the build
-     * @param abstractProject
-     * @return
-     */
-    private AbstractProject<?, ?> getRootProject(AbstractProject<?, ?> abstractProject)
-    {
-        if (abstractProject.getParent() instanceof Hudson)
-        {
-            return abstractProject;
-        }
-        else
-        {
-            return getRootProject((AbstractProject<?, ?>) abstractProject.getParent());
-        }
     }
     
     /**

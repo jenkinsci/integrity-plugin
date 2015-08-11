@@ -5,7 +5,6 @@ import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -25,30 +24,12 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
 	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();
 
-
-    /**
-     * Obtains the root project for the build
-     * @param abstractProject
-     * @return
-     */
-    private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-    {
-        if (abstractProject.getParent() instanceof Hudson)
-        {
-            return abstractProject;
-        }
-        else
-        {
-            return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-        }
-    }
-    
     /**
      * Executes the actual Integrity Delete Non Members operation
      */
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
     {
-        AbstractProject<?, ?> rootProject = getRootProject(build.getProject());
+        AbstractProject<?, ?> rootProject = build.getProject().getRootProject();
 
         if (!(rootProject.getScm() instanceof IntegritySCM))
         {
