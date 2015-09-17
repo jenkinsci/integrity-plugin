@@ -475,13 +475,26 @@ public class DerbyUtils
 				while( rs.next() )
 				{
 					deleteCount++;
-					String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");	
-					executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
+					String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");
 					LOGGER.fine(String.format("Deleting old cache entry for %s/%s/%s", jobName, configurationName, cacheTableName));
+					try
+					{
+						// Attempting to drop the old cache table						
+						executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
+					}
+					catch( SQLException sqlex )
+					{
+						// If this fails, then we'll have to investigate later...
+						LOGGER.fine(String.format("Failed to drop table '%s' from Integrity SCM cache registry!", cacheTableName));
+						LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+					}
+					
+					// Tag the cache entry for removal
 					delete.setString(1, cacheTableName);
 					delete.addBatch();
 				}
 				
+				// Remove the cache entry regardless of the whether or not the cache table was purged
 				if( deleteCount > 0 )
 				{
 					delete.executeBatch();
