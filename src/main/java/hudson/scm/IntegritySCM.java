@@ -816,7 +816,10 @@ public class IntegritySCM extends SCM implements Serializable
 				// Delete non-members in this workspace, if appropriate...
 				if( deleteNonMembers )
 				{
-				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener, alternateWorkspace, getIntegrityProject());
+					
+				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, alternateWorkspace, 
+				    														DerbyUtils.viewProject(getIntegrityProject().getProjectCacheTable()),
+				    														DerbyUtils.getDirList(getIntegrityProject().getProjectCacheTable()));
 				    if( ! workspace.act(deleteNonMembers) )
 					{
 				        return false;
@@ -1008,9 +1011,9 @@ public class IntegritySCM extends SCM implements Serializable
 	 * The Descriptor should also contain the global configuration options as fields, 
 	 * just like the SCM class contains the configurations options for a job.
 	 */
-    public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> implements ModelObject 
+    public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> implements ModelObject
     {    	
-    	@Extension
+		@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
     	private ConnectionPoolDataSource dataSource;
     	private List<IntegrityConfigurable> configurations;

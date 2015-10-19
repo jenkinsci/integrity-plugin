@@ -12,6 +12,9 @@ import hudson.tasks.Publisher;
 
 import java.io.IOException;
 import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
@@ -20,6 +23,7 @@ import org.kohsuke.stapler.StaplerRequest;
 public class IntegrityDeleteNonMembersAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 654691931521381720L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	
 	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();
@@ -38,10 +42,22 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
         }
 
         IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-        IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener,  scm.getAlternateWorkspace(), scm.getIntegrityProject());
-        if (!build.getWorkspace().act(deleteNonMembers))
+        try
         {
-            return false;
+        	IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener,  scm.getAlternateWorkspace(), 
+        															DerbyUtils.viewProject(scm.getIntegrityProject().getProjectCacheTable()),
+        															DerbyUtils.getDirList(scm.getIntegrityProject().getProjectCacheTable()));
+        	if (!build.getWorkspace().act(deleteNonMembers))
+        	{
+        		return false;
+        	}
+        }
+        catch (SQLException e)
+        {
+            listener.getLogger().println("A SQL Exception was caught!"); 
+            listener.getLogger().println(e.getMessage());
+            LOGGER.log(Level.SEVERE, "SQLException", e);
+            return false;       
         }
 
         return true;
