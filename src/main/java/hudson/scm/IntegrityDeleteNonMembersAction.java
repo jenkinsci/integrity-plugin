@@ -44,7 +44,8 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
         IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
         try
         {
-        	IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener,  scm.getAlternateWorkspace(), 
+        	String resolvedAltWkspace = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), scm.getAlternateWorkspace());
+        	IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace, 
         															DerbyUtils.viewProject(scm.getIntegrityProject().getProjectCacheTable()),
         															DerbyUtils.getDirList(scm.getIntegrityProject().getProjectCacheTable()));
         	if (!build.getWorkspace().act(deleteNonMembers))

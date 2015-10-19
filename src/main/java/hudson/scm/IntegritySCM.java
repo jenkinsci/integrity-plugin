@@ -788,18 +788,19 @@ public class IntegritySCM extends SCM implements Serializable
 	        // Now, lets figure out how to populate the workspace...
 			List<Hashtable<CM_PROJECT, Object>> projectMembersList = DerbyUtils.viewProject(projectCacheTable);
 			List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
+			String resolvedAltWkspace = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), alternateWorkspace);
 			IntegrityCheckoutTask coTask = null;
 			if( null == prevProjectCache || prevProjectCache.length() == 0 )
 			{ 
 				// If we we were not able to establish the previous project state, 
 				// then always do full checkout.  cleanCopy = true
-				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, restoreTimestamp,
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace, lineTerminator, restoreTimestamp,
 													true, fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, coSettings);
 			}
 			else 
 			{
 				// Otherwise, update the workspace in accordance with the user's cleanCopy option				
-				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, alternateWorkspace, lineTerminator, restoreTimestamp, 
+				coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace, lineTerminator, restoreTimestamp, 
 													cleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, coSettings); 
 			}
 			
@@ -817,9 +818,7 @@ public class IntegritySCM extends SCM implements Serializable
 				if( deleteNonMembers )
 				{
 					
-				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, alternateWorkspace, 
-				    														DerbyUtils.viewProject(getIntegrityProject().getProjectCacheTable()),
-				    														DerbyUtils.getDirList(getIntegrityProject().getProjectCacheTable()));
+				    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace, projectMembersList, dirList);
 				    if( ! workspace.act(deleteNonMembers) )
 					{
 				        return false;
