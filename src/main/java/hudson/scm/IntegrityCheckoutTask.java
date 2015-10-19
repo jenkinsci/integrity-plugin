@@ -305,7 +305,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 				if( cleanCopy && deltaFlag != 3 )
 				{
 					LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath() + " at revision " + memberRev);		
-					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));			
+					coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
+					fetchCount++;
 				}
 				else if( deltaFlag == 0 && fetchChangedWorkspaceFiles && checksum.length() > 0 )
 				{
@@ -402,7 +403,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             // Lets advice the user that we've checked out all the members
             if (cleanCopy) 
             {
-                listener.getLogger().println("Successfully checked out " + projectMembersList.size() + " files!");
+                listener.getLogger().println("Successfully checked out " + fetchCount + " files!");
             } 
             else 
             {
