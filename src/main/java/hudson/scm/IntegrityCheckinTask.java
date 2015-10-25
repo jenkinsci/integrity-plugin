@@ -11,6 +11,11 @@ import java.io.IOException;
 import java.util.logging.Logger;
 import java.util.logging.Level;
 
+import jenkins.security.Roles;
+
+import org.jenkinsci.remoting.RoleChecker;
+import org.jenkinsci.remoting.RoleSensitive;
+
 import com.mks.api.Command;
 import com.mks.api.FileOption;
 import com.mks.api.Option;
@@ -116,6 +121,15 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
     	return cpid;
     }
     
+    /**
+     * Indicates that this task can be run slaves.
+     * @param checker RoleChecker
+     */
+    public void checkRoles(RoleChecker checker) throws SecurityException
+	{
+		checker.check((RoleSensitive) this, Roles.SLAVE);
+	}  
+	
     /** 
 	 * This task wraps around the code necessary to checkout Integrity CM Members on remote machines
 	 * @param workspaceFile Build environment's workspace directory
