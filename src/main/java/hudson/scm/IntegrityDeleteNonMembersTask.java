@@ -9,21 +9,26 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.security.Roles;
+
+import org.jenkinsci.remoting.RoleChecker;
+import org.jenkinsci.remoting.RoleSensitive;
+
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean> 
 {
     private static final long serialVersionUID = 6452098989064436149L;
     private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
-    private final BuildListener listener;
+    private final TaskListener listener;
     private String alternateWorkspaceDir;
     private final List<Hashtable<CM_PROJECT, Object>> projectMembersList; 
     private final List<String> folderList;
     
-    public IntegrityDeleteNonMembersTask(BuildListener listener, String alternateWorkspaceDir, List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> folderList)
+    public IntegrityDeleteNonMembersTask(TaskListener listener, String alternateWorkspaceDir, List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> folderList)
     {
         this.listener = listener;
         this.alternateWorkspaceDir = alternateWorkspaceDir;
@@ -31,6 +36,18 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         this.folderList = folderList;
     }
 
+    /**
+     * Indicates that this task can be run slaves.
+     * @param checker RoleChecker 
+     */
+	public void checkRoles(RoleChecker checker) throws SecurityException
+	{
+		checker.check((RoleSensitive) this, Roles.SLAVE);
+	}    
+	
+	/**
+	 * Invoke the delete non-members task
+	 */
     public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException, InterruptedException 
     { 
         try 
@@ -44,6 +61,8 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
             LOGGER.log(Level.SEVERE, "SQLException", e);
             return false;       
         }
+        
+        listener.getLogger().println("Delete Non-Members: Task is complete!");
         return true;
     }
     
@@ -94,7 +113,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
      * @throws IOException
      * @throws InterruptedException
      */
-    private void deleteNonMembers(FilePath workspaceFolder ,List<FilePath> projectMembers,BuildListener listener ) throws IOException, InterruptedException
+    private void deleteNonMembers(FilePath workspaceFolder, List<FilePath> projectMembers, TaskListener listener) throws IOException, InterruptedException
     {
         List<FilePath> workspaceMembers = workspaceFolder.list();
         for( FilePath workspaceMember : workspaceMembers )
