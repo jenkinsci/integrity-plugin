@@ -1,6 +1,5 @@
 package hudson.scm;
 
-import hudson.model.AbstractBuild;
 import hudson.model.Run;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
