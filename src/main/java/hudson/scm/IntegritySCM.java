@@ -7,7 +7,6 @@ import hudson.Launcher;
 import hudson.model.ModelObject;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
@@ -160,7 +159,7 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 
 	public IntegritySCM(String serverConfig, String userName, Secret password, String configPath, 
-						String includeList, String excludeList, boolean cleanCopy, boolean checkpointBeforeBuild)
+						String includeList, String excludeList, boolean cleanCopy, String checkpointLabel)
 	{
 		// Log the construction
 		LOGGER.fine("IntegritySCM(limited) constructor has been invoked!");
@@ -191,8 +190,8 @@ public class IntegritySCM extends SCM implements Serializable
 		this.lineTerminator = "native";
 		this.restoreTimestamp = true;
 		this.skipAuthorInfo = true;
-		this.checkpointBeforeBuild = checkpointBeforeBuild;
-		this.checkpointLabel = "";
+		this.checkpointLabel = checkpointLabel;
+		this.checkpointBeforeBuild = (null != checkpointLabel && checkpointLabel.length() > 0 ? true : false);
 		this.alternateWorkspace = "";
 		this.fetchChangedWorkspaceFiles = true;
 		this.deleteNonMembers = true;
