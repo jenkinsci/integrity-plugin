@@ -2,7 +2,7 @@ package hudson.scm;
 
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
-import hudson.model.BuildListener;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 import java.io.File;
@@ -23,6 +23,11 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import jenkins.security.Roles;
+
+import org.jenkinsci.remoting.RoleChecker;
+import org.jenkinsci.remoting.RoleSensitive;
+
 import com.mks.api.response.APIException;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
@@ -37,7 +42,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	private final boolean cleanCopy;
 	private final String alternateWorkspaceDir;
 	private final boolean fetchChangedWorkspaceFiles;
-	private final BuildListener listener;
+	private final TaskListener listener;
 	private IntegrityConfigurable integrityConfig;
     // Checksum Hash
     private ConcurrentHashMap<String, String> checksumHash;
@@ -58,10 +63,12 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 	 * @param restoreTimestamp Toggles whether to use the current date/time or the original date/time for the member
 	 * @param cleanCopy Indicates whether or not the workspace needs to be cleaned up prior to checking out files
 	 * @param fetchChangedWorkspaceFiles Toggles whether or not to calculate checksums, so if changed then it will be overwritten
-	 * @param listener The Hudson build listener
+	 * @param checkoutThreadPoolSize Number of parallel threads for the checkout
+	 * @param listener The Hudson task listener
+	 * @param integrityConfig Integrity Configuration Object
 	 */
 	public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> dirList, String alternateWorkspaceDir, String lineTerminator, boolean restoreTimestamp,
-									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, BuildListener listener, IntegrityConfigurable integrityConfig)
+									boolean cleanCopy, boolean fetchChangedWorkspaceFiles,int checkoutThreadPoolSize, TaskListener listener, IntegrityConfigurable integrityConfig)
 	{
 		this.projectMembersList = projectMembersList;
 		this.dirList = dirList;
@@ -258,6 +265,15 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         }
 
     }
+    
+    /**
+     * Indicates that this task can be run slaves.
+     * @param checker RoleChecker 
+     */
+	public void checkRoles(RoleChecker checker) throws SecurityException
+	{
+		checker.check((RoleSensitive) this, Roles.SLAVE);
+	}    
     
 	/**
 	 * This task wraps around the code necessary to checkout Integrity CM Members on remote machines
