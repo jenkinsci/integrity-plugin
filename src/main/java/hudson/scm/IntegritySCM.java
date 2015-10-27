@@ -7,7 +7,6 @@ import hudson.Launcher;
 import hudson.model.ModelObject;
 import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.model.Job;
 import hudson.model.Run;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
@@ -160,7 +159,7 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 
 	public IntegritySCM(String serverConfig, String userName, Secret password, String configPath, 
-						String includeList, String excludeList, boolean cleanCopy, boolean checkpointBeforeBuild)
+						String includeList, String excludeList, boolean cleanCopy, String checkpointLabel)
 	{
 		// Log the construction
 		LOGGER.fine("IntegritySCM(limited) constructor has been invoked!");
@@ -191,8 +190,8 @@ public class IntegritySCM extends SCM implements Serializable
 		this.lineTerminator = "native";
 		this.restoreTimestamp = true;
 		this.skipAuthorInfo = true;
-		this.checkpointBeforeBuild = checkpointBeforeBuild;
-		this.checkpointLabel = "";
+		this.checkpointLabel = checkpointLabel;
+		this.checkpointBeforeBuild = (null != checkpointLabel && checkpointLabel.length() > 0 ? true : false);
 		this.alternateWorkspace = "";
 		this.fetchChangedWorkspaceFiles = true;
 		this.deleteNonMembers = true;
@@ -583,6 +582,7 @@ public class IntegritySCM extends SCM implements Serializable
     {
     	return projects.containsKey(configurationName);
     }
+    
 	/**
 	 * Adds Integrity CM Project info to the build variables  
 	 */
@@ -592,16 +592,16 @@ public class IntegritySCM extends SCM implements Serializable
 		super.buildEnvVars(build, env);
 		LOGGER.fine("buildEnvVars() invoked...!");		
     	IntegrityConfigurable ic = ((DescriptorImpl)this.getDescriptor()).getConfiguration(serverConfig);		
-		IntegrityCMProject siProject = getIntegrityProject();
-		
-    	env.put("MKSSI_PROJECT", siProject.getConfigurationPath());
+
 		env.put("MKSSI_HOST", ic.getHostName());
 		env.put("MKSSI_PORT", String.valueOf(ic.getPort()));
 		env.put("MKSSI_USER", userName);
 
 		// Populate with information about the most recent checkpoint
+		IntegrityCMProject siProject = getIntegrityProject();
 		if( null != siProject && siProject.isBuild() )
 		{
+	    	env.put("MKSSI_PROJECT", siProject.getConfigurationPath());			
 			env.put("MKSSI_BUILD", siProject.getProjectRevision());
 		}
 	}
@@ -1093,31 +1093,7 @@ public class IntegritySCM extends SCM implements Serializable
         	{
         		scm.browser = new IntegrityWebUI(null);
         	}
-        	
-            // The field configurationName will be validated to ensure it is unique 
-            // When the user has entered some information in the Configuration Name field and moves the focus away from field,
-            // Jenkins will call DescriptorImpl.doUniqueConfigurationNameCheck to ensure uniqueness.
-// Disabling unique name check since it makes it difficult for folks to upgrade to 1.31 from releases older than 1.29
-//        	String thisProjectName = Util.fixEmptyAndTrim(req.getParameter("name"));
-//        	LOGGER.fine("The current project is " + thisProjectName);
-//			for( AbstractProject<?, ?> project :  Jenkins.getInstance().getItems(AbstractProject.class) )
-//			{
-//				if( project.getScm() instanceof IntegritySCM )
-//				{
-//					if( !project.getName().equals(thisProjectName) )
-//					{
-//						LOGGER.fine("Looking for duplicate configuration names - Project = " + project.getUrl());
-//						if( ((IntegritySCM)project.getScm()).getConfigurationName().equalsIgnoreCase(scm.getConfigurationName()) )
-//						{
-//							throw new FormException("Configuration Name '" + scm.getConfigurationName() + "' is not unique!", "configurationName");
-//						}
-//					}
-//				}
-//			}
-
-			// Clear old project cache
-			doClearInactiveCacheData();
-			
+        				
             return scm;
         }
         
@@ -1242,47 +1218,6 @@ public class IntegritySCM extends SCM implements Serializable
 			}
 			return listBox;
 		}		
-
-		/**
-		 * A maintenance function to help keep cache tables under control
-		 * @return
-		 */
-		public FormValidation doClearInactiveCacheData()
-		{
-			// Clean up any projects that aren't active anymore
-        	@SuppressWarnings("rawtypes")
-			List<AbstractProject> projectsList = Jenkins.getInstance().getItems(AbstractProject.class);
-        	LOGGER.fine("Total number of Jenkins projects = " + projectsList.size());
-			try
-			{
-				List<String> jobsList = DerbyUtils.getDistinctJobNames(dataSource);
-				for( String job : jobsList )
-				{
-					boolean active = false;
-					for( AbstractProject<?, ?> project : projectsList )
-					{
-						if( project.getName().equals(job) )
-						{
-							active = true;
-							break;
-						}
-					}
-					
-					if( !active )
-					{
-						LOGGER.fine(String.format("Job '%s' is inactive, deleting cache entries...", job));
-						DerbyUtils.deleteProjectCache(dataSource, job);
-					}
-				}
-			}
-			catch (SQLException e)
-			{
-				LOGGER.log(Level.SEVERE, "SQLException", e);
-				return FormValidation.error(e.getMessage());
-			}
-			
-			return FormValidation.ok("Inactive cache successfully purged!");
-		}
 		
 		/**
 		 * A credentials validation helper

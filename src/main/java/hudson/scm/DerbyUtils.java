@@ -55,6 +55,7 @@ public class DerbyUtils
 																	"BUILD_NUMBER BIGINT NOT NULL)";
 	public static final String SELECT_REGISTRY_1 = "SELECT ID FROM INTEGRITY_SCM_REGISTRY WHERE ID = 1";	
 	public static final String SELECT_REGISTRY_TABLE = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ? AND CONFIGURATION_NAME = ? AND BUILD_NUMBER = ?";
+	public static final String SELECT_REGISTRY_TABLE_DROP = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ? AND BUILD_NUMBER = ?";
 	public static final String INSERT_REGISTRY_ENTRY = "INSERT INTO INTEGRITY_SCM_REGISTRY (JOB_NAME, CONFIGURATION_NAME, PROJECT_CACHE_TABLE, BUILD_NUMBER) " + "VALUES (?, ?, ?, ?)";
 	public static final String SELECT_REGISTRY_DISTINCT_PROJECTS = "SELECT DISTINCT JOB_NAME FROM INTEGRITY_SCM_REGISTRY";
 	public static final String SELECT_REGISTRY_PROJECTS = "SELECT PROJECT_CACHE_TABLE FROM INTEGRITY_SCM_REGISTRY WHERE JOB_NAME = ? AND CONFIGURATION_NAME = ? ORDER BY BUILD_NUMBER DESC";
@@ -440,13 +441,13 @@ public class DerbyUtils
 	}
 	
 	/**
-	 * Maintenance function to limit project cache to the most recent two builds
+	 * Maintenance function to limit project cache to the most recent builds
 	 * @param dataSource
 	 * @param jobName
-	 * @param configurationName
+	 * @param buildNumber
 	 * @throws SQLException
 	 */
-	public static synchronized void cleanupProjectCache(ConnectionPoolDataSource dataSource, String jobName, String configurationName) throws SQLException
+	public static synchronized void cleanupProjectCache(ConnectionPoolDataSource dataSource, String jobName, long buildNumber) throws SQLException
 	{
 		Connection db = null;
 		PreparedStatement select = null;
@@ -459,46 +460,40 @@ public class DerbyUtils
 			db = dataSource.getPooledConnection().getConnection();
 			
 			// First Check to see if the current project registry exists
-			select = db.prepareStatement(SELECT_REGISTRY_PROJECTS, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
+			select = db.prepareStatement(SELECT_REGISTRY_TABLE_DROP, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_READ_ONLY);
 			select.setString(1, jobName);
-			select.setString(2, configurationName);
+			select.setLong(2, buildNumber);
 			delete = db.prepareStatement(DROP_REGISTRY_ENTRY);
 			rs = select.executeQuery();
 			int rowCount = getRowCount(rs);
-			LOGGER.fine("Cache entries for " + jobName + "/" + configurationName + " = " + rowCount);
-			if( rowCount > 2 )
+			int deleteCount = 0;
+			LOGGER.fine("Cache entries for " + jobName + "/" + buildNumber + " = " + rowCount);
+			while( rs.next() )
 			{
-				int deleteCount = 0;
-				// Keeping only two cached records
-				rs.next();
-				rs.next(); 
-				while( rs.next() )
+				String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");
+				LOGGER.fine(String.format("Deleting old cache entry for %s/%s", jobName, cacheTableName));
+				try
 				{
-					deleteCount++;
-					String cacheTableName = rs.getString("PROJECT_CACHE_TABLE");
-					LOGGER.fine(String.format("Deleting old cache entry for %s/%s/%s", jobName, configurationName, cacheTableName));
-					try
-					{
-						// Attempting to drop the old cache table						
-						executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
-					}
-					catch( SQLException sqlex )
-					{
-						// If this fails, then we'll have to investigate later...
-						LOGGER.fine(String.format("Failed to drop table '%s' from Integrity SCM cache registry!", cacheTableName));
-						LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-					}
+					// Attempting to drop the old cache table						
+					executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", cacheTableName));
+				}
+				catch( SQLException sqlex )
+				{
+					// If this fails, then we'll have to investigate later...
+					LOGGER.fine(String.format("Failed to drop table '%s' from Integrity SCM cache registry!", cacheTableName));
+					LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+				}
 					
-					// Tag the cache entry for removal
-					delete.setString(1, cacheTableName);
-					delete.addBatch();
-				}
+				// Tag the cache entry for removal
+				deleteCount++;
+				delete.setString(1, cacheTableName);
+				delete.addBatch();
+			}
 				
-				// Remove the cache entry regardless of the whether or not the cache table was purged
-				if( deleteCount > 0 )
-				{
-					delete.executeBatch();
-				}
+			// Remove the cache entry regardless of the whether or not the cache table was purged
+			if( deleteCount > 0 )
+			{
+				delete.executeBatch();
 			}
 		}
 		catch( SQLException sqlex )

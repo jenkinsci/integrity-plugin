@@ -21,10 +21,11 @@ public class IntegritySCMStep extends SCMStep
 	private String userName;
 	private Secret password;
 	private String configPath;
+	private String checkpointLabel;
 	private String includeList;
 	private String excludeList;
 	private boolean cleanCopy;
-	private boolean checkpointBeforeBuild;
+
 	
 	@DataBoundConstructor
 	public IntegritySCMStep(String serverConfig) 
@@ -32,10 +33,12 @@ public class IntegritySCMStep extends SCMStep
 		this.serverConfig = serverConfig;
 		this.userName = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getUserName();
 		this.password = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getSecretPassword();
+		this.configPath = "";
+		this.checkpointLabel = "";
 		this.includeList = "";
 		this.excludeList = "";
 		this.cleanCopy = false;
-		this.checkpointBeforeBuild = true;
+
 	}
 
 	public String getServerConfig() 
@@ -89,6 +92,16 @@ public class IntegritySCMStep extends SCMStep
 		return this.configPath;
 	}
 
+	@DataBoundSetter
+	public void setCheckpointLabel(String checkpointLabel) 
+	{
+		this.checkpointLabel = checkpointLabel;
+	}
+
+	public String getCheckpointLabel()
+	{
+		return this.checkpointLabel;
+	}
 	
 	@DataBoundSetter
 	public void setIncludeList(String includeList) 
@@ -123,23 +136,12 @@ public class IntegritySCMStep extends SCMStep
 		return this.cleanCopy;
 	}
 	
-	@DataBoundSetter
-	public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild) 
-	{
-		this.checkpointBeforeBuild = checkpointBeforeBuild;
-	}
-
-	public boolean getCheckpointBeforeBuild()
-	{
-		return this.checkpointBeforeBuild;
-	}
-	
 	@Override
 	protected SCM createSCM()
 	{
 		LOGGER.fine("IntegritySCMStep.createSCM() invoked!");
 
-		return new IntegritySCM(serverConfig, userName, password, configPath, includeList, excludeList, cleanCopy, checkpointBeforeBuild);
+		return new IntegritySCM(serverConfig, userName, password, configPath, includeList, excludeList, cleanCopy, checkpointLabel);
 	}
 
 	@Extension(optional = true)
