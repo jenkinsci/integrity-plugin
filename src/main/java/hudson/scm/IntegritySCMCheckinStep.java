@@ -23,7 +23,7 @@ import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 
 
-public class IntegritySCMLabelStep extends AbstractStepImpl
+public class IntegritySCMCheckinStep extends AbstractStepImpl
 {
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	
@@ -31,9 +31,11 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
 	private String userName;
 	private Secret password;
 	private String configPath;
-	private String checkpointLabel;
+	private String includes;
+	private String excludes;
+	private String itemID;
 	private IntegrityConfigurable connectionSettings;
-	
+		
 	public String getServerConfig() 
 	{
 		return this.serverConfig;
@@ -77,15 +79,37 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
 	}
 
 	@DataBoundSetter
-	public void setCheckpointLabel(String checkpointLabel) 
+	public void setIncludes(String includes) 
 	{
-		this.checkpointLabel = checkpointLabel;
+		this.includes = includes;
 	}
 
-	public String getCheckpointLabel()
+	public String getIncludes()
 	{
-		return this.checkpointLabel;
+		return this.includes;
 	}
+	
+	@DataBoundSetter
+	public void setExcludes(String excludes)
+	{
+		this.excludes = excludes;
+	}
+
+	public String getExcludes()
+	{
+		return this.excludes;
+	}	
+	
+	@DataBoundSetter
+	public void setItemID(String itemID)
+	{
+		this.itemID = itemID;
+	}
+
+	public String getItemID()
+	{
+		return this.itemID;
+	}		
 	
 	public IntegrityConfigurable getConnectionSettings()
 	{
@@ -99,39 +123,40 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
 	}
 	
 	@DataBoundConstructor
-	public IntegritySCMLabelStep(String serverConfig)
+	public IntegritySCMCheckinStep(String serverConfig)
 	{
-		this.serverConfig = serverConfig;		
+		this.serverConfig = serverConfig;
 		IntegrityConfigurable config = getConnectionSettings();
 		this.userName = config.getUserName();
 		this.password = Secret.fromString(config.getPassword());
 		this.configPath = "";
-		this.checkpointLabel = "";
-		
-		LOGGER.fine("IntegritySCMLabelStep() constructed!");		
+		this.includes = "";
+		this.excludes = "";		
+		this.itemID = "";
+		LOGGER.fine("IntegritySCMCheckinStep() constructed!");		
 	}
 
 	@Extension(optional = true)
-	public static final class IntegritySCMLabelDescriptorImpl extends AbstractStepDescriptorImpl 
+	public static final class IntegritySCMCheckinDescriptorImpl extends AbstractStepDescriptorImpl 
 	{
 
-		public IntegritySCMLabelDescriptorImpl() 
+		public IntegritySCMCheckinDescriptorImpl() 
 		{
-			super(IntegritySCMLabelStepExecution.class);
+			super(IntegritySCMCheckinStepExecution.class);
 			
-			LOGGER.fine("IntegritySCMLabelDescriptorImpl() invoked!");			
+			LOGGER.fine("IntegritySCMCheckinDescriptorImpl() invoked!");			
 		}
 
 		@Override
 		public String getFunctionName() 
 		{
-			return "siaddprojectlabel";
+			return "sici";
 		}
 
 		@Override
 		public String getDisplayName() 
 		{
-			return "Integrity SCM Label";
+			return "Integrity SCM Checkin";
 		}
 
 		/**
@@ -145,11 +170,11 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
 		}
 	}
 
-	public static class IntegritySCMLabelStepExecution extends AbstractSynchronousStepExecution<Void> 
+	public static class IntegritySCMCheckinStepExecution extends AbstractSynchronousStepExecution<Void> 
 	{
-		private static final long serialVersionUID = 7564942554899422192L;
+		private static final long serialVersionUID = 7420144581704780618L;
 		@Inject
-		private transient IntegritySCMLabelStep step;
+		private transient IntegritySCMCheckinStep step;
 		@StepContextParameter
 		private transient Run<?, ?> run;
 		@StepContextParameter
@@ -162,7 +187,8 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
 		@Override
 		protected Void run() throws Exception 
 		{
-			IntegritySCMLabelNotifierStep notifier = new IntegritySCMLabelNotifierStep(step.getConnectionSettings(), step.getConfigPath(), step.getCheckpointLabel());
+			IntegritySCMCheckinNotifierStep notifier = new IntegritySCMCheckinNotifierStep(step.getConnectionSettings(), step.getConfigPath(), 
+																					step.getIncludes(), step.getExcludes(), step.getItemID());
 			notifier.perform(run, workspace, launcher, listener);
 			return null;
 		}

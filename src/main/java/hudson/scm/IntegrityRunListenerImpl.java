@@ -19,12 +19,12 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
  */
 
 @Extension 
-public class RunListenerImpl<R extends Run<?, ?>> extends RunListener<R> 
+public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R> 
 {
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	
 	@DataBoundConstructor
-	public RunListenerImpl() 
+	public IntegrityRunListenerImpl() 
 	{
 	}
 	

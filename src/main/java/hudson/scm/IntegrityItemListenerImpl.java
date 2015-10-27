@@ -19,12 +19,12 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
  * In addition, this is also used to clean up Integrity SCM cache tables when a Job is purged.
  */
 @Extension
-public class ItemListenerImpl extends ItemListener 
+public class IntegrityItemListenerImpl extends ItemListener 
 {
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	
 	@DataBoundConstructor
-	public ItemListenerImpl() 
+	public IntegrityItemListenerImpl() 
 	{
 	}
 	
