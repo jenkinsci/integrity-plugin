@@ -1,5 +1,8 @@
 package hudson.scm;
 
+import java.sql.SQLException;
+import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.kohsuke.stapler.DataBoundConstructor;
@@ -8,10 +11,12 @@ import hudson.Extension;
 import hudson.model.Item;
 import hudson.model.AbstractProject;
 import hudson.model.listeners.ItemListener;
+import hudson.scm.IntegritySCM.DescriptorImpl;
 
 /**
  * This class implements the onCopied event when a Job is copied from another Job
  * The sole purpose is to ensure that the Configuration Name parameter is unique.
+ * In addition, this is also used to clean up Integrity SCM cache tables when a Job is purged.
  */
 @Extension
 public class ItemListenerImpl extends ItemListener 
@@ -49,5 +54,33 @@ public class ItemListenerImpl extends ItemListener
 				}
 			}
 		}
-	}	
+	}
+	
+	/**
+	 * Cleans up the Integrity SCM plugin database's cache tables, if appropriate
+	 */
+	@Override
+	public void onDeleted(Item item)
+	{
+		LOGGER.fine("ItemListenerImpl.onDeleted() invoked");
+		super.onDeleted(item);		
+		
+		LOGGER.fine("Preparing to clean up IntegritySCM cache tables for item - " + item.getName());
+		try
+		{
+			List<String> jobsList = DerbyUtils.getDistinctJobNames(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource());
+			if( jobsList.contains(item.getName()))
+			{
+				DerbyUtils.deleteProjectCache(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(), item.getName());
+			}
+
+		}
+		catch (SQLException sqlex)
+		{
+			LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+		}
+		
+		LOGGER.fine("IntegritySCM cache table cleanup complete!");
+	}
+	
 }
