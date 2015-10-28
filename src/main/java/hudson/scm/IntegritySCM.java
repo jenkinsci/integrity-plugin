@@ -39,6 +39,7 @@ import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
@@ -77,7 +78,7 @@ public class IntegritySCM extends SCM implements Serializable
 	private String checkpointLabel;
 	private String configurationName;
 	private boolean cleanCopy;
-	private boolean skipAuthorInfo = false;
+	private boolean skipAuthorInfo = true;
 	private String lineTerminator = "native";
 	private boolean restoreTimestamp = true;
 	private boolean checkpointBeforeBuild = false;
@@ -91,14 +92,14 @@ public class IntegritySCM extends SCM implements Serializable
 	 * Using the annotation helps the Stapler class to find which constructor that should be used when 
 	 * automatically copying values from a web form to a class.
 	 */
-    @DataBoundConstructor
+	@Deprecated
 	public IntegritySCM(IntegrityRepositoryBrowser browser, String serverConfig, String userName, String password, String configPath, 
 						String includeList, String excludeList, boolean cleanCopy, String lineTerminator, boolean restoreTimestamp, 
 						boolean skipAuthorInfo, boolean checkpointBeforeBuild, String checkpointLabel, String alternateWorkspace, 
 						boolean fetchChangedWorkspaceFiles, boolean deleteNonMembers, int checkoutThreadPoolSize, String configurationName)
 	{
     	// Log the construction
-    	LOGGER.fine("IntegritySCM constructor has been invoked!");
+    	LOGGER.fine("IntegritySCM constructor (deprecated) has been invoked!");
 		// Initialize the class variables
     	this.browser = browser;
     	this.serverConfig = serverConfig;
@@ -158,68 +159,35 @@ public class IntegritySCM extends SCM implements Serializable
     	LOGGER.fine("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
 	}
 
-	public IntegritySCM(String serverConfig, String userName, Secret password, String configPath, 
-						String includeList, String excludeList, boolean cleanCopy, String checkpointLabel)
+    @DataBoundConstructor
+	public IntegritySCM(String serverConfig, String configPath, String configurationName)
 	{
-		// Log the construction
-		LOGGER.fine("IntegritySCM(limited) constructor has been invoked!");
+    	// Log the construction
+    	LOGGER.fine("IntegritySCM constructor has been invoked!");
 		// Initialize the class variables
-		this.browser =  new IntegrityWebUI(null);
-		this.serverConfig = serverConfig;
-		if (null != userName && userName.length() > 0)
-		{
-			this.userName = userName;
-		}
-		else
-		{
-			this.userName = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getUserName();
-		}
-		if (null != password )
-		{
-			this.password = password;
-		}
-		else
-		{
-			this.password = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig).getSecretPassword();
-		}
-
-		this.configPath = configPath;
-		this.includeList = includeList;
-		this.excludeList = excludeList;
-		this.cleanCopy = cleanCopy;
-		this.lineTerminator = "native";
-		this.restoreTimestamp = true;
-		this.skipAuthorInfo = true;
-		this.checkpointLabel = checkpointLabel;
-		this.checkpointBeforeBuild = (null != checkpointLabel && checkpointLabel.length() > 0 ? true : false);
-		this.alternateWorkspace = "";
-		this.fetchChangedWorkspaceFiles = true;
-		this.deleteNonMembers = true;
+    	this.serverConfig = serverConfig;
+    	IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+    	this.userName = desSettings.getUserName();
+    	this.password = desSettings.getSecretPassword();     	
+    	this.configPath = configPath;
+    	this.includeList = "";
+    	this.excludeList = "";
+    	this.cleanCopy = false;
+    	this.lineTerminator = "native";
+    	this.restoreTimestamp = true;
+    	this.skipAuthorInfo = true;
+    	this.checkpointBeforeBuild = true;
+    	this.checkpointLabel = "";    	
+    	this.alternateWorkspace = "";
+    	this.fetchChangedWorkspaceFiles = true;
+    	this.deleteNonMembers = true;
 		this.checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
-		this.configurationName = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfigurationName();
+		this.configurationName = configurationName;
 
-		// Initialize the Integrity URL
-		initIntegrityURL();
-
-		LOGGER.fine("CI Server URL: " + this.ciServerURL);
-		LOGGER.fine("URL: " + this.integrityURL);
-		LOGGER.fine("Server Configuration: " + this.serverConfig);
-		LOGGER.fine("Project User: " + this.userName);
-		LOGGER.fine("Project User Password: " + this.password);
-		LOGGER.fine("Configuration Name: " + this.configurationName);
-		LOGGER.fine("Configuration Path: " + this.configPath);
-		LOGGER.fine("Include Filter: " + this.includeList);
-		LOGGER.fine("Exclude Filter: " + this.excludeList);
-		LOGGER.fine("Line Terminator: " + this.lineTerminator);
-		LOGGER.fine("Restore Timestamp: " + this.restoreTimestamp);
-		LOGGER.fine("Clean: " + this.cleanCopy);
-		LOGGER.fine("Skip Author Info: " + this.skipAuthorInfo);
-		LOGGER.fine("Checkpoint Before Build: " + this.checkpointBeforeBuild);
-		LOGGER.fine("Tag Name: " + this.checkpointLabel);
-		LOGGER.fine("Alternate Workspace Directory: " + this.alternateWorkspace);
-		LOGGER.fine("Fetch Changed Workspace Files: " + this.fetchChangedWorkspaceFiles);
-		LOGGER.fine("Delete Non Members: " + this.deleteNonMembers);
-		LOGGER.fine("Checkout Thread Pool Size: " + this.checkoutThreadPoolSize);
+    	// Initialize the Integrity URL
+    	initIntegrityURL();    	
+    	
+    	LOGGER.fine("IntegritySCM constructed!");
 	}
 	
     @Override
@@ -399,6 +367,16 @@ public class IntegritySCM extends SCM implements Serializable
 	}
 	
 	/**
+	 * Sets the Integrity SCM web browser
+	 * @param browser
+	 */
+	 @DataBoundSetter 
+	 public final void setBrowser(IntegrityRepositoryBrowser browser)
+	 {
+		 this.browser = browser;
+	 }
+	 
+	/**
 	 * Sets the server configuration name for this project
 	 * @param serverConfig
 	 */
@@ -413,18 +391,26 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the project specific User connecting to the Integrity Server
      * @return
      */
-	public void setUserName(String userName)
+    @DataBoundSetter 
+    public final void setUserName(String userName)
 	{
-		this.userName = userName;
+    	if( null != userName && userName.length() > 0 )
+    	{
+    		this.userName = userName;
+    	}
 	}
 	 
 	/**
      * Sets the project specific encrypted Password of the user connecting to the Integrity Server
      * @param password - The clear password
      */
-	public void setPassword(String password)
+    @DataBoundSetter 
+    public final void setPassword(String password)
 	{
-		this.password = Secret.fromString(password);
+    	if( null != password && password.length() > 0 )
+    	{
+    		this.password = Secret.fromString(password);
+    	}
 	}
 	
     /**
@@ -440,7 +426,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the files that will be not be included
      * @return
      */        
-    public void setIncludeList(String includeList)
+    @DataBoundSetter 
+    public final void setIncludeList(String includeList)
     {
     	this.includeList = includeList;
     }
@@ -449,7 +436,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the files that will be not be included
      * @return
      */        
-    public void setExcludeList(String excludeList)
+    @DataBoundSetter 
+    public final void setExcludeList(String excludeList)
     {
     	this.excludeList = excludeList;
     }
@@ -458,7 +446,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not the workspace is required to be cleaned
      * @return
      */        
-    public void setCleanCopy(boolean cleanCopy)
+    @DataBoundSetter 
+    public final void setCleanCopy(boolean cleanCopy)
     {
     	this.cleanCopy = cleanCopy; 
     }
@@ -467,7 +456,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the line terminator to apply when obtaining files from the Integrity Server
      * @return
      */        
-    public void setLineTerminator(String lineTerminator)
+    @DataBoundSetter 
+    public final void setLineTerminator(String lineTerminator)
     {
     	this.lineTerminator = lineTerminator; 
     }
@@ -476,7 +466,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not to restore the timestamp for individual files
      * @return
      */        
-    public void setRestoreTimestamp(boolean restoreTimestamp)
+    @DataBoundSetter 
+    public final void setRestoreTimestamp(boolean restoreTimestamp)
     {
     	this.restoreTimestamp = restoreTimestamp; 
     }
@@ -485,7 +476,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not to use 'si revisioninfo' to determine author information
      * @return
      */        
-    public void setSkipAuthorInfo(boolean skipAuthorInfo)
+    @DataBoundSetter 
+    public final void setSkipAuthorInfo(boolean skipAuthorInfo)
     {
     	this.skipAuthorInfo = skipAuthorInfo; 
     }
@@ -494,7 +486,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not a checkpoint should be performed before the build
      * @param checkpointBeforeBuild
      */
-    public void setCheckpointBeforeBuild(boolean checkpointBeforeBuild)
+    @DataBoundSetter 
+    public final void setCheckpointBeforeBuild(boolean checkpointBeforeBuild)
     {
     	this.checkpointBeforeBuild = checkpointBeforeBuild;
     }
@@ -503,7 +496,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets the label string for the checkpoint performed before the build
      * @param checkpointLabel
      */
-    public void setCheckpointLabel(String checkpointLabel)
+    @DataBoundSetter 
+    public final void setCheckpointLabel(String checkpointLabel)
     {
     	this.checkpointLabel = checkpointLabel;
     }
@@ -512,7 +506,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Sets an alternate workspace for the checkout directory
      * @param alternateWorkspace
      */
-    public void setAlternateWorkspace(String alternateWorkspace)
+    @DataBoundSetter 
+    public final void setAlternateWorkspace(String alternateWorkspace)
     {
     	this.alternateWorkspace = alternateWorkspace;
     }
@@ -521,7 +516,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not changed workspace files should be synchronized
      * @param fetchChangedWorkspaceFiles
      */
-    public void setFetchChangedWorkspaceFiles(boolean fetchChangedWorkspaceFiles)
+    @DataBoundSetter 
+    public final void setFetchChangedWorkspaceFiles(boolean fetchChangedWorkspaceFiles)
     {
     	this.fetchChangedWorkspaceFiles = fetchChangedWorkspaceFiles;
     }
@@ -530,7 +526,8 @@ public class IntegritySCM extends SCM implements Serializable
      * Toggles whether or not non members should be deleted
      * @param deleteNonMembers
      */
-    public void setDeleteNonMembers(boolean deleteNonMembers)
+    @DataBoundSetter 
+    public final void setDeleteNonMembers(boolean deleteNonMembers)
     {
         this.deleteNonMembers = deleteNonMembers;
 	}
@@ -539,7 +536,8 @@ public class IntegritySCM extends SCM implements Serializable
 	 * Sets the thread pool size of parallel checkout threads
      * @param checkoutThreadPoolSize
      */
-    public void setCheckoutThreadPoolSize(int checkoutThreadPoolSize)
+    @DataBoundSetter 
+    public final void setCheckoutThreadPoolSize(int checkoutThreadPoolSize)
 	{
         this.checkoutThreadPoolSize = checkoutThreadPoolSize;
     }
@@ -1044,7 +1042,7 @@ public class IntegritySCM extends SCM implements Serializable
 	 * The SCMDescriptor is used to create new instances of the SCM.
 	 */
 	@Override
-	public SCMDescriptor<IntegritySCM> getDescriptor() 
+	public DescriptorImpl getDescriptor() 
 	{
 		// Log the call
 		LOGGER.fine("IntegritySCM.getDescriptor() invoked...!");		
@@ -1058,14 +1056,14 @@ public class IntegritySCM extends SCM implements Serializable
 	 * The Descriptor should also contain the global configuration options as fields, 
 	 * just like the SCM class contains the configurations options for a job.
 	 */
-    public static class DescriptorImpl extends SCMDescriptor<IntegritySCM> implements ModelObject
-    {    	
+	public static final class DescriptorImpl extends SCMDescriptor<IntegritySCM> implements ModelObject
+    {
 		@Extension
     	public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
     	private ConnectionPoolDataSource dataSource;
     	private List<IntegrityConfigurable> configurations;
 		
-        protected DescriptorImpl() 
+        public DescriptorImpl() 
         {
         	super(IntegritySCM.class, IntegrityWebUI.class);
         	configurations = new ArrayList<IntegrityConfigurable>();
@@ -1123,6 +1121,12 @@ public class IntegritySCM extends SCM implements Serializable
             return true;
         }
 
+		@Override 
+        public boolean isApplicable(@SuppressWarnings("rawtypes") Job project) 
+        {
+            return true;
+        }
+        
         /**
          * Returns the pooled connection data source for the derby db
          * @return

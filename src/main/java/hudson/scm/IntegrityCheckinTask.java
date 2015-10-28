@@ -16,11 +16,7 @@ import jenkins.security.Roles;
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
-import com.mks.api.Command;
-import com.mks.api.FileOption;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
 
 public class IntegrityCheckinTask implements FileCallable<Boolean>
 {
@@ -61,66 +57,6 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		LOGGER.fine("Integrity Checkin Task Created!");
 	}
 		
-    private String createCP(APISession api) throws APIException
-    {
-    	// Return the generated CP ID
-    	String cpid = ":none";
-
-		// Check to see if the Item ID contains the magic keyword
-		if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
-		{
-			return ":bypass";
-		}
-    	
-    	// First figure out what Integrity Item to use for the Change Package
-    	try
-    	{
-    		int intItemID = Integer.parseInt(itemID);
-    		if( intItemID <= 0 )
-    		{
-    			LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
-    			return cpid;
-    		}
-    	}
-    	catch( NumberFormatException nfe )
-    	{
-    		LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
-    		return cpid;
-    	}
-    	
-    	// Construct a summary/description for the Change Package
-    	String desc = "Build updates from " + buildID;
-
-    	// Construct the create cp command
-    	Command cmd = new Command(Command.SI, "createcp");
-    	cmd.addOption(new Option("summary", desc));
-    	cmd.addOption(new Option("description", desc));
-    	cmd.addOption(new Option("issueId", itemID));
-
-    	// Execute the command
-    	Response res = api.runCommand(cmd);
-
-    	// Process the response object
-    	if( null != res )
-    	{
-    		// Parse the response object to extract the CP ID
-    		if( res.getExitCode() == 0 )
-    		{
-    			cpid = res.getResult().getPrimaryValue().getId();
-    		}
-    		else // Abort the script is the command failed
-    		{
-    			LOGGER.severe("An error occured creating Change Package to check-in build updates!");
-    		}
-    	}
-    	else
-    	{
-    		LOGGER.severe("An error occured creating Change Package to check-in build updates!");
-    	}
-
-    	return cpid;
-    }
-    
     /**
      * Indicates that this task can be run slaves.
      * @param checker RoleChecker
@@ -155,7 +91,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 				if( artifacts.length > 0 )
 				{
 					// Create our Change Package for the supplied itemID
-					String cpid = createCP(api);
+					String cpid = IntegrityCMMember.createCP(api, itemID, "Build updates from " + buildID);
 					for( int i = 0; i < artifacts.length; i++ )
 					{
 						FilePath member = artifacts[i];
@@ -164,143 +100,18 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 						// This is not a recursive directory tree check-in, only process files found
 						if( !member.isDirectory() )
 						{
-							// Construct the lock command
-							Command lock = new Command(Command.SI, "lock");
-							lock.addOption(new Option("cpid", cpid));
-							lock.addOption(new Option("project", ciConfigPath));
-							// Add the member selection
-							lock.addSelection(relativePath);
-							
-							try
-							{
-								// Execute the lock command
-								api.runCommand(lock);
-								// If the lock was successful, check-in the updates
-								LOGGER.fine("Attempting to checkin file: " + member);
-								
-								// Construct the project check-in command
-								Command ci = new Command(Command.SI, "projectci");
-								ci.addOption(new Option("cpid", cpid));
-								ci.addOption(new Option("project", ciConfigPath));
-								ci.addOption(new FileOption("sourceFile", new File(""+member)));
-								ci.addOption(new Option("saveTimestamp"));
-								ci.addOption(new Option("nocloseCP"));
-								ci.addOption(new Option("nodifferentNames"));
-								ci.addOption(new Option("branchVariant"));
-								ci.addOption(new Option("nocheckinUnchanged"));
-								ci.addOption(new Option("description", "Build updates from " + buildID));
-	
-								// Add the member selection
-								ci.addSelection(relativePath);
-	
-								// Execute the check-in command
-								api.runCommand(ci);
-								
-							}
-							catch( APIException ae )
-							{
-								// If the command fails, add only if the error indicates a missing member
-								ExceptionHandler eh = new ExceptionHandler(ae);
-								String exceptionString = eh.getMessage();
-	
-								// Ensure exception is due to member does not exist
-								if( exceptionString.indexOf("is not a current or destined or pending member") > 0 )
-								{
-									LOGGER.fine("Lock failed: " + exceptionString);
-									LOGGER.fine("Attempting to add file: " + member);
-								
-									// Construct the project add command
-									Command add = new Command(Command.SI, "projectadd");
-									add.addOption(new Option("cpid", cpid));
-									add.addOption(new Option("project", ciConfigPath));
-									add.addOption(new FileOption("sourceFile", new File(""+member)));
-									add.addOption(new Option("onExistingArchive", "sharearchive"));
-									add.addOption(new Option("saveTimestamp"));
-									add.addOption(new Option("nocloseCP"));
-									add.addOption(new Option("description", "Build updates from " + buildID));
-	
-									// Add the member selection
-									add.addSelection(relativePath);
-	
-									// Execute the add command
-									api.runCommand(add);								
-								}
-								else
-								{
-									// Re-throw the error as we need to troubleshoot
-									throw ae;
-								}
-							}						
+							IntegrityCMMember.updateMember(api, ciConfigPath, member, relativePath, cpid, "Build updates from " + buildID); 
 						}	
 					}
 					
 					// Finally submit the build updates Change Package if its not :none or :bypass
 					if( !cpid.equals(":none") && !cpid.equals(":bypass") )
 					{
-						LOGGER.fine("Submitting Change Package: " + cpid);
-						
-						// Construct the close cp command
-						Command closecp = new Command(Command.SI, "closecp");
-						closecp.addOption(new Option("releaseLocks"));
-						closecp.addSelection(cpid);
-						
-						// First we'll attempt to close the cp to release locks on files that haven't changed,
-						// next we will submit the cp which will submit it for review or 
-						// it will get automatically closed in the case of transactional cps
-						try
-						{
-							api.runCommand(closecp);
-						}
-						catch( APIException ae )
-						{
-							ExceptionHandler eh = new ExceptionHandler(ae);
-							String exceptionString = eh.getMessage();
-		
-							// Ensure exception is due to member does not exist
-							if( exceptionString.indexOf("has pending entries and can not be closed") > 0 )
-							{
-								LOGGER.fine("Close cp failed: " + exceptionString);
-								LOGGER.fine("Attempting to submit cp: " + cpid);
-								
-								// Construct the submit cp command
-								Command submitcp = new Command(Command.SI, "submitcp");
-								submitcp.addOption(new Option("closeCP"));
-								submitcp.addOption(new Option("commit"));
-		
-								// Add the cpid selection
-								submitcp.addSelection(cpid);
-		
-								// Execute the submit cp command
-								api.runCommand(submitcp);
-							}
-							else
-							{
-								// Re-throw the error as we need to troubleshoot
-								throw ae;
-							}
-							
-						}
+						IntegrityCMMember.submitCP(api, cpid);
 					}
 					else
 					{
-						// Construct the unlock command
-						Command unlock = new Command(Command.SI, "unlock");
-						unlock.addOption(new Option("project", ciConfigPath));
-						unlock.addOption(new Option("action", "remove"));
-						unlock.addOption(new Option("recurse"));
-						unlock.addOption(new Option("yes"));
-						
-						// Execute the unlock command					
-						try
-						{
-							api.runCommand(unlock);
-						}
-						catch( APIException ae )
-						{
-				    		ExceptionHandler eh = new ExceptionHandler(ae);
-				    		LOGGER.severe(eh.getMessage());
-				    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());							
-						}
+						IntegrityCMMember.unlockMembers(api, ciConfigPath);
 					}
 	
 					// Log the success
