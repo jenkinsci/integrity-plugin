@@ -16,7 +16,7 @@ import java.util.logging.Logger;
  * This class represents an Integration Point to a server.  
  * It also contains a Session object
  */
-public class APISession
+public class APISession implements ISession
 {
 	// Initialize our logger
 	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
