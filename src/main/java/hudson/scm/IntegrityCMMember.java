@@ -108,7 +108,7 @@ public final class IntegrityCMMember
 	 * @return true if the operation succeeded or false if failed
 	 * @throws APIException
 	 */
-	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
+	public static final boolean checkout(ISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
 		// Make sure the directory is created
@@ -305,7 +305,7 @@ public final class IntegrityCMMember
 	 * @param api Integrity API Session
 	 * @param configPath Full project configuration path
 	 */
-	public static final void unlockMembers(APISession api, String configPath)
+	public static final void unlockMembers(ISession api, String configPath)
 	{
 		// Construct the unlock command
 		Command unlock = new Command(Command.SI, "unlock");
