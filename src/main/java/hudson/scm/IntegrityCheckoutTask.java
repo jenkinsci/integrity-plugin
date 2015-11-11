@@ -1,10 +1,5 @@
 package hudson.scm;
 
-import hudson.FilePath;
-import hudson.FilePath.FileCallable;
-import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-
 import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
@@ -23,12 +18,17 @@ import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import jenkins.security.Roles;
-
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
-import com.mks.api.response.APIException;
+import hudson.FilePath;
+import hudson.FilePath.FileCallable;
+import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
+import hudson.scm.api.APISession;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.APICommandException;
+import jenkins.security.Roles;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
 {
@@ -242,9 +242,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             	{
             		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp, targetFile, restoreTimestamp, lineTerminator);
             	}
-            	catch( APIException aex )
+            	catch(APICommandException aex)
             	{
-            		LOGGER.severe("API Exception caught...");
+            		LOGGER.severe("API Command Exception caught.");
             		ExceptionHandler eh = new ExceptionHandler(aex);
             		LOGGER.severe(eh.getMessage());
             		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());

@@ -1,4 +1,4 @@
-package hudson.scm;
+package hudson.scm.api;
 
 import com.mks.api.Command;
 import com.mks.api.response.APIException;

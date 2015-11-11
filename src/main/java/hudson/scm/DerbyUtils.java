@@ -1,7 +1,5 @@
 package hudson.scm;
 
-import hudson.scm.IntegritySCM.DescriptorImpl;
-
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
@@ -36,6 +34,9 @@ import com.mks.api.response.Field;
 import com.mks.api.response.WorkItem;
 import com.mks.api.response.WorkItemIterator;
 import com.mks.api.si.SIModelTypeName;
+
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APISession;
 
 /**
  * This class provides certain utility functions for working with the embedded derby database
@@ -793,7 +794,7 @@ public class DerbyUtils
 						rs.updateString(CM_PROJECT.OLD_REVISION.toString(), oldRevision);
 						// Initialize the author information as requested
 						if( ! skipAuthorInfo ){ rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-													IntegrityCMMember.getAuthor(api, 
+													IntegrityCMMember.getAuthorFromRevisionInfo(api, 
 													rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
 													rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 													rowHash.get(CM_PROJECT.REVISION).toString())); }
@@ -825,7 +826,7 @@ public class DerbyUtils
 				{
 					// Initialize the author information as requested
 					if( ! skipAuthorInfo ){ rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-												IntegrityCMMember.getAuthor(api, 
+												IntegrityCMMember.getAuthorFromRevisionInfo(api, 
 												rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
 												rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 												rowHash.get(CM_PROJECT.REVISION).toString())); }				
@@ -1084,7 +1085,7 @@ public class DerbyUtils
 			{
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-						IntegrityCMMember.getAuthor(api, 
+						IntegrityCMMember.getAuthorFromRevisionInfo(api, 
 											rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
 											rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 											rowHash.get(CM_PROJECT.REVISION).toString()));

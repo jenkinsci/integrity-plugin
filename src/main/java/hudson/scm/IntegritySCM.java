@@ -1,20 +1,5 @@
 package hudson.scm;
 
-import hudson.AbortException;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.ModelObject;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.Job;
-import hudson.model.Run;
-import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
-import hudson.scm.browsers.IntegrityWebUI;
-import hudson.util.FormValidation;
-import hudson.util.Secret;
-import hudson.util.ListBoxModel;
-
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -23,20 +8,17 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.text.SimpleDateFormat;
-import java.util.logging.Logger;
-import java.util.logging.Level;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
-
-import jenkins.model.Jenkins;
-import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
@@ -44,12 +26,41 @@ import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 import org.kohsuke.stapler.export.Exported;
 
-import com.mks.api.Command;
-import com.mks.api.MultiValue;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+
+import hudson.AbortException;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.Job;
+import hudson.model.ModelObject;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.scm.ChangeLogParser;
+import hudson.scm.PollingResult;
+import hudson.scm.RepositoryBrowsers;
+import hudson.scm.SCM;
+import hudson.scm.SCMDescriptor;
+import hudson.scm.SCMRevisionState;
+import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
+import hudson.scm.api.APISession;
+import hudson.scm.api.APIUtils;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.APICommandException;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.command.ProjectInfoCommand;
+import hudson.scm.api.command.ViewProjectCommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
+import hudson.scm.browsers.IntegrityWebUI;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
+import jenkins.model.Jenkins;
+import net.sf.json.JSONObject;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and 
@@ -639,16 +650,18 @@ public class IntegritySCM extends SCM implements Serializable
 	 * @return response Integrity API Response
 	 * @throws APIException
 	 */
-	private Response initializeCMProject(APISession api, String projectCacheTable, String resolvedConfigPath) throws APIException
+	private Response initializeCMProject(APISession api, String projectCacheTable, String resolvedConfigPath) throws APICommandException
 	{
 		// Get the project information for this project
-		Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
-		siProjectInfoCmd.addOption(new Option("project", resolvedConfigPath));	
-		LOGGER.fine("Preparing to execute si projectinfo for " + resolvedConfigPath);
-		Response infoRes = api.runCommand(siProjectInfoCmd);
-		LOGGER.fine(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
+	    	
+	    	IAPICommand command = new ProjectInfoCommand();	
+	    	command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
+	    	
+	    	Response infoRes = command.execute(api);
+		
+	    	LOGGER.fine(infoRes.getCommandString() + " returned " + APIUtils.getResponseExitCode(infoRes));
 		// Initialize our siProject class variable
-		IntegrityCMProject siProject = new IntegrityCMProject(infoRes.getWorkItems().next(), projectCacheTable);
+		IntegrityCMProject siProject = new IntegrityCMProject(APIUtils.getWorkItem(infoRes), projectCacheTable);
 		// Set the project options
 		siProject.setLineTerminator(lineTerminator);
 		siProject.setRestoreTimestamp(restoreTimestamp);
@@ -660,10 +673,10 @@ public class IntegritySCM extends SCM implements Serializable
 
 	/**
 	 * Utility function to parse the include/exclude filter
-	 * @param siViewProjectCmd API Command for the 'si viewproject' command
+	 * @param command API Command for the 'si viewproject' command
 	 * @return
 	 */
-	private void applyMemberFilters(Command siViewProjectCmd)
+	private void applyMemberFilters(IAPICommand command)
 	{
 		// Checking if our include list has any entries
 		if( null != includeList && includeList.length() > 0 )
@@ -677,7 +690,7 @@ public class IntegritySCM extends SCM implements Serializable
 				filterString.append("file:");
 				filterString.append(filterTokens[i]);
 			}
-			siViewProjectCmd.addOption(new Option("filter", filterString.toString()));
+			command.addOption(new APIOption(IAPIOption.FILTER, filterString.toString()));
 		}
 	 
 		// Checking if our exclude list has any entries
@@ -689,7 +702,7 @@ public class IntegritySCM extends SCM implements Serializable
 			{ 
 				if (filterTokens[i]!= null)
 				{
-					siViewProjectCmd.addOption(new Option("filter", "!file:"+filterTokens[i]));
+					command.addOption(new APIOption(IAPIOption.FILTER, "!file:"+filterTokens[i]));
 				}
 			}                              
 		}
@@ -706,24 +719,20 @@ public class IntegritySCM extends SCM implements Serializable
 	{
 		IntegrityCMProject siProject = getIntegrityProject();
 		// Lets parse this project
-		Command siViewProjectCmd = new Command(Command.SI, "viewproject");
-		siViewProjectCmd.addOption(new Option("recurse"));
-		siViewProjectCmd.addOption(new Option("project", siProject.getConfigurationPath()));
-		MultiValue mvFields = new MultiValue(",");
-		mvFields.add("name");
-		mvFields.add("context");
-		mvFields.add("cpid");		
-		mvFields.add("memberrev");
-		mvFields.add("membertimestamp");
-		mvFields.add("memberdescription");
-		mvFields.add("type");
-		siViewProjectCmd.addOption(new Option("fields", mvFields));
+		
+		IAPICommand command = new ViewProjectCommand();
+		
+		command.addOption(new APIOption(IAPIOption.RECURSE));
+		command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
+		APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type");
+		command.addOption(new APIOption(IAPIOption.FIELDS, APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type")));
 			
 		// Apply our include/exclude filters
-        applyMemberFilters(siViewProjectCmd);
-	
+		applyMemberFilters(command);
+		
 		LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-		Response viewRes = api.runCommandWithInterim(siViewProjectCmd);
+		Response viewRes = command.execute(api);
+
 		DerbyUtils.parseProject(siProject, viewRes.getWorkItems());
 		return viewRes;
 	}
@@ -803,20 +812,20 @@ public class IntegritySCM extends SCM implements Serializable
 				// Make sure we don't have a build project configuration
 				if( ! siProject.isBuild() )
 				{
-					// Execute a pre-build checkpoint...
-    				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-    				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), checkpointLabel));
-    				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
-					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
-					String chkpt = wi.getResult().getField("resultant").getItem().getId();
-					listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
-													siProject.getConfigurationPath() + ", new revision is " + chkpt);
-					// Update the siProject to use the new checkpoint as the basis for this build
-					Command siProjectInfoCmd = new Command(Command.SI, "projectinfo");
-					siProjectInfoCmd.addOption(new Option("project", siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));	
-
-					Response infoRes = api.runCommand(siProjectInfoCmd);
-					siProject.initializeProject(infoRes.getWorkItems().next());
+        				// Execute a pre-build checkpoint...
+            				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
+            				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), checkpointLabel));
+            				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
+        				WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
+        				String chkpt = wi.getResult().getField("resultant").getItem().getId();
+        				listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
+        													siProject.getConfigurationPath() + ", new revision is " + chkpt);
+        				// Update the siProject to use the new checkpoint as the basis for this build
+        				IAPICommand command = new ProjectInfoCommand();	
+        			    	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
+        			    	
+        			    	Response infoRes = command.execute(api);        				
+        				siProject.initializeProject(infoRes.getWorkItems().next());
 				}
 				else
 				{
@@ -856,6 +865,9 @@ public class IntegritySCM extends SCM implements Serializable
 			String resolvedAltWkspace = IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
 			// If we we were not able to establish the previous project state, then always do full checkout.  cleanCopy = true
 			// Otherwise, update the workspace in accordance with the user's cleanCopy option
+			
+			// ANURAG : construct command objects in this class and pass them below
+			
 			IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace, lineTerminator, restoreTimestamp,
 																	((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy), 
 																	fetchChangedWorkspaceFiles,checkoutThreadPoolSize, listener, coSettings);

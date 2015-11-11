@@ -3,14 +3,17 @@ package hudson.scm;
 import java.io.IOException;
 import java.util.logging.Logger;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
-import com.mks.api.response.APIException;
-
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.TaskListener;
 import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.scm.api.APISession;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.APICommandException;
+import hudson.scm.api.command.AddProjectLabelCommand;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import jenkins.tasks.SimpleBuildStep;
@@ -44,23 +47,21 @@ public class IntegritySCMLabelNotifierStep extends Notifier implements SimpleBui
 			try
 			{
 				// Assumes the checkpoint was done before the build, so lets apply the label now
-				Command siAddProjectLabel = new Command(Command.SI, "addprojectlabel");
-				// Set the project name
-				siAddProjectLabel.addOption(new Option("project", configPath));
-				// Set the label
-				siAddProjectLabel.addOption(new Option("label", checkpointLabel));
-				// Move the label, if a previous one was applied
-				siAddProjectLabel.addOption(new Option("moveLabel"));
-				api.runCommand(siAddProjectLabel);
+				IAPICommand command = new AddProjectLabelCommand();
+			    	command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+			    	command.addOption(new APIOption(IAPIOption.LABEL, checkpointLabel));
+			    	
+			    	command.execute(api);
+			    	
 				listener.getLogger().println("Successfully added label " + checkpointLabel);
 			}
-			catch (APIException aex)
+			catch (APICommandException aex)
 			{
-        		LOGGER.severe("API Exception caught...");
-        		ExceptionHandler eh = new ExceptionHandler(aex);
-        		aex.printStackTrace(listener.fatalError(eh.getMessage()));
-        		LOGGER.severe(eh.getMessage());
-        		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+                		LOGGER.severe("API Exception caught...");
+                		ExceptionHandler eh = new ExceptionHandler(aex);
+                		aex.printStackTrace(listener.fatalError(eh.getMessage()));
+                		LOGGER.severe(eh.getMessage());
+                		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
 			}
 			finally
 			{

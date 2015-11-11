@@ -1,4 +1,4 @@
-package hudson.scm;
+package hudson.scm.api;
 
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
@@ -21,10 +21,10 @@ public class ExceptionHandler
 		
 		// API Exceptions can be nested.  Hence we will need to recurse the 
 		// exception hierarchy to dig for a conclusive message
-        Response response = ex.getResponse();
-
-        // Print the stack trace to standard out for debugging purposes
-        ex.printStackTrace();
+                Response response = ex.getResponse();
+                
+                // Print the stack trace to standard out for debugging purposes
+                        ex.printStackTrace();
         
 		// The API failed to execute the command (i.e. a real API error)
 		if( null == response) 

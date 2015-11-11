@@ -1,4 +1,4 @@
-package hudson.scm;
+package hudson.scm.api;
 
 import com.mks.api.CmdRunner;
 import com.mks.api.Command;
@@ -6,6 +6,9 @@ import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+
+import hudson.scm.IntegrityConfigurable;
+
 import com.mks.api.Session;
 
 import java.io.IOException;

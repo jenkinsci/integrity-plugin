@@ -27,12 +27,18 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+
+import hudson.scm.api.APISession;
+import hudson.scm.api.command.APICommandException;
+import hudson.scm.api.command.AddProjectLabelCommand;
+import hudson.scm.api.command.CheckPointCommand;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
 
 /**
  * This class represents an Integrity Configuration Management Project
@@ -361,23 +367,17 @@ public class IntegrityCMProject implements Serializable
 	 * @param api Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
 	 * @return Integrity API Response object
-	 * @throws APIException
+	 * @throws APICommandException
 	 */
-	public Response checkpoint(APISession api, String chkptLabel) throws APIException
+	public Response checkpoint(APISession api, String chkptLabel) throws APICommandException
 	{
-		// Construct the checkpoint command
-		Command siCheckpoint = new Command(Command.SI, "checkpoint");
-		// Set the project name
-		siCheckpoint.addOption(new Option("project", fullConfigSyntax));
-		// Set the label and description if applicable
-		if( null != chkptLabel && chkptLabel.length() > 0 )
-		{
-			// Set the label
-			siCheckpoint.addOption(new Option("label", chkptLabel));
-			// Set the description
-			siCheckpoint.addOption(new Option("description", chkptLabel));
-		}
-		return api.runCommand(siCheckpoint);
+	    // Construct the checkpoint command
+	    IAPICommand command = new CheckPointCommand();
+	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+	    // Set the label and description if applicable
+	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
+	    
+	    return command.execute(api);
 	}
 	
 	/**
@@ -390,16 +390,12 @@ public class IntegrityCMProject implements Serializable
 	public Response addProjectLabel(APISession api, String chkptLabel, String projectName, String projectRevision) throws APIException
 	{
 		// Construct the addprojectlabel command
-		Command siAddProjectLabel = new Command(Command.SI, "addprojectlabel");
-		// Set the project name
-		siAddProjectLabel.addOption(new Option("project", projectName));
-		// Set the project revision
-		siAddProjectLabel.addOption(new Option("projectRevision", projectRevision));
-		// Set the label
-		siAddProjectLabel.addOption(new Option("label", chkptLabel));
-		// Move the label, if a previous one was applied
-		siAddProjectLabel.addOption(new Option("moveLabel"));
-		return api.runCommand(siAddProjectLabel);
+	    	IAPICommand command = new AddProjectLabelCommand();
+	    	command.addOption(new APIOption(IAPIOption.PROJECT, projectName));
+	    	command.addOption(new APIOption(IAPIOption.LABEL, chkptLabel));
+	    	command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, projectRevision));
+	    	
+	    	return command.execute(api);
 	}
 	
 	/**

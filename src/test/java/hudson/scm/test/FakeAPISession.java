@@ -11,25 +11,17 @@
 
 package hudson.scm.test;
 
-import hudson.scm.APISession;
-import hudson.scm.ExceptionHandler;
-import hudson.scm.IntegrityConfigurable;
-import hudson.scm.ISession;
-
 import java.io.IOException;
-import java.util.LinkedHashMap;
-import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import com.mks.api.CmdRunner;
 import com.mks.api.Command;
-import com.mks.api.IntegrationPoint;
-import com.mks.api.IntegrationPointFactory;
-import com.mks.api.Session;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
-import com.mks.api.util.APIVersion;
+
+import hudson.scm.IntegrityConfigurable;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.ISession;
 
 /**
  * Allows for testing of an APISession
