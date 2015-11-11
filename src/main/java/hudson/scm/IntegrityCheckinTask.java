@@ -1,22 +1,23 @@
 package hudson.scm;
 
-import hudson.FilePath;
-import hudson.FilePath.FileCallable;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.remoting.VirtualChannel;
-
 import java.io.File;
 import java.io.IOException;
-import java.util.logging.Logger;
 import java.util.logging.Level;
-
-import jenkins.security.Roles;
+import java.util.logging.Logger;
 
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
 import com.mks.api.response.APIException;
+
+import hudson.FilePath;
+import hudson.FilePath.FileCallable;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.remoting.VirtualChannel;
+import hudson.scm.api.APISession;
+import hudson.scm.api.ExceptionHandler;
+import jenkins.security.Roles;
 
 public class IntegrityCheckinTask implements FileCallable<Boolean>
 {

@@ -1,22 +1,5 @@
 package hudson.scm;
 
-import groovy.lang.Binding;
-import groovy.lang.GroovyShell;
-import hudson.Extension;
-import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Notifier;
-import hudson.tasks.Publisher;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import hudson.util.Secret;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.SQLException;
@@ -27,8 +10,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
-
-import net.sf.json.JSONObject;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
@@ -41,6 +22,26 @@ import org.kohsuke.stapler.StaplerRequest;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+
+import groovy.lang.Binding;
+import groovy.lang.GroovyShell;
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APISession;
+import hudson.scm.api.ExceptionHandler;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
 
 
 public class IntegrityCheckpointAction extends Notifier implements Serializable
