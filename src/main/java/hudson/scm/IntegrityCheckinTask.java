@@ -145,7 +145,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 			{
 			    if( null != api )
 			    {
-			    	api.Terminate();
+			    	api.terminate();
 			    }
 			}
 		}

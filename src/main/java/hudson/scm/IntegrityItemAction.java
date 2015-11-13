@@ -792,7 +792,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	        }
         	finally
         	{
-        		api.Terminate();
+        		api.terminate();
         	}			
 		}
 		else

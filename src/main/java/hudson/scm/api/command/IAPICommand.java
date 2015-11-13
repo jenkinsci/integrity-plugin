@@ -1,8 +1,8 @@
 package hudson.scm.api.command;
 
-import com.mks.api.Command;
 import com.mks.api.response.Response;
 
+import hudson.AbortException;
 import hudson.scm.api.ISession;
 import hudson.scm.api.option.IAPIOption;
 
@@ -18,7 +18,7 @@ import hudson.scm.api.option.IAPIOption;
 
 public interface IAPICommand 
 {
-    
+    // List of commonly used plugin API commands
     static String PROJECT_CHECKOUT_COMMAND  =  "projectco";
     static String PROJECT_CHECKIN_COMMAND =  "projectci";
     static String PROJECT_INFO_COMMAND  =  "projectinfo";
@@ -43,13 +43,9 @@ public interface IAPICommand
      * Execute the command using an auto-generated Integrity Session API
      * @return
      * @throws APICommandException
+     * @throws AbortException 
      */
-    public boolean execute() throws APICommandException;
-    
-    /**
-     * @return
-     */
-    public Command getMKSAPICommand();
+    public Response execute() throws APICommandException, AbortException;
     
     /**
      * Do actions post the Integrity API call specifically for Jenkins functionality

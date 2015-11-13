@@ -202,14 +202,14 @@ public class FakeAPISession implements ISession
 	
 	public void refreshAPISession() throws APIException
 	{
-	    Terminate();
+	    terminate();
 	    initAPI();
 	} 
 	
 	/**
 	 * Terminate the API Session and Integration Point
 	 */
-	public void Terminate()
+	public void terminate()
 	{
 		boolean cmdRunnerKilled = false;
 		boolean sessionKilled = false;

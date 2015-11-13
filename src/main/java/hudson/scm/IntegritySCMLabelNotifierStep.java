@@ -65,7 +65,7 @@ public class IntegritySCMLabelNotifierStep extends Notifier implements SimpleBui
 			}
 			finally
 			{
-				api.Terminate();
+				api.terminate();
 			}
 		}
 		else

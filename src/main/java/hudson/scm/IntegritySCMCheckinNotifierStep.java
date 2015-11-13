@@ -108,7 +108,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 			{
 			    if( null != api )
 			    {
-			    	api.Terminate();
+			    	api.terminate();
 			    }
 			}
 		}

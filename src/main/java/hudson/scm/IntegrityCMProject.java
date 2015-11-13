@@ -32,6 +32,7 @@ import com.mks.api.response.Field;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 
+import hudson.AbortException;
 import hudson.scm.api.APISession;
 import hudson.scm.api.command.APICommandException;
 import hudson.scm.api.command.AddProjectLabelCommand;
@@ -324,7 +325,10 @@ public class IntegrityCMProject implements Serializable
 		item.appendChild(revision);
 		// Create and append the <date> element
 		Element date = xmlDoc.createElement("date");
-		date.appendChild(xmlDoc.createTextNode(IntegritySCM.SDF.format((Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP))));
+		synchronized (IntegritySCM.SDF) 
+		{
+		    date.appendChild(xmlDoc.createTextNode(IntegritySCM.SDF.format((Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP))));
+		}
 		item.appendChild(date);
 		// Create and append the annotation and differences links
 		try
@@ -363,6 +367,8 @@ public class IntegrityCMProject implements Serializable
 	}
 	
 	/**
+	 * TODO deprecate this method in later iteration 
+	 * 
 	 * Performs a checkpoint on this Integrity CM Project
 	 * @param api Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
@@ -378,6 +384,25 @@ public class IntegrityCMProject implements Serializable
 	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
 	    
 	    return command.execute(api);
+	}
+	
+	/**
+	 * Performs a checkpoint on this Integrity CM Project
+	 * @param api Authenticated Integrity API Session
+	 * @param chkptLabel Checkpoint label string
+	 * @return Integrity API Response object
+	 * @throws APICommandException
+	 * @throws AbortException 
+	 */
+	public Response checkpoint(String chkptLabel) throws APICommandException, AbortException
+	{
+	    // Construct the checkpoint command
+	    IAPICommand command = new CheckPointCommand();
+	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+	    // Set the label and description if applicable
+	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
+	    
+	    return command.execute();
 	}
 	
 	/**

@@ -43,7 +43,10 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
 		this.url = integrityURL;
 		this.version = String.valueOf(run.getNumber());
 		this.author = "user";
-		this.date = IntegritySCM.SDF.format(new Date());
+		synchronized (IntegritySCM.SDF) 
+		{
+		    this.date = IntegritySCM.SDF.format(new Date());
+		}
 		this.msg = "Integrity Change Log";
 		for (IntegrityChangeLog log : logs)
 		{

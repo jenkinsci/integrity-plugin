@@ -68,7 +68,7 @@ public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBui
 			}
 			finally
 			{
-				api.Terminate();
+				api.terminate();
 			}
 		}
 		else

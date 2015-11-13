@@ -14,8 +14,12 @@ import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
+import hudson.AbortException;
+import hudson.scm.IntegrityConfigurable;
+import hudson.scm.api.APISession;
 import hudson.scm.api.ISession;
 import hudson.scm.api.option.IAPIOption;
+import hudson.util.StreamTaskListener;
 
 /**
  * All Jenkins Integrity API Commands have to extend this class in order to execute Integrity API calls using the default method
@@ -29,6 +33,8 @@ public abstract class BasicAPICommand implements IAPICommand
     protected Map<String, Object> commandHelperObjects;
     
     protected Response res;
+    protected boolean runCommandWithInterim = false;
+    private static IntegrityConfigurable icSettings;
     
     
     /* (non-Javadoc)
@@ -44,7 +50,11 @@ public abstract class BasicAPICommand implements IAPICommand
 	    
 	    doPreAction();
 	    
-	    res = api.runCommand(getMKSAPICommand());
+	    if(runCommandWithInterim)
+		res = api.runCommandWithInterim(cmd);
+	    else
+		res = api.runCommand(cmd);
+	    
 	    if(null != res){
         	    int resCode = res.getExitCode();
         	    
@@ -56,25 +66,33 @@ public abstract class BasicAPICommand implements IAPICommand
 	    
 	} catch (APIException e) {
 	    throw new APICommandException(e);
+	} finally {
+	    api.terminate();
 	}
 	
 	return res;
     }
 
-    @Override
-    public boolean execute() throws APICommandException
-    {
-	//TODO Initialize API session here using an "IntegrityConfigurable.java" object
-	return false;
-    }
-    
     /* (non-Javadoc)
-     * @see hudson.scm.api.command.APICommand#getMKSAPICommand()
+     * @see hudson.scm.api.command.IAPICommand#execute()
      */
     @Override
-    public Command getMKSAPICommand()
+    public Response execute() throws APICommandException, AbortException
     {
-	return cmd;
+	IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", icSettings.getIpHostName(), icSettings.getIpPort(), icSettings.getHostName(), 
+	icSettings.getPort(), icSettings.getSecure(), icSettings.getUserName(), icSettings.getPasswordInPlainText());
+
+        ISession api = APISession.create(coSettings);
+        
+        // Ensure we've successfully created an API Session
+        if( null == api )
+        {
+            StreamTaskListener task = StreamTaskListener.fromStdout();
+            task.getLogger().println("Failed to establish an API connection to the Integrity Server!");
+            throw new AbortException("Connection Failed!");
+        }
+        
+        return execute(api);
     }
     
     @Override
@@ -114,6 +132,11 @@ public abstract class BasicAPICommand implements IAPICommand
     public void addAdditionalParameters(String paramName, Object param)
     {
 	commandHelperObjects.put(paramName, param);
+    }
+
+    public static void setIntegritySettings(IntegrityConfigurable desSettings)
+    {
+	icSettings = desSettings;
     }
     
 }

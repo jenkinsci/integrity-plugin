@@ -50,6 +50,7 @@ import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.command.APICommandException;
+import hudson.scm.api.command.BasicAPICommand;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.command.ProjectInfoCommand;
 import hudson.scm.api.command.ViewProjectCommand;
@@ -646,18 +647,17 @@ public class IntegritySCM extends SCM implements Serializable
 
 	/**
 	 * Primes the Integrity Project metadata information
-	 * @param api Integrity API Session
 	 * @return response Integrity API Response
+	 * @throws AbortException 
 	 * @throws APIException
 	 */
-	private Response initializeCMProject(APISession api, String projectCacheTable, String resolvedConfigPath) throws APICommandException
+	private Response initializeCMProject(String projectCacheTable, String resolvedConfigPath) throws APICommandException, AbortException
 	{
 		// Get the project information for this project
-	    	
 	    	IAPICommand command = new ProjectInfoCommand();	
 	    	command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
 	    	
-	    	Response infoRes = command.execute(api);
+	    	Response infoRes = command.execute();
 		
 	    	LOGGER.fine(infoRes.getCommandString() + " returned " + APIUtils.getResponseExitCode(infoRes));
 		// Initialize our siProject class variable
@@ -710,19 +710,18 @@ public class IntegritySCM extends SCM implements Serializable
 	
 	/**
 	 * Primes the Integrity Project Member metadata information
-	 * @param api Integrity API Session
 	 * @return response Integrity API Response
 	 * @throws APIException
 	 * @throws SQLException 
+	 * @throws AbortException 
 	 */
-	private Response initializeCMProjectMembers(APISession api) throws APIException, SQLException
+	private Response initializeCMProjectMembers() throws APIException, SQLException, AbortException
 	{
 		IntegrityCMProject siProject = getIntegrityProject();
 		// Lets parse this project
 		
 		IAPICommand command = new ViewProjectCommand();
 		
-		command.addOption(new APIOption(IAPIOption.RECURSE));
 		command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
 		APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type");
 		command.addOption(new APIOption(IAPIOption.FIELDS, APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type")));
@@ -731,7 +730,7 @@ public class IntegritySCM extends SCM implements Serializable
 		applyMemberFilters(command);
 		
 		LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-		Response viewRes = command.execute(api);
+		Response viewRes = command.execute();
 
 		DerbyUtils.parseProject(siProject, viewRes.getWorkItems());
 		return viewRes;
@@ -784,14 +783,10 @@ public class IntegritySCM extends SCM implements Serializable
 		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
 		IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
 																		desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());				
-		APISession api = APISession.create(coSettings);
 		
-		// Ensure we've successfully created an API Session
-		if( null == api )
-		{
-			listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
-			throw new AbortException("Connection Failed!");
-		}
+		// Initialize the API command framework
+		BasicAPICommand.setIntegritySettings(desSettings);
+		
 		// Lets also open the change log file for writing...
 		// Override file.encoding property so that we write as UTF-8 and do not have problems with special characters
 		PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile),"UTF-8"));
@@ -799,12 +794,12 @@ public class IntegritySCM extends SCM implements Serializable
 		{
 			// Register the project cache for this build
 			Job<?, ?> job = run.getParent();
-			String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), 
-																		job.getName(), configurationName, run.getNumber());			
+			String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(),
+											job.getName(), configurationName, run.getNumber());			
 			
 			// Next, load up the information for this Integrity Project's configuration
 			listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
-			initializeCMProject(api, projectCacheTable, resolvedConfigPath);
+			initializeCMProject(projectCacheTable, resolvedConfigPath);
 			IntegrityCMProject siProject = getIntegrityProject();
 			// Check to see we need to checkpoint before the build
 			if( checkpointBeforeBuild )
@@ -814,7 +809,7 @@ public class IntegritySCM extends SCM implements Serializable
 				{
         				// Execute a pre-build checkpoint...
             				listener.getLogger().println("Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
-            				Response res = siProject.checkpoint(api, IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), checkpointLabel));
+            				Response res = siProject.checkpoint(IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), checkpointLabel));
             				LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());        					
         				WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
         				String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -824,7 +819,7 @@ public class IntegritySCM extends SCM implements Serializable
         				IAPICommand command = new ProjectInfoCommand();	
         			    	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
         			    	
-        			    	Response infoRes = command.execute(api);        				
+        			    	Response infoRes = command.execute();        				
         				siProject.initializeProject(infoRes.getWorkItems().next());
 				}
 				else
@@ -833,7 +828,7 @@ public class IntegritySCM extends SCM implements Serializable
 				}
 			}
 			listener.getLogger().println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-			initializeCMProjectMembers(api);
+			initializeCMProjectMembers();
 					
 	    	// Now, we need to find the project state from the previous build.
 			String prevProjectCache = null;
@@ -846,7 +841,7 @@ public class IntegritySCM extends SCM implements Serializable
 	            {
 	            	// Compare the current project with the old revision state
 	            	LOGGER.fine("Found previous project state " + prevProjectCache);
-	            	DerbyUtils.compareBaseline(prevProjectCache, projectCacheTable, skipAuthorInfo, api);
+	            	DerbyUtils.compareBaseline(prevProjectCache, projectCacheTable, skipAuthorInfo);
 	            }
 			}
 			else
@@ -854,7 +849,7 @@ public class IntegritySCM extends SCM implements Serializable
 	            // We don't have the previous Integrity Revision State!
 				LOGGER.fine("Cannot construct previous Integrity Revision State!");
 				// Prime the author information for the current build as this could be the first build
-				if( ! skipAuthorInfo ){ DerbyUtils.primeAuthorInformation(projectCacheTable, api); }
+				if( ! skipAuthorInfo ){ DerbyUtils.primeAuthorInformation(projectCacheTable); }
 			}
 			
 	        // After all that insane interrogation, we have the current Project state that is
@@ -926,7 +921,6 @@ public class IntegritySCM extends SCM implements Serializable
 			{
 	            writer.close();
 	        }
-	    	api.Terminate();
 	    }
 
 		// Log the completion... 
@@ -972,12 +966,12 @@ public class IntegritySCM extends SCM implements Serializable
 	    				// Re-evaluate the config path to resolve any groovy expressions...
 	    				String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(job.getCharacteristicEnvVars(), configPath);
 	    				listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
-	    				initializeCMProject(api, projectCacheTable, resolvedConfigPath);
+	    				initializeCMProject(projectCacheTable, resolvedConfigPath);
 	    				listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
-	    				initializeCMProjectMembers(api);
+	    				initializeCMProjectMembers();
 	
 	    				// Compare this project with the old project 
-	    				int changeCount = DerbyUtils.compareBaseline(prevProjectCache, projectCacheTable, skipAuthorInfo, api);		
+	    				int changeCount = DerbyUtils.compareBaseline(prevProjectCache, projectCacheTable, skipAuthorInfo);		
 	    				// Finally decide whether or not we need to build again
 	    				if( changeCount > 0 )
 	    				{
@@ -1012,7 +1006,7 @@ public class IntegritySCM extends SCM implements Serializable
 	    			}
 	    		    finally
 	    		    {
-	    				api.Terminate();
+	    				api.terminate();
 	    		    }
 				}
 				else
@@ -1269,7 +1263,7 @@ public class IntegritySCM extends SCM implements Serializable
 			APISession api = APISession.create(ic);
 			if( null != api )
 			{
-				api.Terminate();
+				api.terminate();
 				return FormValidation.ok("Connection successful!");
 			}
 			else

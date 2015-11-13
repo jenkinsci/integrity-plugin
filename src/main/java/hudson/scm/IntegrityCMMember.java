@@ -17,6 +17,7 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 
+import hudson.AbortException;
 import hudson.FilePath;
 import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
@@ -150,14 +151,14 @@ public final class IntegrityCMMember
 	
 	/**
 	 * Performs a revision info on this Integrity Source File
-	 * @param api Integrity API Session
 	 * @param configPath Full project configuration path
 	 * @param memberID Member ID for this file
 	 * @param memberRev Member Revision for this file
 	 * @return User responsible for making this change
+	 * @throws AbortException 
 	 * @throws APICommandException 
 	 */
-	public static String getAuthorFromRevisionInfo(APISession api, String configPath, String memberID, String memberRev)
+	public static String getAuthorFromRevisionInfo(String configPath, String memberID, String memberRev) throws AbortException
 	{
 		String author = "unknown";
 		
@@ -169,7 +170,7 @@ public final class IntegrityCMMember
 		
 		Response response;
 		try {
-		    	response = command.execute(api);
+		    	response = command.execute();
 		    	author = APIUtils.getAuthorInfo(response,memberID);
 		    	
 		} catch (APICommandException aex) {

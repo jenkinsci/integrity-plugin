@@ -324,7 +324,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     		}
     		finally
     		{
-    			api.Terminate();
+    			api.terminate();
     		}
         		
 		}

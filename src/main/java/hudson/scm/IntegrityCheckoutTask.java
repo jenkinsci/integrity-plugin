@@ -166,7 +166,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                 try
                 {
                 	LOGGER.fine("Terminating threaded API Sessions...");
-                    session.Terminate();
+                    session.terminate();
                 }
                 catch(Exception ex)
                 {
