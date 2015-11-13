@@ -9,6 +9,8 @@ package hudson.scm.api.command;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
+
 /**
  * Project Info command for the Integrity Jenkins Plugin
  * @author Author: asen
@@ -17,8 +19,9 @@ import com.mks.api.Command;
 public class ProjectInfoCommand extends BasicAPICommand
 {
     
-    public ProjectInfoCommand()
+    public ProjectInfoCommand(final IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, PROJECT_INFO_COMMAND);
     }
 

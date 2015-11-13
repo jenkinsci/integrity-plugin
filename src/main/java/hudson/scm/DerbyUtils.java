@@ -726,7 +726,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo) throws SQLException, IOException
+	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -792,7 +792,7 @@ public class DerbyUtils
 						rs.updateString(CM_PROJECT.OLD_REVISION.toString(), oldRevision);
 						// Initialize the author information as requested
 						if( ! skipAuthorInfo ){ rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-													IntegrityCMMember.getAuthorFromRevisionInfo( 
+													IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId, 
 													rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
 													rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 													rowHash.get(CM_PROJECT.REVISION).toString())); }
@@ -824,7 +824,7 @@ public class DerbyUtils
 				{
 					// Initialize the author information as requested
 					if( ! skipAuthorInfo ){ rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-												IntegrityCMMember.getAuthorFromRevisionInfo( 
+												IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId, 
 												rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
 												rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 												rowHash.get(CM_PROJECT.REVISION).toString())); }				
@@ -1066,7 +1066,7 @@ public class DerbyUtils
 	 * @throws SQLException
 	 * @throws IOException
 	 */
-	public static synchronized void primeAuthorInformation(String projectCacheTable) throws SQLException, IOException
+	public static synchronized void primeAuthorInformation(String serverConfigId, String projectCacheTable) throws SQLException, IOException
 	{
 		Connection db = null;
 		Statement authSelect = null;
@@ -1082,7 +1082,7 @@ public class DerbyUtils
 			{
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				rs.updateString(CM_PROJECT.AUTHOR.toString(), 
-						IntegrityCMMember.getAuthorFromRevisionInfo(rowHash.get(CM_PROJECT.CONFIG_PATH).toString(), 
+						IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId, rowHash.get(CM_PROJECT.CONFIG_PATH).toString(), 
 											rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
 											rowHash.get(CM_PROJECT.REVISION).toString()));
 				rs.updateRow();

@@ -3,13 +3,14 @@ package hudson.scm;
 import java.io.IOException;
 import java.util.logging.Logger;
 
+import com.mks.api.response.APIException;
+
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.command.APICommandException;
 import hudson.scm.api.command.CheckPointCommand;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
@@ -42,23 +43,21 @@ public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBui
 
 	public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException
 	{
-		APISession api = APISession.create(ciSettings);
-		if( null != api )
 		{
 			listener.getLogger().println("Preparing to execute si checkpoint for project " + configPath);
 			try
 			{
 				// Construct the checkpoint command
-				IAPICommand command = new CheckPointCommand();
+				IAPICommand command = new CheckPointCommand(ciSettings);
 				command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 				command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, checkpointLabel);
 				command.addAdditionalParameters(IAPIOption.CHECKPOINT_DESCRIPTION, checkpointDesc);
 				
-				command.execute(api);
+				command.execute();
 				
 				listener.getLogger().println("Successfully checkpointed project " + configPath);
 			}
-			catch (APICommandException aex)
+			catch (APIException aex)
 			{
                 		LOGGER.severe("API Exception caught...");
                 		ExceptionHandler eh = new ExceptionHandler(aex);
@@ -66,14 +65,6 @@ public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBui
                 		LOGGER.severe(eh.getMessage());
                 		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
 			}
-			finally
-			{
-				api.terminate();
-			}
-		}
-		else
-		{
-			listener.getLogger().println("Failed to establish connection with Integrity!");
 		}
 	}
 }

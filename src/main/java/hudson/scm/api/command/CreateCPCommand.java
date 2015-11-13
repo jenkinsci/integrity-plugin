@@ -9,6 +9,8 @@ package hudson.scm.api.command;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
+
 /**
  *
  * @author Author: asen
@@ -16,8 +18,9 @@ import com.mks.api.Command;
  */
 public class CreateCPCommand extends BasicAPICommand
 {
-    public CreateCPCommand()
+    public CreateCPCommand(final IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, CREATE_CP_COMMAND);
     }
     

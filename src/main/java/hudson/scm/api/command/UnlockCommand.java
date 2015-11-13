@@ -9,6 +9,7 @@ package hudson.scm.api.command;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 
@@ -19,8 +20,9 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class UnlockCommand extends BasicAPICommand
 {
-    public UnlockCommand()
+    public UnlockCommand(final IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, UNLOCK_COMMAND);
 	
 	// Initialize defaults

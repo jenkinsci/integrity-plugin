@@ -15,7 +15,6 @@ import hudson.FilePath.FileCallable;
 import hudson.model.AbstractBuild;
 import hudson.model.BuildListener;
 import hudson.remoting.VirtualChannel;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
 import jenkins.security.Roles;
 
@@ -81,10 +80,6 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 		
 		listener.getLogger().println("Integrity project '" + ciConfigPath + "' will be updated from directory " + workspace);
 
-		// Open our connection to the Integrity Server		
-		APISession api = APISession.create(integrityConfig);
-		if( null != api )
-		{
 			try
 			{
 				// Determine what files need to be checked-in
@@ -92,7 +87,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 				if( artifacts.length > 0 )
 				{
 					// Create our Change Package for the supplied itemID
-					String cpid = IntegrityCMMember.createCP(api, itemID, "Build updates from " + buildID);
+					String cpid = IntegrityCMMember.createCP(integrityConfig, itemID, "Build updates from " + buildID);
 					for( int i = 0; i < artifacts.length; i++ )
 					{
 						FilePath member = artifacts[i];
@@ -101,18 +96,18 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 						// This is not a recursive directory tree check-in, only process files found
 						if( !member.isDirectory() )
 						{
-							IntegrityCMMember.updateMember(api, ciConfigPath, member, relativePath, cpid, "Build updates from " + buildID); 
+							IntegrityCMMember.updateMember(integrityConfig, ciConfigPath, member, relativePath, cpid, "Build updates from " + buildID); 
 						}	
 					}
 					
 					// Finally submit the build updates Change Package if its not :none or :bypass
 					if( !cpid.equals(":none") && !cpid.equals(":bypass") )
 					{
-						IntegrityCMMember.submitCP(api, cpid);
+						IntegrityCMMember.submitCP(integrityConfig, cpid);
 					}
 					else
 					{
-						IntegrityCMMember.unlockMembers(api, ciConfigPath);
+						IntegrityCMMember.unlockMembers(integrityConfig, ciConfigPath);
 					}
 	
 					// Log the success
@@ -140,23 +135,9 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
 	    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	    		LOGGER.log(Level.SEVERE, "APIException", aex);
 	    		return false;
-	    	}		
-			finally
-			{
-			    if( null != api )
-			    {
-			    	api.terminate();
-			    }
-			}
-		}
-		else
-		{
-			listener.getLogger().println("Couldn't create API Session for check-in task!"); 
-    		listener.getLogger().println("Failed to update Integrity project '" + ciConfigPath + "' with contents of workspace (" + workspace + ")!");
-    		return false;
-		}
-		
-	    // If we got here, everything is good on the check-in...		
+	    	}
+			
+		// If we got here, everything is good on the check-in...		
 		return true;
     }
 }

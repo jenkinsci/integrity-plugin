@@ -9,6 +9,7 @@ package hudson.scm.api.command;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 
@@ -19,8 +20,9 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class ViewProjectCommand extends BasicAPICommand
 {
-    public ViewProjectCommand()
+    public ViewProjectCommand(IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, VIEW_PROJECT_COMMAND);
 	
 	// TODO: this is a bug. This command should be run with interim = true as per original code, but this fails somehow

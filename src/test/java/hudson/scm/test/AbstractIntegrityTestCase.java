@@ -165,7 +165,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 	{
     	IntegrityConfigurable configObj= new IntegrityConfigurable("server1", "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, false, "developer", "password");
     	FakeAPISession api = FakeAPISession.create(configObj);
-		IntegrityCMMember.unlockMembers(api, configPath);
+		IntegrityCMMember.unlockMembers(configObj, configPath);
 	}
    
 }

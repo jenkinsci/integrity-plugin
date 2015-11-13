@@ -19,11 +19,10 @@ import com.mks.api.response.Response;
 
 import hudson.AbortException;
 import hudson.FilePath;
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.ISession;
-import hudson.scm.api.command.APICommandException;
 import hudson.scm.api.command.CloseCPCommand;
 import hudson.scm.api.command.CreateCPCommand;
 import hudson.scm.api.command.IAPICommand;
@@ -128,7 +127,7 @@ public final class IntegrityCMMember
 	 * @throws APIException
 	 */
 	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
-							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APICommandException
+							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
 	    	IAPICommand command = new ProjectCheckoutCommand();
 		
@@ -145,8 +144,7 @@ public final class IntegrityCMMember
 		command.addAdditionalParameters(IAPIOption.TARGET_FILE,targetFile);
 		
 		Response response =  command.execute(api);
-		int resCode = APIUtils.getResponseExitCode(response);
-	        return BooleanUtils.toBoolean(resCode, 0, 1);
+	        return BooleanUtils.toBoolean(response.getExitCode(), 0, 1);
 	}
 	
 	/**
@@ -158,12 +156,12 @@ public final class IntegrityCMMember
 	 * @throws AbortException 
 	 * @throws APICommandException 
 	 */
-	public static String getAuthorFromRevisionInfo(String configPath, String memberID, String memberRev) throws AbortException
+	public static String getAuthorFromRevisionInfo(String serverConfigId, String configPath, String memberID, String memberRev) throws AbortException
 	{
 		String author = "unknown";
 		
 		// Construct the revision-info command
-		IAPICommand command = new RevisionInfoCommand();
+		IAPICommand command = new RevisionInfoCommand(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
 		command.addSelection(memberID);
@@ -173,7 +171,7 @@ public final class IntegrityCMMember
 		    	response = command.execute();
 		    	author = APIUtils.getAuthorInfo(response,memberID);
 		    	
-		} catch (APICommandException aex) {
+		} catch (APIException aex) {
 		    ExceptionHandler eh = new ExceptionHandler(aex);
 		    LOGGER.severe("API Exception caught...");
 		    LOGGER.severe(eh.getMessage());
@@ -213,18 +211,19 @@ public final class IntegrityCMMember
 	
 	/**
 	 * Performs a lock and subsequent project checkin for the specified member
-	 * @param api Integrity API Session
+	 * @param ciSettings Integrity API Session
 	 * @param configPath Full project configuration path
 	 * @param member Member name for this file
 	 * @param relativePath Workspace relative file path
 	 * @param cpid Change Package ID
 	 * @param desc Checkin description
+	 * @throws AbortException 
 	 * @throws APIException
 	 */
-	public static final void updateMember(APISession api, String configPath, FilePath member, String relativePath, String cpid, String desc) throws APIException
+	public static final void updateMember(IntegrityConfigurable ciSettings, String configPath, FilePath member, String relativePath, String cpid, String desc) throws AbortException, APIException
 	{
 		// Construct the lock command
-	    	IAPICommand command = new LockCommand();
+	    	IAPICommand command = new LockCommand(ciSettings);
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 		command.addSelection(relativePath);
@@ -232,11 +231,11 @@ public final class IntegrityCMMember
 		try
 		{
 			// Execute the lock command
-		    	command.execute(api);
+		    	command.execute();
 			// If the lock was successful, check-in the updates
 			LOGGER.fine("Attempting to checkin file: " + member);
 			
-			IAPICommand cmd = new ProjectCheckinCommand();
+			IAPICommand cmd = new ProjectCheckinCommand(ciSettings);
 			cmd.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 			cmd.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 			cmd.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
@@ -244,9 +243,9 @@ public final class IntegrityCMMember
 			
 			cmd.addSelection(relativePath);
 			
-			cmd.execute(api);
+			cmd.execute();
 		}
-		catch( APICommandException ae )
+		catch( APIException ae )
 		{
 			// If the command fails, add only if the error indicates a missing member
 			ExceptionHandler eh = new ExceptionHandler(ae);
@@ -259,7 +258,7 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to add file: " + member);
 			
 				// Construct the project add command
-				IAPICommand addCommand = new ProjectAddCommand();
+				IAPICommand addCommand = new ProjectAddCommand(ciSettings);
 				addCommand.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 				addCommand.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 				addCommand.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
@@ -267,7 +266,7 @@ public final class IntegrityCMMember
 				
 				addCommand.addSelection(relativePath);
 				// Execute the add command
-				addCommand.execute(api);
+				addCommand.execute();
 			}
 			else
 			{
@@ -279,42 +278,39 @@ public final class IntegrityCMMember
 	
 	/**
 	 * Performs a recursive unlock on all current user's locked members
-	 * @param api Integrity API Session
+	 * @param integrityConfig 
 	 * @param configPath Full project configuration path
+	 * @throws AbortException 
+	 * @throws APIException 
 	 */
-	public static final void unlockMembers(ISession api, String configPath)
+	public static final void unlockMembers(IntegrityConfigurable integrityConfig, String configPath) throws AbortException, APIException
 	{
 		// Construct the unlock command
-		IAPICommand command = new UnlockCommand();
+		IAPICommand command = new UnlockCommand(integrityConfig);
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
-		
-		try {
-		    command.execute(api);
-		} catch (APICommandException e) {
-		    ExceptionHandler eh = new ExceptionHandler(e);
-	    	    LOGGER.severe(eh.getMessage());
-	    	    LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-		}
+		command.execute();
 	}
 
 	/**
 	 * Creates a Change Package for updating Integrity SCM projects
-	 * @param api Integrity API Session
+	 * @param  Integrity API Session
 	 * @param itemID Integrity Lifecycle Manager Item ID
 	 * @param desc Change Package Description
 	 * @return
 	 * @throws APIException
+	 * @throws AbortException 
+	 * @throws InterruptedException 
 	 */
-    public static final String createCP(APISession api, String itemID, String desc) throws APIException
+    public static final String createCP(IntegrityConfigurable ciSettings, String itemID, String desc) throws APIException, AbortException, InterruptedException
     {
     	// Return the generated CP ID
     	String cpid = ":none";
 
-		// Check to see if the Item ID contains the magic keyword
-		if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
-		{
-			return ":bypass";
-		}
+    	// Check to see if the Item ID contains the magic keyword
+	if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
+	{
+	    return ":bypass";
+	}
     	
     	// First figure out what Integrity Item to use for the Change Package
     	try
@@ -332,12 +328,12 @@ public final class IntegrityCMMember
     		return cpid;
     	}
 
-    	IAPICommand command = new CreateCPCommand();
+    	IAPICommand command = new CreateCPCommand(ciSettings);
     	command.addOption(new APIOption(IAPIOption.DESCRIPTION,desc));
     	command.addOption(new APIOption(IAPIOption.SUMMARY,desc));
     	command.addOption(new APIOption(IAPIOption.ITEM_ID,itemID));
     	
-    	Response res = command.execute(api);
+    	Response res = command.execute();
 
     	// Process the response object
     	if( null != res )
@@ -362,15 +358,16 @@ public final class IntegrityCMMember
     
 	/**
 	 * Submits the change package used for updating the Integrity SCM project
-	 * @param api Integrity API Session
+	 * @param ciSettings Integrity API Session
 	 * @param cpid Change Package ID
+	 * @throws AbortException 
 	 * @throws APIException
 	 */
-	public static final void submitCP(APISession api, String cpid) throws APICommandException
+	public static final void submitCP(IntegrityConfigurable ciSettings, String cpid) throws APIException, AbortException
 	{
 		LOGGER.fine("Submitting Change Package: " + cpid);
 		
-		IAPICommand command = new CloseCPCommand();
+		IAPICommand command = new CloseCPCommand(ciSettings);
 		command.addSelection(cpid);
 		
 		// First we'll attempt to close the cp to release locks on files that haven't changed,
@@ -378,9 +375,9 @@ public final class IntegrityCMMember
 		// it will get automatically closed in the case of transactional cps
 		try
 		{
-		    	command.execute(api);
+		    	command.execute();
 		}
-		catch( APICommandException ae )
+		catch( APIException ae )
 		{
 			ExceptionHandler eh = new ExceptionHandler(ae);
 			String exceptionString = eh.getMessage();
@@ -392,10 +389,10 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to submit cp: " + cpid);
 				
 				// Construct the submit cp command
-				IAPICommand submitcpcmd = new SubmitCPCommand();
+				IAPICommand submitcpcmd = new SubmitCPCommand(ciSettings);
 				submitcpcmd.addSelection(cpid);
 				
-				submitcpcmd.execute(api);
+				submitcpcmd.execute();
 			}
 			else
 			{

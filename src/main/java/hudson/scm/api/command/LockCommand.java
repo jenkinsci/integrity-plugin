@@ -9,6 +9,8 @@ package hudson.scm.api.command;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
+
 /**
  *
  * @author Author: asen
@@ -16,8 +18,9 @@ import com.mks.api.Command;
  */
 public class LockCommand extends BasicAPICommand
 {
-    public LockCommand()
+    public LockCommand(final IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, LOCK_COMMAND);
     }
 }

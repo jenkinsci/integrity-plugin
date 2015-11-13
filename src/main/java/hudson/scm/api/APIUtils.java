@@ -9,11 +9,9 @@ package hudson.scm.api;
 
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
-import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 
-import hudson.scm.api.command.APICommandException;
 import hudson.scm.api.option.IAPIOption;
 
 /**
@@ -42,28 +40,9 @@ public class APIUtils
 	return mvFields;
     }
     
-    
-    /**
-     * @param response
-     * @return
-     * @throws APICommandException
-     */
-    public static int getResponseExitCode(Response response) throws APICommandException
+    public static WorkItem getWorkItem(Response response) throws APIException
     {
-	try {
-	    return response.getExitCode();
-	} catch (InterruptedException e) {
-	    throw new APICommandException(e);
-	}
-    }
-    
-    public static WorkItem getWorkItem(Response response) throws APICommandException
-    {
-	    try {
-		return response.getWorkItems().next();
-	    } catch (APIException e) {
-		throw new APICommandException(e);
-	    }
+	return response.getWorkItems().next();
     }
 
     /**

@@ -33,8 +33,6 @@ import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 
 import hudson.AbortException;
-import hudson.scm.api.APISession;
-import hudson.scm.api.command.APICommandException;
 import hudson.scm.api.command.AddProjectLabelCommand;
 import hudson.scm.api.command.CheckPointCommand;
 import hudson.scm.api.command.IAPICommand;
@@ -370,34 +368,16 @@ public class IntegrityCMProject implements Serializable
 	 * TODO deprecate this method in later iteration 
 	 * 
 	 * Performs a checkpoint on this Integrity CM Project
-	 * @param api Authenticated Integrity API Session
+	 * @param integrityConfigurable Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
 	 * @return Integrity API Response object
-	 * @throws APICommandException
-	 */
-	public Response checkpoint(APISession api, String chkptLabel) throws APICommandException
-	{
-	    // Construct the checkpoint command
-	    IAPICommand command = new CheckPointCommand();
-	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
-	    // Set the label and description if applicable
-	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
-	    
-	    return command.execute(api);
-	}
-	
-	/**
-	 * Performs a checkpoint on this Integrity CM Project
-	 * @param api Authenticated Integrity API Session
-	 * @param chkptLabel Checkpoint label string
-	 * @return Integrity API Response object
-	 * @throws APICommandException
+	 * @throws APIException
 	 * @throws AbortException 
 	 */
-	public Response checkpoint(String chkptLabel) throws APICommandException, AbortException
+	public Response checkpoint(IntegrityConfigurable integrityConfigurable, String chkptLabel) throws APIException, AbortException
 	{
 	    // Construct the checkpoint command
-	    IAPICommand command = new CheckPointCommand();
+	    IAPICommand command = new CheckPointCommand(integrityConfigurable);
 	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
 	    // Set the label and description if applicable
 	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
@@ -407,20 +387,21 @@ public class IntegrityCMProject implements Serializable
 	
 	/**
 	 * Applies a Project Label on this Integrity CM Project
-	 * @param api Authenticated Integrity API Session
+	 * @param serverConf Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
 	 * @return Integrity API Response object
 	 * @throws APIException
+	 * @throws AbortException 
 	 */
-	public Response addProjectLabel(APISession api, String chkptLabel, String projectName, String projectRevision) throws APIException
+	public Response addProjectLabel(IntegrityConfigurable serverConf, String chkptLabel, String projectName, String projectRevision) throws APIException, AbortException
 	{
 		// Construct the addprojectlabel command
-	    	IAPICommand command = new AddProjectLabelCommand();
+	    	IAPICommand command = new AddProjectLabelCommand(serverConf);
 	    	command.addOption(new APIOption(IAPIOption.PROJECT, projectName));
 	    	command.addOption(new APIOption(IAPIOption.LABEL, chkptLabel));
 	    	command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, projectRevision));
 	    	
-	    	return command.execute(api);
+	    	return command.execute();
 	}
 	
 	/**

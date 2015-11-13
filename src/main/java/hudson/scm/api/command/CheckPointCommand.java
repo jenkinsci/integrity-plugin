@@ -13,6 +13,7 @@ import org.apache.commons.lang.StringUtils;
 
 import com.mks.api.Command;
 
+import hudson.scm.IntegrityConfigurable;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 
@@ -23,8 +24,9 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class CheckPointCommand extends BasicAPICommand
 {
-    public CheckPointCommand()
+    public CheckPointCommand(final IntegrityConfigurable serverConfig)
     {
+	super(serverConfig);
 	cmd = new Command(Command.SI, CHECKPOINT_COMMAND);
 	commandHelperObjects = new HashMap<String, Object>();
     }

@@ -21,13 +21,14 @@ import java.util.logging.Logger;
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
+import com.mks.api.response.APIException;
+
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.command.APICommandException;
 import jenkins.security.Roles;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
@@ -242,7 +243,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             	{
             		IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp, targetFile, restoreTimestamp, lineTerminator);
             	}
-            	catch(APICommandException aex)
+            	catch(APIException aex)
             	{
             		LOGGER.severe("API Command Exception caught.");
             		ExceptionHandler eh = new ExceptionHandler(aex);

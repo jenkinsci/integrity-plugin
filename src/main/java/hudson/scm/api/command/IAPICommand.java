@@ -1,5 +1,6 @@
 package hudson.scm.api.command;
 
+import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.AbortException;
@@ -37,7 +38,7 @@ public interface IAPICommand
      * Execute the command using Integrity Session API
      * @param api
      */
-    public Response execute(ISession api) throws APICommandException;
+    public Response execute(ISession api) throws APIException;
     
     /**
      * Execute the command using an auto-generated Integrity Session API
@@ -45,7 +46,7 @@ public interface IAPICommand
      * @throws APICommandException
      * @throws AbortException 
      */
-    public Response execute() throws APICommandException, AbortException;
+    public Response execute() throws APIException, AbortException;
     
     /**
      * Do actions post the Integrity API call specifically for Jenkins functionality

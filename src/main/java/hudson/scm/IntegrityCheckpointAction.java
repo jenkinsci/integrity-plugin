@@ -25,6 +25,7 @@ import com.mks.api.response.WorkItem;
 
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -32,7 +33,6 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
@@ -47,7 +47,7 @@ import net.sf.json.JSONObject;
 public class IntegrityCheckpointAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 3344676447487492553L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private String checkpointLabel;
 	private final Log logger = LogFactory.getLog(getClass());
 	private String serverConfig;
@@ -188,7 +188,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	
 	/**
 	 * Applies a project label to a project or subproject
-	 * @param api Integrity API Session wrapper
+	 * @param serverConf Integrity API Session wrapper
 	 * @param listener Jenkins build listener
 	 * @param siProject IntegrityCMProject object
 	 * @param fullConfigPath Integrity project configuration path
@@ -196,13 +196,14 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 * @param revision Integrity project/subproject revision
 	 * @param chkptLabel Checkpoint label string
 	 * @throws APIException
+	 * @throws AbortException 
 	 */
-	private void applyProjectLabel(APISession api, BuildListener listener, IntegrityCMProject siProject, String fullConfigPath, String projectName, String revision, String chkptLabel) throws APIException 
+	private void applyProjectLabel(IntegrityConfigurable serverConf, BuildListener listener, IntegrityCMProject siProject, String fullConfigPath, String projectName, String revision, String chkptLabel) throws APIException, AbortException 
 	{
 		// Looks like the checkpoint was done before the build, so lets apply the label now
 		listener.getLogger().println("Preparing to execute si addprojectlabel for " + fullConfigPath);
 		listener.getLogger().println(" (" + projectName + ", " +  revision + ")");
-		Response res = siProject.addProjectLabel(api, chkptLabel, projectName, revision);
+		Response res = siProject.addProjectLabel(serverConf, chkptLabel, projectName, revision);
 		logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 		listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + revision);        					
 		
@@ -243,21 +244,19 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
-		// Set the configuration name for this build
+    		// Set the configuration name for this build
 		setConfigurationName(build);
 		
 		if( ! Result.SUCCESS.equals(build.getResult()) )
 		{
-			listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
-			return true;
+		    listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
+		    return true;
 		}
 		
-		APISession api = APISession.create(getProjectSettings(build));
-		if( null != api )
-		{
-			// Evaluate the groovy tag name
-			Map<String, String> env = build.getEnvironment(listener);
-			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, checkpointLabel);
+		IntegrityConfigurable serverConf = getProjectSettings(build);
+		// Evaluate the groovy tag name
+		Map<String, String> env = build.getEnvironment(listener);
+		String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, checkpointLabel);
     		try
     		{
     			// Get information about the project
@@ -269,7 +268,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	    			{
 						// A checkpoint wasn't done before the build, so lets checkpoint this build now...
 	    				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
-	    				Response res = siProject.checkpoint(api, chkptLabel);
+	    				Response res = siProject.checkpoint(serverConf, chkptLabel);
 						logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
 						WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
 						String chkpt = wi.getResult().getField("resultant").getItem().getId();
@@ -282,7 +281,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	    				if( siProject.getCheckpointBeforeBuild() ) 
 	    				{
 	    					// Attach label to 'main' project
-	    					applyProjectLabel(api, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
+	    					applyProjectLabel(serverConf, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
 	    					
 	    					// Attach label to 'subProjects'
 	    					for (Hashtable<CM_PROJECT, Object> memberInfo: DerbyUtils.viewSubProjects(siProject.getProjectCacheTable())) 
@@ -290,7 +289,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	    						String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
 	    						String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
 	    						String revision = String.class.cast(memberInfo.get(CM_PROJECT.REVISION));
-	   							applyProjectLabel(api, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
+	   							applyProjectLabel(serverConf, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
 	    					}
 	    				}
 	    				else
@@ -302,12 +301,12 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     			else
     			{
     				LOGGER.severe("Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'");    				
-					listener.getLogger().println("ERROR: Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'!");    				
-    			}
-    		}
-    		catch( APIException aex )
-    		{
-        		LOGGER.severe("API Exception caught...");
+				listener.getLogger().println("ERROR: Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'!");    				
+			}
+		}
+		catch( APIException aex )
+		{
+    			LOGGER.severe("API Exception caught...");
         		ExceptionHandler eh = new ExceptionHandler(aex);
         		aex.printStackTrace(listener.fatalError(eh.getMessage()));
         		LOGGER.severe(eh.getMessage());
@@ -320,22 +319,10 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 	    		listener.getLogger().println("A SQL Exception was caught!"); 
 	    		listener.getLogger().println(sqlex.getMessage());
 	    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-	    		return false;			
-    		}
-    		finally
-    		{
-    			api.terminate();
-    		}
-        		
-		}
-		else
-		{
-			LOGGER.severe("An API Session could not be established!  Cannot perform checkpoint operation!");
-			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation!");
-			return false;
-		}
-
-		return true;
+    	    		return false;			
+        	}
+    
+    		return true;
 	}
 
 	/**

@@ -20,6 +20,7 @@ public class ProjectCheckoutCommand extends BasicAPICommand
 
     public ProjectCheckoutCommand()
     {
+	//super(serverConfig);
 	cmd = new Command(Command.SI, PROJECT_CHECKOUT_COMMAND);
 	commandHelperObjects = new HashMap<String, Object>();
 	

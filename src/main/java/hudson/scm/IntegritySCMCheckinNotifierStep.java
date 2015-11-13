@@ -10,7 +10,6 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -46,10 +45,6 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 		listener.getLogger().println("Change Package ID will be derived from '" + itemID + "' supplied...");		
 		String buildID = run.getFullDisplayName();
 		
-		// Open our connection to the Integrity Server
-		APISession api = APISession.create(ciSettings);
-		if( null != api )
-		{
 			try
 			{
 				// Determine what files need to be checked-in
@@ -57,7 +52,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 				if( artifacts.length > 0 )
 				{
 					// Create our Change Package for the supplied itemID
-					String cpid = IntegrityCMMember.createCP(api, itemID, "Build updates from " + buildID);
+					String cpid = IntegrityCMMember.createCP(ciSettings, itemID, "Build updates from " + buildID);
 					for( int i = 0; i < artifacts.length; i++ )
 					{
 						FilePath member = artifacts[i];
@@ -66,18 +61,18 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 						// This is not a recursive directory tree check-in, only process files found
 						if( !member.isDirectory() )
 						{
-							IntegrityCMMember.updateMember(api, configPath, member, relativePath, cpid, "Build updates from " + buildID); 
+							IntegrityCMMember.updateMember(ciSettings, configPath, member, relativePath, cpid, "Build updates from " + buildID); 
 						}	
 					}
 					
 					// Finally submit the build updates Change Package if its not :none or :bypass
 					if( !cpid.equals(":none") && !cpid.equals(":bypass") )
 					{
-						IntegrityCMMember.submitCP(api, cpid);
+						IntegrityCMMember.submitCP(ciSettings, cpid);
 					}
 					else
 					{
-						IntegrityCMMember.unlockMembers(api, configPath);
+						IntegrityCMMember.unlockMembers(ciSettings, configPath);
 					}
 	
 					// Log the success
@@ -104,18 +99,5 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 	    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
 	    		LOGGER.log(Level.SEVERE, "APIException", aex);
 	    	}		
-			finally
-			{
-			    if( null != api )
-			    {
-			    	api.terminate();
-			    }
-			}
-		}
-		else
-		{
-			listener.getLogger().println("Failed to establish connection with Integrity for check-in step!"); 
-	    	listener.getLogger().println("Failed to update Integrity project '" + configPath + "' with contents of workspace (" + workspace + ")!");
-		}
 	}
 }
