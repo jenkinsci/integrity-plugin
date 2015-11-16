@@ -9,28 +9,8 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.tasks.Publisher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
-import hudson.model.Result;
-import hudson.Extension;
-import hudson.Launcher;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Notifier;
-import hudson.tasks.test.TestResult;
-import hudson.tasks.test.AbstractTestResultAction;
-import hudson.tasks.test.AggregatedTestResultAction;
-import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
-import hudson.util.ListBoxModel;
-import hudson.util.Secret;
-
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-
-import net.sf.json.JSONObject;
 
 import com.mks.api.Command;
 import com.mks.api.MultiValue;
@@ -41,10 +21,31 @@ import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
 
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APISession;
+import hudson.scm.api.ExceptionHandler;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import hudson.tasks.test.AbstractTestResultAction;
+import hudson.tasks.test.AggregatedTestResultAction;
+import hudson.tasks.test.TestResult;
+import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
+import net.sf.json.JSONObject;
+
 public class IntegrityItemAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 7067049279037277420L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private String serverConfig;
 	private String queryDefinition;
 	private String stateField;
@@ -791,7 +792,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	        }
         	finally
         	{
-        		api.Terminate();
+        		api.terminate();
         	}			
 		}
 		else

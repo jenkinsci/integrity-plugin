@@ -21,7 +21,7 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
 @Extension
 public class IntegrityItemListenerImpl extends ItemListener 
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	@DataBoundConstructor
 	public IntegrityItemListenerImpl() 

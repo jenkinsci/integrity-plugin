@@ -27,7 +27,7 @@ import net.sf.json.JSONObject;
 public class IntegrityCheckinAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 4647604916824363519L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private String ciConfigPath;
 	private String ciWorkspaceDir;
 	private String includes;

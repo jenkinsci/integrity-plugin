@@ -1,7 +1,5 @@
 package hudson.scm;
 
-import hudson.FilePath;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileNotFoundException;
@@ -13,12 +11,26 @@ import java.sql.Timestamp;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
+import org.apache.commons.lang.BooleanUtils;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
-import com.mks.api.FileOption;
 import com.mks.api.response.APIException;
+import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
+
+import hudson.AbortException;
+import hudson.FilePath;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APISession;
+import hudson.scm.api.APIUtils;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.CommandFactory;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.command.ProjectAddCommand;
+import hudson.scm.api.command.ProjectCheckinCommand;
+import hudson.scm.api.command.SubmitCPCommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.FileAPIOption;
+import hudson.scm.api.option.IAPIOption;
 
 /**
  * This class is intended to represent an Integrity CM Member
@@ -28,7 +40,7 @@ import com.mks.api.response.Response;
  */
 public final class IntegrityCMMember
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private static final String ENCODING = "UTF-8"; 
 	
 	/**
@@ -106,88 +118,61 @@ public final class IntegrityCMMember
 	 * @param restoreTimestamp Toggles whether or not the original timestamp should be used
 	 * @param lineTerminator Sets the line terminator for this file (native, crlf, or lf)
 	 * @return true if the operation succeeded or false if failed
+	 * @throws InterruptedException 
 	 * @throws APIException
 	 */
 	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
-		// Make sure the directory is created
-		if( ! targetFile.getParentFile().isDirectory() )
-		{
-			targetFile.getParentFile().mkdirs();
-		}
-		// Construct the project check-co command
-		Command coCMD = new Command(Command.SI, "projectco");
-		coCMD.addOption(new Option("overwriteExisting"));
-		coCMD.addOption(new Option("nolock"));
-		coCMD.addOption(new Option("project", configPath));
-		coCMD.addOption(new FileOption("targetFile", targetFile));
-		coCMD.addOption(new Option(restoreTimestamp ? "restoreTimestamp" : "norestoreTimestamp"));
-		coCMD.addOption(new Option("lineTerminator", lineTerminator));
-		coCMD.addOption(new Option("revision", memberRev));
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKOUT_COMMAND, null);
+		
+		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+		command.addOption(new FileAPIOption(IAPIOption.TARGET_FILE, targetFile));
+		command.addOption(new APIOption(restoreTimestamp ? IAPIOption.RESTORE_TIMESTAMP : IAPIOption.NORESTORE_TIMESTAMP));
+		command.addOption(new APIOption(IAPIOption.LINE_TERMINATOR, lineTerminator));
+		command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
 		// Add the member selection
-		coCMD.addSelection(memberID);
+		command.addSelection(memberID);
 		
-		// Execute the checkout command
-		Response res = api.runCommand(coCMD);
-		LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());
+		command.addAdditionalParameters(IAPIOption.MEMBER_TIMESTAMP,memberTimestamp);
+		command.addAdditionalParameters(IAPIOption.RESTORE_TIMESTAMP,restoreTimestamp);
+		command.addAdditionalParameters(IAPIOption.TARGET_FILE,targetFile);
 		
-		// Return true if we were successful
-		if( res.getExitCode() == 0 )
-		{
-			// Per JENKINS-13765 - providing a workaround due to API bug
-			// Update the timestamp for the file, if appropriate
-			if( restoreTimestamp )
-			{
-				targetFile.setLastModified(memberTimestamp.getTime());
-			}
-			return true;
-		}
-		// Otherwise return false...
-		else
-		{
-			return false;
-		}
+		Response response =  command.execute(api);
+	        return BooleanUtils.toBoolean(response.getExitCode(), 0, 1);
 	}
 	
 	/**
 	 * Performs a revision info on this Integrity Source File
-	 * @param api Integrity API Session
 	 * @param configPath Full project configuration path
 	 * @param memberID Member ID for this file
 	 * @param memberRev Member Revision for this file
 	 * @return User responsible for making this change
+	 * @throws AbortException 
+	 * @throws APICommandException 
 	 */
-	public static String getAuthor(APISession api, String configPath, String memberID, String memberRev)
+	public static String getAuthorFromRevisionInfo(String serverConfigId, String configPath, String memberID, String memberRev) throws AbortException
 	{
-		// Initialize the return value
 		String author = "unknown";
 		
 		// Construct the revision-info command
-		Command revInfoCMD = new Command(Command.SI, "revisioninfo");
-		revInfoCMD.addOption(new Option("project", configPath));
-		revInfoCMD.addOption(new Option("revision", memberRev));
-		// Add the member selection
-		revInfoCMD.addSelection(memberID);
-		try
-		{
-			// Execute the revision-info command
-			Response res = api.runCommand(revInfoCMD);
-			LOGGER.fine("Command: " + res.getCommandString() + " completed with exit code " + res.getExitCode());			
-			// Return the author associated with this update
-			if( res.getExitCode() == 0 )
-			{
-				author = res.getWorkItem(memberID).getField("author").getValueAsString();
-			}
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.REVISION_INFO_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
+		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+		command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
+		command.addSelection(memberID);
+		
+		Response response;
+		try {
+		    	response = command.execute();
+		    	author = APIUtils.getAuthorInfo(response,memberID);
+		    	
+		} catch (APIException aex) {
+		    ExceptionHandler eh = new ExceptionHandler(aex);
+		    LOGGER.severe("API Exception caught...");
+		    LOGGER.severe(eh.getMessage());
+		    LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+		    aex.printStackTrace();
 		}
-		catch(APIException aex)
-		{
-			ExceptionHandler eh = new ExceptionHandler(aex);
-			LOGGER.severe("API Exception caught...");
-    		LOGGER.severe(eh.getMessage());
-    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
-		}	
 		
 		return author;
 	}
@@ -221,48 +206,39 @@ public final class IntegrityCMMember
 	
 	/**
 	 * Performs a lock and subsequent project checkin for the specified member
-	 * @param api Integrity API Session
+	 * @param ciSettings Integrity API Session
 	 * @param configPath Full project configuration path
 	 * @param member Member name for this file
 	 * @param relativePath Workspace relative file path
 	 * @param cpid Change Package ID
 	 * @param desc Checkin description
+	 * @throws AbortException 
 	 * @throws APIException
 	 */
-	public static final void updateMember(APISession api, String configPath, FilePath member, String relativePath, String cpid, String desc) throws APIException
+	public static final void updateMember(IntegrityConfigurable ciSettings, String configPath, FilePath member, String relativePath, String cpid, String desc) throws AbortException, APIException
 	{
 		// Construct the lock command
-		Command lock = new Command(Command.SI, "lock");
-		lock.addOption(new Option("cpid", cpid));
-		lock.addOption(new Option("project", configPath));
-		// Add the member selection
-		lock.addSelection(relativePath);
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.LOCK_COMMAND, ciSettings);
+		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+		command.addOption(new APIOption(IAPIOption.CP_ID, cpid));
+		command.addSelection(relativePath);
 		
 		try
 		{
 			// Execute the lock command
-			api.runCommand(lock);
+		    	command.execute();
 			// If the lock was successful, check-in the updates
 			LOGGER.fine("Attempting to checkin file: " + member);
 			
-			// Construct the project check-in command
-			Command ci = new Command(Command.SI, "projectci");
-			ci.addOption(new Option("cpid", cpid));
-			ci.addOption(new Option("project", configPath));
-			ci.addOption(new FileOption("sourceFile", new File(""+member)));
-			ci.addOption(new Option("saveTimestamp"));
-			ci.addOption(new Option("nocloseCP"));
-			ci.addOption(new Option("nodifferentNames"));
-			ci.addOption(new Option("branchVariant"));
-			ci.addOption(new Option("nocheckinUnchanged"));
-			ci.addOption(new Option("description", desc));
-
-			// Add the member selection
-			ci.addSelection(relativePath);
-
-			// Execute the check-in command
-			api.runCommand(ci);
+			IAPICommand cmd = new ProjectCheckinCommand(ciSettings);
+			cmd.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+			cmd.addOption(new APIOption(IAPIOption.CP_ID, cpid));
+			cmd.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
+			cmd.addOption(new APIOption(IAPIOption.DESCRIPTION, desc));
 			
+			cmd.addSelection(relativePath);
+			
+			cmd.execute();
 		}
 		catch( APIException ae )
 		{
@@ -277,20 +253,15 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to add file: " + member);
 			
 				// Construct the project add command
-				Command add = new Command(Command.SI, "projectadd");
-				add.addOption(new Option("cpid", cpid));
-				add.addOption(new Option("project", configPath));
-				add.addOption(new FileOption("sourceFile", new File(""+member)));
-				add.addOption(new Option("onExistingArchive", "sharearchive"));
-				add.addOption(new Option("saveTimestamp"));
-				add.addOption(new Option("nocloseCP"));
-				add.addOption(new Option("description", desc));
-
-				// Add the member selection
-				add.addSelection(relativePath);
-
+				IAPICommand addCommand = new ProjectAddCommand(ciSettings);
+				addCommand.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+				addCommand.addOption(new APIOption(IAPIOption.CP_ID, cpid));
+				addCommand.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
+				addCommand.addOption(new APIOption(IAPIOption.DESCRIPTION, desc));
+				
+				addCommand.addSelection(relativePath);
 				// Execute the add command
-				api.runCommand(add);								
+				addCommand.execute();
 			}
 			else
 			{
@@ -302,49 +273,39 @@ public final class IntegrityCMMember
 	
 	/**
 	 * Performs a recursive unlock on all current user's locked members
-	 * @param api Integrity API Session
+	 * @param integrityConfig 
 	 * @param configPath Full project configuration path
+	 * @throws AbortException 
+	 * @throws APIException 
 	 */
-	public static final void unlockMembers(APISession api, String configPath)
+	public static final void unlockMembers(IntegrityConfigurable integrityConfig, String configPath) throws AbortException, APIException
 	{
 		// Construct the unlock command
-		Command unlock = new Command(Command.SI, "unlock");
-		unlock.addOption(new Option("project", configPath));
-		unlock.addOption(new Option("action", "remove"));
-		unlock.addOption(new Option("recurse"));
-		unlock.addOption(new Option("yes"));
-		
-		// Execute the unlock command					
-		try
-		{
-			api.runCommand(unlock);
-		}
-		catch( APIException ae )
-		{
-    		ExceptionHandler eh = new ExceptionHandler(ae);
-    		LOGGER.severe(eh.getMessage());
-    		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());							
-		}
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.UNLOCK_COMMAND, integrityConfig);
+		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+		command.execute();
 	}
 
 	/**
 	 * Creates a Change Package for updating Integrity SCM projects
-	 * @param api Integrity API Session
+	 * @param  Integrity API Session
 	 * @param itemID Integrity Lifecycle Manager Item ID
 	 * @param desc Change Package Description
 	 * @return
 	 * @throws APIException
+	 * @throws AbortException 
+	 * @throws InterruptedException 
 	 */
-    public static final String createCP(APISession api, String itemID, String desc) throws APIException
+    public static final String createCP(IntegrityConfigurable ciSettings, String itemID, String desc) throws APIException, AbortException, InterruptedException
     {
     	// Return the generated CP ID
     	String cpid = ":none";
 
-		// Check to see if the Item ID contains the magic keyword
-		if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
-		{
-			return ":bypass";
-		}
+    	// Check to see if the Item ID contains the magic keyword
+	if( ":bypass".equalsIgnoreCase(itemID) || "bypass".equalsIgnoreCase(itemID) )
+	{
+	    return ":bypass";
+	}
     	
     	// First figure out what Integrity Item to use for the Change Package
     	try
@@ -362,14 +323,12 @@ public final class IntegrityCMMember
     		return cpid;
     	}
 
-    	// Construct the create cp command
-    	Command cmd = new Command(Command.SI, "createcp");
-    	cmd.addOption(new Option("summary", desc));
-    	cmd.addOption(new Option("description", desc));
-    	cmd.addOption(new Option("issueId", itemID));
-
-    	// Execute the command
-    	Response res = api.runCommand(cmd);
+    	IAPICommand command = CommandFactory.createCommand(IAPICommand.CREATE_CP_COMMAND, ciSettings);
+    	command.addOption(new APIOption(IAPIOption.DESCRIPTION,desc));
+    	command.addOption(new APIOption(IAPIOption.SUMMARY,desc));
+    	command.addOption(new APIOption(IAPIOption.ITEM_ID,itemID));
+    	
+    	Response res = command.execute();
 
     	// Process the response object
     	if( null != res )
@@ -394,25 +353,24 @@ public final class IntegrityCMMember
     
 	/**
 	 * Submits the change package used for updating the Integrity SCM project
-	 * @param api Integrity API Session
+	 * @param ciSettings Integrity API Session
 	 * @param cpid Change Package ID
+	 * @throws AbortException 
 	 * @throws APIException
 	 */
-	public static final void submitCP(APISession api, String cpid) throws APIException
+	public static final void submitCP(IntegrityConfigurable ciSettings, String cpid) throws APIException, AbortException
 	{
 		LOGGER.fine("Submitting Change Package: " + cpid);
 		
-		// Construct the close cp command
-		Command closecp = new Command(Command.SI, "closecp");
-		closecp.addOption(new Option("releaseLocks"));
-		closecp.addSelection(cpid);
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.CLOSE_CP_COMMAND, ciSettings);
+		command.addSelection(cpid);
 		
 		// First we'll attempt to close the cp to release locks on files that haven't changed,
 		// next we will submit the cp which will submit it for review or 
 		// it will get automatically closed in the case of transactional cps
 		try
 		{
-			api.runCommand(closecp);
+		    	command.execute();
 		}
 		catch( APIException ae )
 		{
@@ -426,15 +384,10 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to submit cp: " + cpid);
 				
 				// Construct the submit cp command
-				Command submitcp = new Command(Command.SI, "submitcp");
-				submitcp.addOption(new Option("closeCP"));
-				submitcp.addOption(new Option("commit"));
-
-				// Add the cpid selection
-				submitcp.addSelection(cpid);
-
-				// Execute the submit cp command
-				api.runCommand(submitcp);
+				IAPICommand submitcpcmd = new SubmitCPCommand(ciSettings);
+				submitcpcmd.addSelection(cpid);
+				
+				submitcpcmd.execute();
 			}
 			else
 			{

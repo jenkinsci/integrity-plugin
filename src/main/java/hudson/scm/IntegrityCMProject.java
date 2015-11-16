@@ -27,12 +27,16 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+
+import hudson.AbortException;
+import hudson.scm.api.command.CommandFactory;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
 
 /**
  * This class represents an Integrity Configuration Management Project
@@ -41,7 +45,7 @@ import com.mks.api.response.WorkItem;
 public class IntegrityCMProject implements Serializable
 {
 	private static final long serialVersionUID = 6452315129657215760L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	public static final String NORMAL_PROJECT = "Normal";
 	public static final String VARIANT_PROJECT = "Variant";
@@ -318,7 +322,10 @@ public class IntegrityCMProject implements Serializable
 		item.appendChild(revision);
 		// Create and append the <date> element
 		Element date = xmlDoc.createElement("date");
-		date.appendChild(xmlDoc.createTextNode(IntegritySCM.SDF.format((Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP))));
+		synchronized (IntegritySCM.SDF) 
+		{
+		    date.appendChild(xmlDoc.createTextNode(IntegritySCM.SDF.format((Timestamp)memberInfo.get(CM_PROJECT.TIMESTAMP))));
+		}
 		item.appendChild(date);
 		// Create and append the annotation and differences links
 		try
@@ -357,49 +364,43 @@ public class IntegrityCMProject implements Serializable
 	}
 	
 	/**
+	 * TODO deprecate this method in later iteration 
+	 * 
 	 * Performs a checkpoint on this Integrity CM Project
-	 * @param api Authenticated Integrity API Session
+	 * @param integrityConfigurable Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
 	 * @return Integrity API Response object
 	 * @throws APIException
+	 * @throws AbortException 
 	 */
-	public Response checkpoint(APISession api, String chkptLabel) throws APIException
+	public Response checkpoint(IntegrityConfigurable integrityConfigurable, String chkptLabel) throws APIException, AbortException
 	{
-		// Construct the checkpoint command
-		Command siCheckpoint = new Command(Command.SI, "checkpoint");
-		// Set the project name
-		siCheckpoint.addOption(new Option("project", fullConfigSyntax));
-		// Set the label and description if applicable
-		if( null != chkptLabel && chkptLabel.length() > 0 )
-		{
-			// Set the label
-			siCheckpoint.addOption(new Option("label", chkptLabel));
-			// Set the description
-			siCheckpoint.addOption(new Option("description", chkptLabel));
-		}
-		return api.runCommand(siCheckpoint);
+	    // Construct the checkpoint command
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.CHECKPOINT_COMMAND, integrityConfigurable);
+	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+	    // Set the label and description if applicable
+	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
+	    
+	    return command.execute();
 	}
 	
 	/**
 	 * Applies a Project Label on this Integrity CM Project
-	 * @param api Authenticated Integrity API Session
+	 * @param serverConf Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string
 	 * @return Integrity API Response object
 	 * @throws APIException
+	 * @throws AbortException 
 	 */
-	public Response addProjectLabel(APISession api, String chkptLabel, String projectName, String projectRevision) throws APIException
+	public Response addProjectLabel(IntegrityConfigurable serverConf, String chkptLabel, String projectName, String projectRevision) throws APIException, AbortException
 	{
 		// Construct the addprojectlabel command
-		Command siAddProjectLabel = new Command(Command.SI, "addprojectlabel");
-		// Set the project name
-		siAddProjectLabel.addOption(new Option("project", projectName));
-		// Set the project revision
-		siAddProjectLabel.addOption(new Option("projectRevision", projectRevision));
-		// Set the label
-		siAddProjectLabel.addOption(new Option("label", chkptLabel));
-		// Move the label, if a previous one was applied
-		siAddProjectLabel.addOption(new Option("moveLabel"));
-		return api.runCommand(siAddProjectLabel);
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.ADD_PROJECT_LABEL_COMMAND, serverConf);
+	    	command.addOption(new APIOption(IAPIOption.PROJECT, projectName));
+	    	command.addOption(new APIOption(IAPIOption.LABEL, chkptLabel));
+	    	command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, projectRevision));
+	    	
+	    	return command.execute();
 	}
 	
 	/**

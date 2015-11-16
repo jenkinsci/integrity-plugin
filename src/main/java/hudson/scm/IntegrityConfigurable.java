@@ -225,4 +225,18 @@ public final class IntegrityConfigurable implements Serializable
 			return false;
 		}
 	}
+	
+	/* (non-Javadoc)
+	 * @see java.lang.Object#hashCode()
+	 */
+	@Override
+	public int hashCode() {
+	    final int prime = 31;
+            int result = 1;
+            
+            result = prime * result
+                    + ((hostName == null) ? 0 : hostName.hashCode()) +  ((password == null) ? 0 : password.hashCode());
+
+            return result;
+	}
 }

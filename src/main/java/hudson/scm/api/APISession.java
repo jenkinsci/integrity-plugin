@@ -1,4 +1,4 @@
-package hudson.scm;
+package hudson.scm.api;
 
 import com.mks.api.CmdRunner;
 import com.mks.api.Command;
@@ -6,6 +6,10 @@ import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+
+import hudson.scm.IntegrityConfigurable;
+import hudson.scm.IntegritySCM;
+
 import com.mks.api.Session;
 
 import java.io.IOException;
@@ -16,10 +20,10 @@ import java.util.logging.Logger;
  * This class represents an Integration Point to a server.  
  * It also contains a Session object
  */
-public class APISession
+public class APISession implements ISession
 {
 	// Initialize our logger
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	// Store the API Version
 	public static final String VERSION = "4.13";
@@ -192,14 +196,15 @@ public class APISession
 	
 	public void refreshAPISession() throws APIException
 	{
-	    Terminate();
+	    terminate();
 	    initAPI();
 	} 
 	
 	/**
 	 * Terminate the API Session and Integration Point
 	 */
-	public void Terminate()
+	@Override
+	public void terminate()
 	{
 		boolean cmdRunnerKilled = false;
 		boolean sessionKilled = false;
