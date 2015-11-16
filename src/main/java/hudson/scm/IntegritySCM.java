@@ -39,9 +39,8 @@ import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
-import hudson.scm.api.command.ProjectInfoCommand;
-import hudson.scm.api.command.ViewProjectCommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.browsers.IntegrityWebUI;
@@ -239,7 +238,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(environment, configPath);
 	
     	// Get the project information for this project
-      	IAPICommand command = new ProjectInfoCommand(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));	
+      	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
       	command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
       	
       	Response infoRes = command.execute();
@@ -305,7 +304,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     	IntegrityCMProject siProject = getIntegrityProject();
     
     	// Lets parse this project
-    	IAPICommand command = new ViewProjectCommand(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    	IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
     	
     	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
     	APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type");
@@ -480,7 +479,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      * @throws InterruptedException
      */
     private void checkPointBeforeBuild(Run<?, ?> run, TaskListener listener,
-    				   IntegrityCMProject siProject) throws 
+    				       IntegrityCMProject siProject) throws 
     								 AbortException, IOException, InterruptedException,
     								 com.mks.api.response.InterruptedException, APIException
     {
@@ -496,7 +495,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         	listener.getLogger().println("Successfully executed pre-build checkpoint for project " + 
         										siProject.getConfigurationPath() + ", new revision is " + chkpt);
         	// Update the siProject to use the new checkpoint as the basis for this build
-        	IAPICommand command = new ProjectInfoCommand(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));	
+        	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
             	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
             	
             Response infoRes = command.execute();        				

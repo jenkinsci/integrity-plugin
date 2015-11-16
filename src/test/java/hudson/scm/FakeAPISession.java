@@ -9,7 +9,7 @@
 //   is strictly prohibited.
 //
 
-package hudson.scm.test;
+package hudson.scm;
 
 import java.io.IOException;
 import java.util.logging.Level;
@@ -20,6 +20,7 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.scm.IntegrityConfigurable;
+import hudson.scm.IntegritySCM;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.ISession;
 
@@ -32,7 +33,7 @@ import hudson.scm.api.ISession;
 public class FakeAPISession implements ISession
 {
 	// Initialize our logger
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	// Store the API Version
 	public static final String VERSION = "4.13";

@@ -1,20 +1,9 @@
-package hudson.scm.test;
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertFalse;
-import static org.junit.Assert.assertTrue;
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.FreeStyleProject;
-import hudson.model.ParametersDefinitionProperty;
-import hudson.model.StringParameterDefinition;
-import hudson.model.User;
-import hudson.scm.IntegrityCMMember;
-
-import java.util.Set;
-
-import org.junit.Rule;
+package hudson.scm;
 import org.junit.Test;
-import org.jvnet.hudson.test.JenkinsRule;
+
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Result;
 
 
 public class IntegritySCMTest extends AbstractIntegrityTestCase

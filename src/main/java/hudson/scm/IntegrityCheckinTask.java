@@ -21,7 +21,7 @@ import jenkins.security.Roles;
 public class IntegrityCheckinTask implements FileCallable<Boolean>
 {
 	private static final long serialVersionUID = 4165773747683187630L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private final String itemID;
 	private final String buildID;
 	private final String ciConfigPath;

@@ -9,7 +9,7 @@
 //   is strictly prohibited.
 //
 
-package hudson.scm.test;
+package hudson.scm;
 
 import com.mks.api.CmdRunner;
 import com.mks.api.Command;

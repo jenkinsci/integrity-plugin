@@ -18,7 +18,7 @@ import jenkins.tasks.SimpleBuildStep;
 @SuppressWarnings("unchecked")
 public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleBuildStep
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private final IntegrityConfigurable ciSettings;
 	private final String configPath;
 	private final String includes;

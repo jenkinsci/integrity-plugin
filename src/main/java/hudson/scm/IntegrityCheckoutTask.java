@@ -34,7 +34,7 @@ import jenkins.security.Roles;
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
 {
 	private static final long serialVersionUID = 1240357991626897900L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private static final int CHECKOUT_TRESHOLD = 500;	
 	private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
 	private final List<String> dirList;

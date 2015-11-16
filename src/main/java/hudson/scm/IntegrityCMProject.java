@@ -33,8 +33,7 @@ import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 
 import hudson.AbortException;
-import hudson.scm.api.command.AddProjectLabelCommand;
-import hudson.scm.api.command.CheckPointCommand;
+import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
@@ -46,7 +45,7 @@ import hudson.scm.api.option.IAPIOption;
 public class IntegrityCMProject implements Serializable
 {
 	private static final long serialVersionUID = 6452315129657215760L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	public static final String NORMAL_PROJECT = "Normal";
 	public static final String VARIANT_PROJECT = "Variant";
@@ -377,7 +376,7 @@ public class IntegrityCMProject implements Serializable
 	public Response checkpoint(IntegrityConfigurable integrityConfigurable, String chkptLabel) throws APIException, AbortException
 	{
 	    // Construct the checkpoint command
-	    IAPICommand command = new CheckPointCommand(integrityConfigurable);
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.CHECKPOINT_COMMAND, integrityConfigurable);
 	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
 	    // Set the label and description if applicable
 	    command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, chkptLabel);
@@ -396,7 +395,7 @@ public class IntegrityCMProject implements Serializable
 	public Response addProjectLabel(IntegrityConfigurable serverConf, String chkptLabel, String projectName, String projectRevision) throws APIException, AbortException
 	{
 		// Construct the addprojectlabel command
-	    	IAPICommand command = new AddProjectLabelCommand(serverConf);
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.ADD_PROJECT_LABEL_COMMAND, serverConf);
 	    	command.addOption(new APIOption(IAPIOption.PROJECT, projectName));
 	    	command.addOption(new APIOption(IAPIOption.LABEL, chkptLabel));
 	    	command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, projectRevision));

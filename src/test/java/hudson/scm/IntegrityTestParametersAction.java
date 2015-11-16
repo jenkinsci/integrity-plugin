@@ -1,4 +1,4 @@
-package hudson.scm.test;
+package hudson.scm;
 import hudson.EnvVars;
 import hudson.model.EnvironmentContributingAction;
 import hudson.model.InvisibleAction;

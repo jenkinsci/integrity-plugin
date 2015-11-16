@@ -23,16 +23,11 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.command.CloseCPCommand;
-import hudson.scm.api.command.CreateCPCommand;
+import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
-import hudson.scm.api.command.LockCommand;
 import hudson.scm.api.command.ProjectAddCommand;
 import hudson.scm.api.command.ProjectCheckinCommand;
-import hudson.scm.api.command.ProjectCheckoutCommand;
-import hudson.scm.api.command.RevisionInfoCommand;
 import hudson.scm.api.command.SubmitCPCommand;
-import hudson.scm.api.command.UnlockCommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
 import hudson.scm.api.option.IAPIOption;
@@ -45,7 +40,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public final class IntegrityCMMember
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private static final String ENCODING = "UTF-8"; 
 	
 	/**
@@ -129,7 +124,7 @@ public final class IntegrityCMMember
 	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
-	    	IAPICommand command = new ProjectCheckoutCommand();
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKOUT_COMMAND, null);
 		
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new FileAPIOption(IAPIOption.TARGET_FILE, targetFile));
@@ -161,7 +156,7 @@ public final class IntegrityCMMember
 		String author = "unknown";
 		
 		// Construct the revision-info command
-		IAPICommand command = new RevisionInfoCommand(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.REVISION_INFO_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
 		command.addSelection(memberID);
@@ -223,7 +218,7 @@ public final class IntegrityCMMember
 	public static final void updateMember(IntegrityConfigurable ciSettings, String configPath, FilePath member, String relativePath, String cpid, String desc) throws AbortException, APIException
 	{
 		// Construct the lock command
-	    	IAPICommand command = new LockCommand(ciSettings);
+	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.LOCK_COMMAND, ciSettings);
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 		command.addSelection(relativePath);
@@ -286,7 +281,7 @@ public final class IntegrityCMMember
 	public static final void unlockMembers(IntegrityConfigurable integrityConfig, String configPath) throws AbortException, APIException
 	{
 		// Construct the unlock command
-		IAPICommand command = new UnlockCommand(integrityConfig);
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.UNLOCK_COMMAND, integrityConfig);
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.execute();
 	}
@@ -328,7 +323,7 @@ public final class IntegrityCMMember
     		return cpid;
     	}
 
-    	IAPICommand command = new CreateCPCommand(ciSettings);
+    	IAPICommand command = CommandFactory.createCommand(IAPICommand.CREATE_CP_COMMAND, ciSettings);
     	command.addOption(new APIOption(IAPIOption.DESCRIPTION,desc));
     	command.addOption(new APIOption(IAPIOption.SUMMARY,desc));
     	command.addOption(new APIOption(IAPIOption.ITEM_ID,itemID));
@@ -367,7 +362,7 @@ public final class IntegrityCMMember
 	{
 		LOGGER.fine("Submitting Change Package: " + cpid);
 		
-		IAPICommand command = new CloseCPCommand(ciSettings);
+		IAPICommand command = CommandFactory.createCommand(IAPICommand.CLOSE_CP_COMMAND, ciSettings);
 		command.addSelection(cpid);
 		
 		// First we'll attempt to close the cp to release locks on files that haven't changed,

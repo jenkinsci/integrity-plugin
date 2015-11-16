@@ -92,6 +92,10 @@ public abstract class BasicAPICommand implements IAPICommand
     @Override
     public Response execute() throws APIException, AbortException
     {
+	    if(null == serverConfig){
+		throw new AbortException("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
+	    }
+	    // Create an Integrity Session using params from IntegrityConfigurable Object	
 	    ISession api = APISession.create(serverConfig);
                 
             // Ensure we've successfully created an API Session

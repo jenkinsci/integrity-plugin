@@ -9,7 +9,7 @@
 //   is strictly prohibited.
 //
 
-package hudson.scm.test;
+package hudson.scm;
 
 import java.util.LinkedHashMap;
 import java.util.Map;

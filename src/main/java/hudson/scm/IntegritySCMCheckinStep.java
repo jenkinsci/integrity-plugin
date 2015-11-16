@@ -25,7 +25,7 @@ import org.kohsuke.stapler.QueryParameter;
 
 public class IntegritySCMCheckinStep extends AbstractStepImpl
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	private String serverConfig;
 	private String userName;

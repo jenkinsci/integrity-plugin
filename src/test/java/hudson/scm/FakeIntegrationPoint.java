@@ -5,7 +5,7 @@
 // PTC Inc. Any use or disclosure of this Software without the express
 // written permission of PTC Inc. is strictly prohibited.
 
-package hudson.scm.test;
+package hudson.scm;
 
 import java.util.Iterator;
 

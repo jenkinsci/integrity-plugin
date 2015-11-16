@@ -45,7 +45,7 @@ import net.sf.json.JSONObject;
 public class IntegrityItemAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 7067049279037277420L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private String serverConfig;
 	private String queryDefinition;
 	private String stateField;

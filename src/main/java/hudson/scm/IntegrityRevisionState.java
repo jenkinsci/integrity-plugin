@@ -9,7 +9,7 @@ import java.util.logging.Logger;
 public final class IntegrityRevisionState extends SCMRevisionState implements Serializable 
 {
 	private static final long serialVersionUID = 1838332506014398677L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private final String projectCacheTable;
 
 	public IntegrityRevisionState(String jobName, String configurationName, String projectCacheTable) 

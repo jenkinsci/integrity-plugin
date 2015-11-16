@@ -1,4 +1,4 @@
-package hudson.scm.test;
+package hudson.scm;
 
 import hudson.FilePath;
 import hudson.model.TaskListener;

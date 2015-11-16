@@ -9,7 +9,7 @@
 //   is strictly prohibited.
 //
 
-package hudson.scm.test;
+package hudson.scm;
 
 import java.io.IOException;
 import java.util.Iterator;

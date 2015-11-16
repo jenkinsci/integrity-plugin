@@ -1,23 +1,4 @@
-package hudson.scm.test;
-
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.FreeStyleBuild;
-import hudson.model.Result;
-import hudson.model.StreamBuildListener;
-import hudson.model.TaskListener;
-import hudson.model.AbstractBuild;
-import hudson.model.Cause;
-import hudson.model.FreeStyleProject;
-import hudson.scm.IntegrityCMMember;
-import hudson.scm.IntegrityCheckinTask;
-import hudson.scm.IntegrityConfigurable;
-import hudson.scm.IntegrityItemAction;
-import hudson.scm.IntegritySCM;
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.util.StreamTaskListener;
+package hudson.scm;
 
 import java.io.ByteArrayOutputStream;
 import java.io.File;
@@ -30,6 +11,22 @@ import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
 //import org.mockito.Mockito;
 
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.BuildListener;
+import hudson.model.Cause;
+import hudson.model.FreeStyleBuild;
+import hudson.model.FreeStyleProject;
+import hudson.model.Result;
+import hudson.model.StreamBuildListener;
+import hudson.model.TaskListener;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
+import hudson.util.StreamTaskListener;
 import rpc.IntegrityException;
 
 public abstract class AbstractIntegrityTestCase extends JenkinsRule{
@@ -49,6 +46,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 	String configPath="#/Vipin";
 	@Rule public JenkinsRule jenkinsRule = new JenkinsRule();
 	@Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
+	IntegrityConfigurable fakeConfigObj;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -59,7 +57,8 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 			 name1=testRepo.userName1;
 			 name2=testRepo.userName2;
 			 workDir = testRepo.IntegrityDir;
-	         workspace = testRepo.IntegrityDirPath;
+			 workspace = testRepo.IntegrityDirPath;
+			 fakeConfigObj = new IntegrityConfigurable("server1", "dummy.server.com", 7001, "dummy.server.com", 7001, false, "developer", "password");
 		}
         catch (Throwable e) {
 			// TODO Auto-generated catch block
@@ -162,10 +161,14 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
     }
     
     protected void testUnlockMembers() throws Exception
-	{
+    {
     	IntegrityConfigurable configObj= new IntegrityConfigurable("server1", "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, false, "developer", "password");
     	FakeAPISession api = FakeAPISession.create(configObj);
-		IntegrityCMMember.unlockMembers(configObj, configPath);
-	}
+	IntegrityCMMember.unlockMembers(configObj, configPath);
+	
+	/*IAPICommand command = new MockAPICommand(IAPICommand.UNLOCK_COMMAND);
+	command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+	command.execute();*/
+    }	
    
 }

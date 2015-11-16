@@ -10,7 +10,7 @@ import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.command.AddProjectLabelCommand;
+import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
@@ -44,7 +44,7 @@ public class IntegritySCMLabelNotifierStep extends Notifier implements SimpleBui
         	 try
         	 {
         	     // Assumes the checkpoint was done before the build, so lets apply the label now
-        	     IAPICommand command = new AddProjectLabelCommand(ciSettings);
+        	     IAPICommand command = CommandFactory.createCommand(IAPICommand.ADD_PROJECT_LABEL_COMMAND, ciSettings);
         	     command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
         	     command.addOption(new APIOption(IAPIOption.LABEL, checkpointLabel));
         		    	

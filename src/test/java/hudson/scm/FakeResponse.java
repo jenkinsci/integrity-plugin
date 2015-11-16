@@ -9,7 +9,7 @@
 //   is strictly prohibited.
 //
 
-package hudson.scm.test;
+package hudson.scm;
 
 import com.mks.api.VersionNumber;
 import com.mks.api.response.*;

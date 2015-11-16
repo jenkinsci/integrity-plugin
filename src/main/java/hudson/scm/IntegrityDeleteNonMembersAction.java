@@ -1,29 +1,28 @@
 package hudson.scm;
 
-import hudson.Extension;
-import hudson.Launcher;
-import hudson.model.BuildListener;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.BuildStepMonitor;
-import hudson.tasks.Notifier;
-import hudson.tasks.Publisher;
-
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import net.sf.json.JSONObject;
-
 import org.kohsuke.stapler.StaplerRequest;
+
+import hudson.Extension;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.BuildStepMonitor;
+import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
+import net.sf.json.JSONObject;
 
 public class IntegrityDeleteNonMembersAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 654691931521381720L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	
 	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();

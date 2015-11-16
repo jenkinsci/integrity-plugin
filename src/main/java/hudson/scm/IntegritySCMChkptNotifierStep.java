@@ -9,9 +9,8 @@ import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.Run;
 import hudson.model.TaskListener;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.command.CheckPointCommand;
+import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
@@ -22,7 +21,7 @@ import jenkins.tasks.SimpleBuildStep;
 @SuppressWarnings("unchecked")
 public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBuildStep
 {
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
 	private final IntegrityConfigurable ciSettings;
 	private final String configPath;
 	private final String checkpointLabel;
@@ -48,7 +47,7 @@ public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBui
 			try
 			{
 				// Construct the checkpoint command
-				IAPICommand command = new CheckPointCommand(ciSettings);
+				IAPICommand command = CommandFactory.createCommand(IAPICommand.CHECKPOINT_COMMAND, ciSettings);
 				command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 				command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, checkpointLabel);
 				command.addAdditionalParameters(IAPIOption.CHECKPOINT_DESCRIPTION, checkpointDesc);
