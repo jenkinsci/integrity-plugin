@@ -20,7 +20,6 @@ import com.mks.api.response.Response;
 import hudson.AbortException;
 import hudson.FilePath;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.command.CommandFactory;
@@ -31,6 +30,7 @@ import hudson.scm.api.command.SubmitCPCommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
 import hudson.scm.api.option.IAPIOption;
+import hudson.scm.api.session.APISession;
 
 /**
  * This class is intended to represent an Integrity CM Member
@@ -40,7 +40,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public final class IntegrityCMMember
 {
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	private static final String ENCODING = "UTF-8"; 
 	
 	/**

@@ -47,7 +47,7 @@ import net.sf.json.JSONObject;
 public class IntegrityCheckpointAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 3344676447487492553L;
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	private String checkpointLabel;
 	private final Log logger = LogFactory.getLog(getClass());
 	private String serverConfig;

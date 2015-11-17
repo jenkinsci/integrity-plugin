@@ -47,8 +47,9 @@ public class TestIntegrityRepo {
      */
     public String commit(final String fileName, final String User1, final String message)
             throws IntegrityException, InterruptedException {
-        return commit(fileName,User1, message);
+        return commit(fileName, "Dummy File Content", User1, message);
     }
+    
     public String commit(final String fileName, final String fileContent, final String User1,
                          final String message) throws IntegrityException, InterruptedException {
         FilePath file = IntegrityDirPath.child(fileName);

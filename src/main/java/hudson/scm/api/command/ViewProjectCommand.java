@@ -25,8 +25,7 @@ public class ViewProjectCommand extends BasicAPICommand
 	super(serverConfig);
 	cmd = new Command(Command.SI, VIEW_PROJECT_COMMAND);
 	
-	// TODO: this is a bug. This command should be run with interim = true as per original code, but this fails somehow
-	//runCommandWithInterim = true;
+	runCommandWithInterim = true;
 	
 	// Initialize defaults
 	cmd.addOption(new APIOption(IAPIOption.RECURSE));

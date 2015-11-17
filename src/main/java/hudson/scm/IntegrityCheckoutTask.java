@@ -27,14 +27,14 @@ import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.session.APISession;
 import jenkins.security.Roles;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
 {
 	private static final long serialVersionUID = 1240357991626897900L;
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	private static final int CHECKOUT_TRESHOLD = 500;	
 	private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
 	private final List<String> dirList;

@@ -42,11 +42,11 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
  */
 public class DerbyUtils 
 {
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	public static final String DERBY_DRIVER = "org.apache.derby.jdbc.EmbeddedDriver";
 	public static final String DERBY_SYS_HOME_PROPERTY = "derby.system.home";
 	public static final String DERBY_URL_PREFIX = "jdbc:derby:";
-	private static final String DERBY_DB_NAME = IntegritySCM.class.getName();
+	private static final String DERBY_DB_NAME = IntegritySCM.class.getSimpleName();
 	public static final String CREATE_INTEGRITY_SCM_REGISTRY = "CREATE TABLE INTEGRITY_SCM_REGISTRY (" +
 																	"ID INTEGER NOT NULL PRIMARY KEY GENERATED ALWAYS AS IDENTITY (START WITH 1, INCREMENT BY 1), " +
 																	"JOB_NAME VARCHAR(256) NOT NULL, " +

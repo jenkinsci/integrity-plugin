@@ -14,8 +14,8 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.AbortException;
-import hudson.scm.api.ISession;
 import hudson.scm.api.command.BasicAPICommand;
+import hudson.scm.api.session.ISession;
 
 /**
  *

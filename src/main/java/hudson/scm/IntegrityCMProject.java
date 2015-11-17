@@ -45,7 +45,7 @@ import hudson.scm.api.option.IAPIOption;
 public class IntegrityCMProject implements Serializable
 {
 	private static final long serialVersionUID = 6452315129657215760L;
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	
 	public static final String NORMAL_PROJECT = "Normal";
 	public static final String VARIANT_PROJECT = "Variant";
@@ -300,20 +300,19 @@ public class IntegrityCMProject implements Serializable
 	 */
 	private Element writeChangeLog(Element item, Hashtable<CM_PROJECT, Object> memberInfo)
 	{
+	    	if(null == memberInfo)
+	    	    return item;
 		// Create and append the <file> element
 		Element file = xmlDoc.createElement("file");
 		file.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.NAME).toString()));
 		item.appendChild(file);
 		// Create and append the <user> element
 		Element user = xmlDoc.createElement("user");
-		if(memberInfo != null)
+		Object o = memberInfo.get(CM_PROJECT.AUTHOR);
+		if(o != null)
 		{
-		    Object o = memberInfo.get(CM_PROJECT.AUTHOR);
-		    if(o != null)
-		    {
-		        user.appendChild(xmlDoc.createTextNode(o.toString()));
-		        item.appendChild(user);
-		    }
+		    user.appendChild(xmlDoc.createTextNode(o.toString()));
+		    item.appendChild(user);
 		}
 		
 		// Create and append the <rev> element
@@ -364,8 +363,6 @@ public class IntegrityCMProject implements Serializable
 	}
 	
 	/**
-	 * TODO deprecate this method in later iteration 
-	 * 
 	 * Performs a checkpoint on this Integrity CM Project
 	 * @param integrityConfigurable Authenticated Integrity API Session
 	 * @param chkptLabel Checkpoint label string

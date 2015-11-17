@@ -28,8 +28,8 @@ import hudson.model.AbstractProject;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.APISession;
 import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.session.APISession;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -45,7 +45,7 @@ import net.sf.json.JSONObject;
 public class IntegrityItemAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 7067049279037277420L;
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	private String serverConfig;
 	private String queryDefinition;
 	private String stateField;

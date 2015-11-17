@@ -22,7 +22,7 @@ import hudson.remoting.VirtualChannel;
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean> 
 {
     private static final long serialVersionUID = 6452098989064436149L;
-    private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+    private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
     private final TaskListener listener;
     private String alternateWorkspaceDir;
     private final List<Hashtable<CM_PROJECT, Object>> projectMembersList; 

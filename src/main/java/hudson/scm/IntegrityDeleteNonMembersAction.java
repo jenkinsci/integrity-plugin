@@ -22,7 +22,7 @@ import net.sf.json.JSONObject;
 public class IntegrityDeleteNonMembersAction extends Notifier implements Serializable
 {
 	private static final long serialVersionUID = 654691931521381720L;
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	
 	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();

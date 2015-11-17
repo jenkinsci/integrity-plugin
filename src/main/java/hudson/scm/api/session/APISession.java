@@ -1,4 +1,4 @@
-package hudson.scm.api;
+package hudson.scm.api.session;
 
 import com.mks.api.CmdRunner;
 import com.mks.api.Command;
@@ -9,6 +9,7 @@ import com.mks.api.response.Response;
 
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
+import hudson.scm.api.ExceptionHandler;
 
 import com.mks.api.Session;
 
@@ -23,7 +24,7 @@ import java.util.logging.Logger;
 public class APISession implements ISession
 {
 	// Initialize our logger
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	
 	// Store the API Version
 	public static final String VERSION = "4.13";
@@ -54,7 +55,7 @@ public class APISession implements ISession
 		// Attempt to open a connection to the Integrity Server
     	try
     	{
-    		LOGGER.fine("Creating Integrity API Session...");
+    		LOGGER.info("Creating Integrity API Session for :"+ settings.getUserName() + settings.getSecure());
     		return new APISession(
     					settings.getIpHostName(),
     					settings.getIpPort(),
@@ -334,5 +335,11 @@ public class APISession implements ISession
 	public String getUserName()
 	{
 		return userName;
+	}
+
+	@Override
+	public boolean isSecure()
+	{
+	    return this.secure;
 	}
 }
