@@ -21,6 +21,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
@@ -36,13 +37,13 @@ import hudson.model.ModelObject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
-import hudson.scm.api.APISession;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
+import hudson.scm.api.session.APISession;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -235,6 +236,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      */
     private Response initializeCMProject(EnvVars environment, String projectCacheTable) throws APIException, IOException, InterruptedException
     {
+	// Re-evaluate the config path to resolve any groovy expressions...
 	String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(environment, configPath);
 	
     	// Get the project information for this project
@@ -307,8 +309,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     	IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
     	
     	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
-    	APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type");
-    	command.addOption(new APIOption(IAPIOption.FIELDS, APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type")));
+    	MultiValue mv = APIUtils.createMultiValueField(",","name","context","cpid","memberrev","membertimestamp","memberdescription","type");
+    	command.addOption(new APIOption(IAPIOption.FIELDS, mv));
     		
     	// Apply our include/exclude filters
     	applyMemberFilters(command);
@@ -335,9 +337,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
     	// Log the invocation... 
     	LOGGER.fine("Start execution of checkout() routine...!");
-    	
-    	// Re-evaluate the config path to resolve any groovy expressions...
-    	//String resolvedConfigPath = IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener), configPath);
     	
     	// Provide links to the Change and Build logs for easy access from Integrity
     	listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
@@ -421,7 +420,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     			// Delete non-members in this workspace, if appropriate...
     			if( deleteNonMembers )
     			{
-    				
     			    IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace, projectMembersList, dirList);
     			    if( ! workspace.act(deleteNonMembers) )
     				{
@@ -444,7 +442,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       		listener.getLogger().println(eh.getMessage());
       		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
       		listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      		
       		throw new AbortException("Caught Integrity APIException!");
         }
     	catch(SQLException sqlex)
@@ -453,7 +450,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       		listener.getLogger().println("A SQL Exception was caught!"); 
       		listener.getLogger().println(sqlex.getMessage());
       		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-      		
       		throw new AbortException("Caught Derby SQLException!");
     	}
         finally
@@ -536,9 +532,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
               		// Get the project cache table name
               		String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl)this.getDescriptor()).getDataSource(), job.getName(), configurationName, 0);				        				
               		// Re-evaluate the config path to resolve any groovy expressions...
-              		//listener.getLogger().println("Preparing to execute si projectinfo for " + resolvedConfigPath);
               		initializeCMProject(job.getCharacteristicEnvVars(), configPath);
-              		//listener.getLogger().println("Preparing to execute si viewproject for " + resolvedConfigPath);
               		initializeCMProjectMembers();
               
               		// Compare this project with the old project 

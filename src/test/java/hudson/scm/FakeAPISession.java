@@ -22,7 +22,7 @@ import com.mks.api.response.Response;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.ISession;
+import hudson.scm.api.session.ISession;
 
 /**
  * Allows for testing of an APISession
@@ -33,7 +33,7 @@ import hudson.scm.api.ISession;
 public class FakeAPISession implements ISession
 {
 	// Initialize our logger
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	
 	// Store the API Version
 	public static final String VERSION = "4.13";
@@ -340,6 +340,12 @@ public class FakeAPISession implements ISession
 	public String getUserName()
 	{
 		return userName;
+	}
+
+	@Override
+	public boolean isSecure()
+	{
+	    return secure;
 	}
 }
 

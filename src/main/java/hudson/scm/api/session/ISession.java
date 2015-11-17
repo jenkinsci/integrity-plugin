@@ -1,4 +1,4 @@
-package hudson.scm.api;
+package hudson.scm.api.session;
 
 import com.mks.api.Command;
 import com.mks.api.response.APIException;
@@ -11,5 +11,9 @@ public interface ISession {
 	public Response runCommandWithInterim(Command cmd) throws APIException; 
 	
 	public void terminate();
+	
+	public String getUserName();
+	
+	public boolean isSecure();
 
 }

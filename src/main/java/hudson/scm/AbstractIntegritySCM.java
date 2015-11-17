@@ -6,6 +6,8 @@
 // written permission of PTC Inc. is strictly prohibited.
 package hudson.scm;
 
+import java.io.File;
+import java.io.IOException;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -15,8 +17,13 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.command.BasicAPICommand;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
@@ -29,7 +36,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 {
     private static final long serialVersionUID = 7559894846609712683L;
     
-    protected static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+    protected static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
     protected static final Map<String, IntegrityCMProject> projects = new ConcurrentHashMap<String, IntegrityCMProject>();
     public static final String NL = System.getProperty("line.separator");
     public static final String FS = System.getProperty("file.separator");
@@ -64,7 +71,8 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
     {
 	super();
     }
-
+    
+    
     @Override
     @Exported
     public IntegrityRepositoryBrowser getBrowser()

@@ -4,8 +4,8 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.AbortException;
-import hudson.scm.api.ISession;
 import hudson.scm.api.option.IAPIOption;
+import hudson.scm.api.session.ISession;
 
 /**
  * All Jenkins Integrity API command calls must extend this interface. A command is essentially a 

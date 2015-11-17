@@ -18,9 +18,10 @@ import com.mks.api.response.Response;
 import hudson.AbortException;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
-import hudson.scm.api.APISession;
-import hudson.scm.api.ISession;
 import hudson.scm.api.option.IAPIOption;
+import hudson.scm.api.session.APISession;
+import hudson.scm.api.session.ISession;
+import hudson.scm.api.session.SessionTable;
 
 /**
  * All Jenkins Integrity API Commands have to extend this class in order to execute Integrity API calls using the default method
@@ -30,7 +31,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public abstract class BasicAPICommand implements IAPICommand
 {
-    protected static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+    protected static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
     protected Command cmd;
     protected Map<String, Object> commandHelperObjects;
     
@@ -61,27 +62,21 @@ public abstract class BasicAPICommand implements IAPICommand
 	if(null == cmd)
 	    throw new APIException("Integration API Command cannot be null");
 	
-	try {
+	doPreAction();
 	    
-	    doPreAction();
+	if(runCommandWithInterim)
+	    res = api.runCommandWithInterim(cmd);
+	else
+	    res = api.runCommand(cmd);
 	    
-	    if(runCommandWithInterim)
-		res = api.runCommandWithInterim(cmd);
-	    else
-		res = api.runCommand(cmd);
-	    
-	    if(null != res){
-        	    int resCode = res.getExitCode();
+	if(null != res && !runCommandWithInterim){
+           int resCode = res.getExitCode();
         	    
-        	    if(resCode == 0){
-        		// execute post action only on success response
-        		doPostAction();
-        	    }
-	    }
-	    
-	} finally {
-	    api.terminate();
-	}
+           if(resCode == 0){
+               // execute post action only on success response
+        	doPostAction();
+           }
+        }
 	
 	return res;
     }
@@ -93,17 +88,29 @@ public abstract class BasicAPICommand implements IAPICommand
     public Response execute() throws APIException, AbortException
     {
 	    if(null == serverConfig){
-		throw new AbortException("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
+		LOGGER.severe("Unable to get Server configuration for "+cmd.getCommandName()+" operation");
+		throw new AbortException("Unable to get Server configuration for "+cmd.getCommandName()+" operation");
 	    }
+	    
+	    ISession api = SessionTable.getSession(serverConfig);
+	    //LOGGER.info("Reusing session for :"+serverConfig.toString());
+	    
 	    // Create an Integrity Session using params from IntegrityConfigurable Object	
-	    ISession api = APISession.create(serverConfig);
+	    if (null == api){
+		
+		api = APISession.create(serverConfig);
                 
-            // Ensure we've successfully created an API Session
-            if( null == api )
-            {
-        	LOGGER.severe("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
-        	throw new AbortException("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
-            }
+	    	// Ensure we've successfully created an API Session
+            	if( null == api )
+            	{
+            	    LOGGER.severe("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
+            	    throw new AbortException("An Integrity API Session could not be established!  Cannot perform "+cmd.getCommandName()+" operation");
+            	}
+            	else {
+            	    SessionTable.addSession(serverConfig, api);
+            	    LOGGER.info("API Session Table contents: " + SessionTable.printKeys());
+            	}
+	    }
 	
             return execute(api);
     }

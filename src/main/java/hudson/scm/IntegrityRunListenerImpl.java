@@ -9,8 +9,10 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.session.SessionTable;
 
 /**
  * This class implements the onDeleted event when a build is deleted
@@ -21,7 +23,7 @@ import hudson.scm.IntegritySCM.DescriptorImpl;
 @Extension 
 public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R> 
 {
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getName());
+	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 	
 	@DataBoundConstructor
 	public IntegrityRunListenerImpl() 
@@ -29,7 +31,7 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
 	}
 	
 	@Override
-    public void onDeleted(R run) 
+	public void onDeleted(R run) 
 	{
 		LOGGER.fine("RunListenerImpl.onDeleted() invoked");
 		super.onDeleted(run);
@@ -47,5 +49,16 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
 		}
 		
 		LOGGER.fine("RunListenerImpl.onDeleted() execution complete!");
-    }	
+	}	
+	
+	@Override
+	public void onCompleted(R r, TaskListener listener)
+	{
+	    // TODO Auto-generated method stub
+	    super.onCompleted(r, listener);
+	    
+	    listener.getLogger().println("Executing cleanup.");
+	    SessionTable.clearSessions();
+	}
+	
 }
