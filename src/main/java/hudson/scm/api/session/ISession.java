@@ -16,4 +16,6 @@ public interface ISession {
 	
 	public boolean isSecure();
 
+	public void refreshAPISession() throws APIException;
+
 }

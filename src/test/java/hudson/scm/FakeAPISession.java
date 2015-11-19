@@ -66,13 +66,13 @@ public class FakeAPISession implements ISession
     	{
     		LOGGER.fine("Creating Integrity API Session...");
     		return new FakeAPISession(
-    					settings.getIpHostName(),
-    					settings.getIpPort(),
-    					settings.getHostName(), 
-    					settings.getPort(),
-    					settings.getUserName(),
-    					settings.getPasswordInPlainText(),
-    					settings.getSecure()
+    					"dummy.server.com",//settings.getIpHostName(),
+    					7001,//settings.getIpPort(),
+    					"dummy.server.com",//settings.getHostName(), 
+    					7001,//settings.getPort(),
+    					"administrator",//settings.getUserName(),
+    					"password",//settings.getPasswordInPlainText(),
+    					false//settings.getSecure()
     				);
     	}
     	catch(APIException aex)

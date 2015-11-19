@@ -33,6 +33,10 @@ public interface IAPICommand
     static String SUBMIT_CP_COMMAND =  "submitcp";
     static String CHECKPOINT_COMMAND =  "checkpoint";
     static String ADD_PROJECT_LABEL_COMMAND =  "addprojectlabel";
+    static String EDIT_ISSUE_COMMAND = "editissue";
+    static String RELATIONSHIPS_COMMAND = "relationships";
+    static String ISSUES_COMMAND = "issues";
+    static String EDIT_RESULT_COMMAND = "editresult";
     
     /**
      * Execute the command using Integrity Session API

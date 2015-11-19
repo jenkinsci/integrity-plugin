@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class UnlockCommand extends BasicAPICommand
 {
-    public UnlockCommand(final IntegrityConfigurable serverConfig)
+    protected UnlockCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, UNLOCK_COMMAND);

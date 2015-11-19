@@ -18,7 +18,7 @@ import hudson.scm.IntegrityConfigurable;
  */
 public class LockCommand extends BasicAPICommand
 {
-    public LockCommand(final IntegrityConfigurable serverConfig)
+    protected LockCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, LOCK_COMMAND);

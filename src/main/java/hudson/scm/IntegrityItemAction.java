@@ -12,15 +12,14 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import com.mks.api.Command;
 import com.mks.api.MultiValue;
-import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
 import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
 
+import hudson.AbortException;
 import hudson.Extension;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
@@ -29,7 +28,10 @@ import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.ExceptionHandler;
-import hudson.scm.api.session.APISession;
+import hudson.scm.api.command.CommandFactory;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIOption;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -344,10 +346,10 @@ public class IntegrityItemAction extends Notifier implements Serializable
      * @throws IOException
      * @throws APIException
      */
-    private boolean editBuildItem(AbstractBuild<?, ?> build, BuildListener listener, APISession api, String buildItemID) throws IOException, APIException
+    private boolean editBuildItem(AbstractBuild<?, ?> build, BuildListener listener, String buildItemID) throws IOException, APIException
     {
+		IAPICommand editIssueCmd = CommandFactory.createCommand(IAPICommand.EDIT_ISSUE_COMMAND, getProjectSettings(build));
 		// Setup the edit item command to update the build item with the results of the build
-		Command editIssue = new Command(Command.IM, "editissue");
 		// Load up the build log, if required
 		if( null != logField && logField.length() > 0 )
 		{
@@ -361,7 +363,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 			MultiValue mvLog = new MultiValue("=");
 			mvLog.add(logField);
 			mvLog.add(log);
-			editIssue.addOption(new Option("richContentField", mvLog));
+			editIssueCmd.addOption(new APIOption(IAPIOption.RICH_CONTENT_FIELD, mvLog));
 		}
 		
 		// Lets update the build item based on the success/failure of the build
@@ -379,11 +381,11 @@ public class IntegrityItemAction extends Notifier implements Serializable
 			listener.getLogger().println("Preparing to update item '" + buildItemID + "' with values " + stateField + " = " + failureValue);
 			mvState.add(failureValue);
 		}
-		editIssue.addOption(new Option("field", mvState));
-		editIssue.addSelection(buildItemID);	    			
+		editIssueCmd.addOption(new APIOption(IAPIOption.FIELD, mvState));
+		editIssueCmd.addSelection(buildItemID);	    			
 
 		// Finally execute the edit item command
-		Response editIssueResponse = api.runCommand(editIssue);
+		Response editIssueResponse = editIssueCmd.execute();
 		int returnCode = editIssueResponse.getExitCode();
 		LOGGER.fine(editIssueResponse.getCommandString() + " returned " + returnCode);        					
 		listener.getLogger().println("Updated build item '" + buildItemID + "' with build status!");
@@ -393,6 +395,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 
     /**
      * Executes the Integrity edit test result command for given Test Session and Test Case
+     * @param build 
      * @param api Integrity API Session
      * @param annotation Test Result Annotation
      * @param verdict Test Result Verdict
@@ -400,21 +403,20 @@ public class IntegrityItemAction extends Notifier implements Serializable
      * @param testCaseID Test Case ID
      * @throws APIException 
      */
-    private void editTestResult(APISession api, String annotation, String verdict, String testSessionID, String testCaseID) throws APIException
+    private void editTestResult(AbstractBuild<?, ?> build, String annotation, String verdict, String testSessionID, String testCaseID) throws APIException
     {
 		// Setup the edit test result command
-		Command editresult = new Command(Command.TM, "editresult");
-		editresult.addOption(new Option("annotation", annotation));		
-		editresult.addOption(new Option("verdict", verdict));
-		editresult.addOption(new Option("forceCreate"));
-		editresult.addOption(new Option("sessionID", testSessionID));
-		editresult.addSelection(testCaseID);
+		IAPICommand editresultCmd = CommandFactory.createCommand(IAPICommand.EDIT_RESULT_COMMAND, getProjectSettings(build));
+		editresultCmd.addOption(new APIOption(IAPIOption.ANNOTATION, annotation));		
+		editresultCmd.addOption(new APIOption(IAPIOption.VERDICT, verdict));
+		editresultCmd.addOption(new APIOption(IAPIOption.SESSION_ID, testSessionID));
+		editresultCmd.addSelection(testCaseID);
 		
 		// Update Integrity for this Test Case result
 		try
 		{
 			LOGGER.fine("Attempting to update test result for Integrity Test - " + testCaseID);
-			api.runCommand(editresult);
+			editresultCmd.execute();
 		}
 		catch (APIException aex)
 		{
@@ -494,6 +496,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
     
     /**
      * Recursively update the Test Results for all Test Cases that have an 'External ID' populated
+     * @param build 
      * @param testResult AbstractTestResultAction object
      * @param listener BuildListener
      * @param api Integrity API Session
@@ -502,7 +505,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
      * @throws APIException
      */
 	@SuppressWarnings("unchecked")
-	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, Response walkResponse, List<Item> testCaseList) throws APIException
+	private void updateTestResult(AbstractBuild<?, ?> build, TestResult testResult, BuildListener listener, String testSessionID, Response walkResponse, List<Item> testCaseList) throws APIException
     {
 		// Look for the specific Tests we're interested in...
 		for( Item test : testCaseList  )
@@ -533,21 +536,21 @@ public class IntegrityItemAction extends Notifier implements Serializable
 				{
 					// Execute the edit test result command
 					LOGGER.fine("Located internal JUnit Test - " + junitTestName);
-					editTestResult(api, (caseResult.isPassed() ? "Test " + caseResult.getId() + " has passed" : caseResult.getErrorDetails()), 
+					editTestResult(build, (caseResult.isPassed() ? "Test " + caseResult.getId() + " has passed" : caseResult.getErrorDetails()), 
 									(caseResult.isPassed() ? testPassedVerdictName : testFailedVerdictName), testSessionID, test.getId());
 				}
 				else
 				{
 					// Lets mark the Test Result as skipped for this Test Case
 					LOGGER.warning("Could not locate internal JUnit Test - " + junitTestName);
-					editTestResult(api, "Test " + getJUnitID(testCaseID) + " was not run!", testSkippedVerdictName, testSessionID, test.getId());
+					editTestResult(build, "Test " + getJUnitID(testCaseID) + " was not run!", testSkippedVerdictName, testSessionID, test.getId());
 				}
 			}
 			
 			// Process the next level of Test Cases
 			if( null != containsFld && null != containsFld.getList() )
 			{
-				updateTestResult(testResult, listener, api, testSessionID, walkResponse, containsFld.getList());
+				updateTestResult(build, testResult, listener, testSessionID, walkResponse, containsFld.getList());
 			}
 		}
     }
@@ -585,31 +588,31 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	
 	/**
 	 * Collects the Test Results based on the list of Tests contained within an Integrity Test Session
-	 * @param testResultAction AggregatedTestResultAction
 	 * @param listener BuildListener
 	 * @param api Integrity API Session
 	 * @param testSessionID Integrity Test Session ID
 	 * @return
 	 * @throws APIException
+	 * @throws AbortException 
 	 */
     @SuppressWarnings("unchecked")
-	private boolean collectTestResults(AggregatedTestResultAction testResultAction, BuildListener listener, APISession api, String testSessionID) throws APIException
+	private boolean collectTestResults(AbstractBuild<?, ?> build, BuildListener listener, String testSessionID) throws APIException, AbortException
     {
 		// Read the Test Case relationships from the Test Session
-		Command walk = new Command(Command.IM, "relationships");
-		walk.addOption(new Option("fields", testCaseTestNameField));
+		IAPICommand walk = CommandFactory.createCommand(IAPICommand.RELATIONSHIPS_COMMAND, getProjectSettings(build));
+		walk.addOption(new APIOption(IAPIOption.FIELDS, testCaseTestNameField));
 		MultiValue traverseFields = new MultiValue(",");
 		traverseFields.add(testSessionTestsField);
 		traverseFields.add(testSuiteContainsField);
-		walk.addOption(new Option("traverseFields", traverseFields));
+		walk.addOption(new APIOption(IAPIOption.TRAVERSE_FIELDS, traverseFields));
 		walk.addSelection(testSessionID);
-		Response walkResponse = api.runCommand(walk);
+		Response walkResponse = walk.execute();
 		if( null != walkResponse )
 		{
 			Field testSessionFld = walkResponse.getWorkItem(testSessionID).getField(testSessionTestsField);
 			if( null != testSessionFld && null != testSessionFld.getList() )
 			{
-				updateTestResult(getTestResult(testResultAction), listener, api, testSessionID, walkResponse, testSessionFld.getList()); 
+				updateTestResult(build, getTestResult(build.getAction(AggregatedTestResultAction.class)), listener, testSessionID, walkResponse, testSessionFld.getList()); 
 			}
 		}				
 		
@@ -660,9 +663,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
 			return true;
 		}
 
-		APISession api = APISession.create(getProjectSettings(build));
-		if( null != api )
-		{
         	try
         	{
         		// First lets find the build item or test session id
@@ -685,10 +685,9 @@ public class IntegrityItemAction extends Notifier implements Serializable
         			if( queryDefinition.length() > 0 )
         			{
 	        			// Let's query for the build item id
-		        		Command issues = new Command(Command.IM, "issues");
-		        		issues.addOption(new Option("fields", "ID"));
-		        		issues.addOption(new Option("queryDefinition", queryDefinition));
-		        		Response issuesResponse = api.runCommand(issues);
+        			    	IAPICommand issueCmd = CommandFactory.createCommand(IAPICommand.ISSUES_COMMAND, getProjectSettings(build));
+        			    	issueCmd.addOption(new APIOption(IAPIOption.QUERY_DEFINITION, queryDefinition));
+        			    	Response issuesResponse = issueCmd.execute();
 		        		if( null != issuesResponse )
 		        		{
 		        			WorkItemIterator wit = issuesResponse.getWorkItems();
@@ -725,11 +724,12 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
 	        		{
 	        			// Get the relationships for the Build item
-	        			Command walk = new Command(Command.IM, "relationships");
-	        			walk.addOption(new Option("fields", testSessionStateField));
-	        			walk.addOption(new Option("traverseFields", testSessionField));
+	        		    	IAPICommand walk = CommandFactory.createCommand(IAPICommand.RELATIONSHIPS_COMMAND, getProjectSettings(build));
+	        			walk.addOption(new APIOption(IAPIOption.FIELDS, testSessionStateField));
+	        			walk.addOption(new APIOption(IAPIOption.TRAVERSE_FIELDS, testSessionField));
 	        			walk.addSelection(buildItemID);
-	        			Response walkResponse = api.runCommand(walk);
+	        			//Response walkResponse = api.runCommand(walk);
+	        			Response walkResponse = walk.execute();
 	        			if( null != walkResponse )
 	        			{
 	        				Field testSessionFld = walkResponse.getWorkItem(buildItemID).getField(testSessionField);
@@ -768,7 +768,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	        		if( intTestSessionID > 0 )
 	        		{
 	        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
-	        			success = collectTestResults(build.getAction(AggregatedTestResultAction.class), listener, api, testSessionID);
+	        			success = collectTestResults(build, listener, testSessionID);
 	        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
 	        		}
         		}
@@ -777,7 +777,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
         		if( intBuildItemID > 0 )
         		{
         			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
-        			success = editBuildItem(build, listener, api, buildItemID);
+        			success = editBuildItem(build, listener, buildItemID);
         		}
         		
         	}
@@ -790,17 +790,6 @@ public class IntegrityItemAction extends Notifier implements Serializable
             	LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
             	return false;
 	        }
-        	finally
-        	{
-        		api.terminate();
-        	}			
-		}
-		else
-		{
-			LOGGER.severe("An API Session could not be established!  Cannot update Integrity Build Item!");
-			listener.getLogger().println("An API Session could not be established!  Cannot update Integrity Build Item!");
-			return false;
-		}
 
 		return success;
 	}

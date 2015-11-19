@@ -30,7 +30,7 @@ import hudson.scm.api.command.SubmitCPCommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
 import hudson.scm.api.option.IAPIOption;
-import hudson.scm.api.session.APISession;
+import hudson.scm.api.session.ISession;
 
 /**
  * This class is intended to represent an Integrity CM Member
@@ -121,7 +121,7 @@ public final class IntegrityCMMember
 	 * @throws InterruptedException 
 	 * @throws APIException
 	 */
-	public static final boolean checkout(APISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
+	public static final boolean checkout(ISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
 	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKOUT_COMMAND, null);
@@ -230,7 +230,7 @@ public final class IntegrityCMMember
 			// If the lock was successful, check-in the updates
 			LOGGER.fine("Attempting to checkin file: " + member);
 			
-			IAPICommand cmd = new ProjectCheckinCommand(ciSettings);
+			IAPICommand cmd = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKIN_COMMAND, ciSettings);
 			cmd.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 			cmd.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 			cmd.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
@@ -253,7 +253,7 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to add file: " + member);
 			
 				// Construct the project add command
-				IAPICommand addCommand = new ProjectAddCommand(ciSettings);
+				IAPICommand addCommand = CommandFactory.createCommand(IAPICommand.PROJECT_ADD_COMMAND, ciSettings);
 				addCommand.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 				addCommand.addOption(new APIOption(IAPIOption.CP_ID, cpid));
 				addCommand.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File(""+member)));
@@ -384,7 +384,7 @@ public final class IntegrityCMMember
 				LOGGER.fine("Attempting to submit cp: " + cpid);
 				
 				// Construct the submit cp command
-				IAPICommand submitcpcmd = new SubmitCPCommand(ciSettings);
+				IAPICommand submitcpcmd = CommandFactory.createCommand(IAPICommand.SUBMIT_CP_COMMAND, ciSettings);
 				submitcpcmd.addSelection(cpid);
 				
 				submitcpcmd.execute();
