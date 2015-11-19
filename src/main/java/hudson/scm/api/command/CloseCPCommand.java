@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class CloseCPCommand extends BasicAPICommand
 {
-    public CloseCPCommand(final IntegrityConfigurable serverConfig)
+    protected CloseCPCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, CLOSE_CP_COMMAND);

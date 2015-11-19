@@ -236,7 +236,7 @@ public final class IntegrityConfigurable implements Serializable
             int result = 1;
             
             result = prime * result
-                    + ((hostName == null) ? 0 : hostName.hashCode()) +  ((password == null) ? 0 : password.hashCode());
+                    + ((hostName == null) ? 0 : hostName.hashCode()) + ((userName == null) ? 0 : userName.hashCode()) + ((password == null) ? 0 : password.hashCode());
 
             return result;
 	}

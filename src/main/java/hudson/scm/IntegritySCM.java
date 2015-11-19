@@ -44,6 +44,7 @@ import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.APISession;
+import hudson.scm.api.session.ISession;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.FormValidation;
 import hudson.util.ListBoxModel;
@@ -494,7 +495,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
             	command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
             	
-            Response infoRes = command.execute();        				
+            	Response infoRes = command.execute();        				
         	siProject.initializeProject(infoRes.getWorkItems().next());
         }
         else
@@ -790,7 +791,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         	LOGGER.fine("ipPort: " + ipPort);
         	
   		IntegrityConfigurable ic = new IntegrityConfigurable("TEMP_ID", ipHostName, ipPort, hostName, port, secure, userName, password);
-  		APISession api = APISession.create(ic);
+  		ISession api = APISession.create(ic);
   		if( null != api )
   		{
   			api.terminate();

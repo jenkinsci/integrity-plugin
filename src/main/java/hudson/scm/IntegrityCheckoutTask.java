@@ -29,6 +29,7 @@ import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.session.APISession;
+import hudson.scm.api.session.ISession;
 import jenkins.security.Roles;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean> 
@@ -124,22 +125,22 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 		/**
 		 * Returns the initial value for the open file handle count
 		 */
-        @Override
-        protected Integer initialValue()
-        {
-            LOGGER.fine("Trying to retrieve initial value for open file handler" );
-            return new Integer(1);
-        }
+                @Override
+                protected Integer initialValue()
+                {
+                    LOGGER.fine("Trying to retrieve initial value for open file handler" );
+                    return new Integer(1);
+                }
 	}
 	
 	/**
 	 * Nested class to manage the APISessions for the checkout thread pool
 	 */
-    private static class ThreadLocalAPISession extends ThreadLocal<APISession>
+    private static class ThreadLocalAPISession extends ThreadLocal<ISession>
     {
         IntegrityConfigurable integrityConfig;
         // Using a thread safe Vector instead of a List
-        private Vector<APISession> sessions = new Vector<APISession>();
+        private Vector<ISession> sessions = new Vector<ISession>();
    
         /**
          * Initialize our constructor with the all the information needed to create an APISession 
@@ -162,7 +163,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         @Override
         public void remove()
         {
-            for(APISession session:sessions)
+            for(ISession session:sessions)
             {
                 try
                 {
@@ -181,9 +182,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
          * Returns an initial APISession for this thread
          */
         @Override
-        protected APISession initialValue() 
+        protected ISession initialValue() 
         {
-        	APISession api = APISession.create(integrityConfig);
+        	ISession api = APISession.create(integrityConfig);
         	if( null != api )
         	{
         		sessions.add(api);
@@ -227,7 +228,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         
         public Void call() throws Exception 
         {
-            APISession api = apiSession.get();
+            ISession api = apiSession.get();
             if( null != api )
             {
             	// Check to see if we need to release the APISession to clear some file handles

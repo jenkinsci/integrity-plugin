@@ -18,7 +18,7 @@ import hudson.scm.IntegrityConfigurable;
  */
 public class CreateCPCommand extends BasicAPICommand
 {
-    public CreateCPCommand(final IntegrityConfigurable serverConfig)
+    protected CreateCPCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, CREATE_CP_COMMAND);

@@ -10,12 +10,8 @@ package hudson.scm;
 import java.util.HashMap;
 
 import com.mks.api.Command;
-import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
 
-import hudson.AbortException;
 import hudson.scm.api.command.BasicAPICommand;
-import hudson.scm.api.session.ISession;
 
 /**
  *
@@ -25,9 +21,6 @@ import hudson.scm.api.session.ISession;
 public class MockAPICommand extends BasicAPICommand
 {
     
-    Command cmd;
-    IntegrityConfigurable configObj;
-	
     public MockAPICommand(final IntegrityConfigurable serverConfig, String command)
     {
 	super(serverConfig);
@@ -35,16 +28,4 @@ public class MockAPICommand extends BasicAPICommand
 	commandHelperObjects = new HashMap<String, Object>();
     }
 	
-
-    /* (non-Javadoc)
-     * @see hudson.scm.api.command.IAPICommand#execute()
-     */
-    @Override
-    public Response execute() throws APIException, AbortException
-    {
-	configObj= new IntegrityConfigurable("server1", "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, false, "developer", "password");
-	ISession api = FakeAPISession.create(configObj);
-	return super.execute(api);
-    }
-
 }

@@ -19,7 +19,7 @@ import hudson.scm.IntegrityConfigurable;
 public class ProjectInfoCommand extends BasicAPICommand
 {
     
-    public ProjectInfoCommand(final IntegrityConfigurable serverConfig)
+    protected ProjectInfoCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, PROJECT_INFO_COMMAND);

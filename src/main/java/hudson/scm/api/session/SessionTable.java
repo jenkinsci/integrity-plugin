@@ -21,14 +21,29 @@ public class SessionTable
 {
     private static Hashtable<IntegrityConfigurable, ISession> availableSessions = new Hashtable<IntegrityConfigurable, ISession>();
     
+    /**
+     * Adds a unique IntegrityConf session in the table
+     * 
+     * @param serverConfig
+     * @param session
+     */
     public static void addSession(IntegrityConfigurable serverConfig, ISession session){
 	availableSessions.put(serverConfig, session);
     }
     
+    /**
+     * Gets an available IntegrityConf session
+     * 
+     * @param serverConfig
+     * @return
+     */
     public static ISession getSession(IntegrityConfigurable serverConfig){
 	return availableSessions.get(serverConfig);
     }
     
+    /**
+     *  Terminate all sessions in the table and clear the session table
+     */
     public static void clearSessions(){
 	for(Entry<IntegrityConfigurable, ISession> session : availableSessions.entrySet()){
 	    session.getValue().terminate();

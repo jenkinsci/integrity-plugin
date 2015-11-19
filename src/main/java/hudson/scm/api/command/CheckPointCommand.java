@@ -24,7 +24,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class CheckPointCommand extends BasicAPICommand
 {
-    public CheckPointCommand(final IntegrityConfigurable serverConfig)
+    protected CheckPointCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, CHECKPOINT_COMMAND);

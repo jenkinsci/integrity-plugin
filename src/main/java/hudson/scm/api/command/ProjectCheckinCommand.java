@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class ProjectCheckinCommand extends BasicAPICommand
 {
-    public ProjectCheckinCommand(final IntegrityConfigurable serverConfig)
+    protected ProjectCheckinCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, PROJECT_CHECKIN_COMMAND);
