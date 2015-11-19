@@ -8,8 +8,12 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
+import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.powermock.api.mockito.PowerMockito;
 //import org.mockito.Mockito;
+import org.powermock.core.classloader.annotations.PowerMockIgnore;
+import org.powermock.modules.junit4.PowerMockRunner;
 
 import hudson.EnvVars;
 import hudson.FilePath;
@@ -23,12 +27,11 @@ import hudson.model.Result;
 import hudson.model.StreamBuildListener;
 import hudson.model.TaskListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.command.IAPICommand;
-import hudson.scm.api.option.APIOption;
-import hudson.scm.api.option.IAPIOption;
 import hudson.util.StreamTaskListener;
 import rpc.IntegrityException;
 
+@PowerMockIgnore({"javax.crypto.*" })
+@RunWith(PowerMockRunner.class)
 public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 	
 	protected TaskListener listener;
@@ -103,7 +106,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
     
     protected FreeStyleProject setupIntegrityProject() throws Exception
     {
-    	setupIntegrityConfigurable();
+    	//setupIntegrityConfigurable();
     	FreeStyleProject project = setupProject();
     	return project;
     }
@@ -159,16 +162,5 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 //        }
         return build;
     }
-    
-    protected void testUnlockMembers() throws Exception
-    {
-    	IntegrityConfigurable configObj= new IntegrityConfigurable("server1", "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, false, "developer", "password");
-    	FakeAPISession api = FakeAPISession.create(configObj);
-	IntegrityCMMember.unlockMembers(configObj, configPath);
-	
-	/*IAPICommand command = new MockAPICommand(IAPICommand.UNLOCK_COMMAND);
-	command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
-	command.execute();*/
-    }	
    
 }

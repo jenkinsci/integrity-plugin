@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class SubmitCPCommand extends BasicAPICommand
 {
-    public SubmitCPCommand(final IntegrityConfigurable serverConfig)
+    protected SubmitCPCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, SUBMIT_CP_COMMAND);

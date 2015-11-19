@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class ProjectAddCommand extends BasicAPICommand
 {
-    public ProjectAddCommand(final IntegrityConfigurable serverConfig)
+    protected ProjectAddCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, PROJECT_ADD_COMMAND);

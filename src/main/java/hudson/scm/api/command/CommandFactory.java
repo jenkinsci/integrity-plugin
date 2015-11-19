@@ -43,6 +43,14 @@ public class CommandFactory
 	    return new UnlockCommand(integrityConfig);
 	if(commandName.equalsIgnoreCase(IAPICommand.VIEW_PROJECT_COMMAND))
 	    return new ViewProjectCommand(integrityConfig);
+	if(commandName.equalsIgnoreCase(IAPICommand.RELATIONSHIPS_COMMAND))
+	    return new RelationshipsCommand(integrityConfig);
+	if(commandName.equalsIgnoreCase(IAPICommand.ISSUES_COMMAND))
+	    return new IssuesCommand(integrityConfig);
+	if(commandName.equalsIgnoreCase(IAPICommand.EDIT_ISSUE_COMMAND))
+	    return new EditIssuesCommand(integrityConfig);
+	if(commandName.equalsIgnoreCase(IAPICommand.EDIT_RESULT_COMMAND))
+	    return new EditResultsCommand(integrityConfig);
 	return null;
     }
 }

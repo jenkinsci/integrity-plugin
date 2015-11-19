@@ -50,7 +50,7 @@ public class APISession implements ISession
      * Creates an authenticated API Session against the Integrity Server
      * @return An authenticated API Session
      */
-	public static synchronized APISession create(IntegrityConfigurable settings)
+	public static synchronized ISession create(IntegrityConfigurable settings)
 	{
 		// Attempt to open a connection to the Integrity Server
     	try
@@ -195,6 +195,7 @@ public class APISession implements ISession
 	    return res;
 	}
 	
+	@Override
 	public void refreshAPISession() throws APIException
 	{
 	    terminate();

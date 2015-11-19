@@ -52,5 +52,13 @@ public interface IAPIOption
     public final String PROJECT_REVISION = "projectRevision";
     public final String MOVE_LABEL = "moveLabel";
     public final String CHECKPOINT_DESCRIPTION = "checkpointDesc";
+    public final String RICH_CONTENT_FIELD = "richContentField";
+    public final String FIELD = "field";
+    public final String TRAVERSE_FIELDS = "traverseFields";
+    public final String QUERY_DEFINITION = "queryDefinition";
+    public final String ANNOTATION = "annotation";
+    public final String VERDICT = "verdict";
+    public final String FORCE_CREATE = "forceCreate";
+    public final String SESSION_ID = "sessionID";
 	    
 }

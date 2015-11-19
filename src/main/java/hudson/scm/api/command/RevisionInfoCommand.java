@@ -19,7 +19,7 @@ import hudson.scm.IntegrityConfigurable;
  */
 public class RevisionInfoCommand extends BasicAPICommand
 {
-    public RevisionInfoCommand(final IntegrityConfigurable serverConfig)
+    protected RevisionInfoCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, REVISION_INFO_COMMAND);

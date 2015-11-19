@@ -20,7 +20,7 @@ import hudson.scm.api.option.IAPIOption;
  */
 public class ViewProjectCommand extends BasicAPICommand
 {
-    public ViewProjectCommand(IntegrityConfigurable serverConfig)
+    protected ViewProjectCommand(IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
 	cmd = new Command(Command.SI, VIEW_PROJECT_COMMAND);
