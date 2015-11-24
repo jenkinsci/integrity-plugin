@@ -1,5 +1,24 @@
 package hudson.scm;
 
+import hudson.EnvVars;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Result;
+import hudson.model.StreamBuildListener;
+import hudson.model.TaskListener;
+import hudson.model.AbstractBuild;
+import hudson.model.Cause;
+import hudson.model.FreeStyleProject;
+import hudson.scm.IntegrityCMMember;
+import hudson.scm.IntegrityCheckinTask;
+import hudson.scm.IntegrityConfigurable;
+import hudson.scm.IntegrityItemAction;
+import hudson.scm.IntegritySCM;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.util.StreamTaskListener;
+
 import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.util.ArrayList;
@@ -8,30 +27,11 @@ import java.util.List;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.rules.TemporaryFolder;
-import org.junit.runner.RunWith;
 import org.jvnet.hudson.test.JenkinsRule;
-import org.powermock.api.mockito.PowerMockito;
 //import org.mockito.Mockito;
-import org.powermock.core.classloader.annotations.PowerMockIgnore;
-import org.powermock.modules.junit4.PowerMockRunner;
 
-import hudson.EnvVars;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.AbstractBuild;
-import hudson.model.BuildListener;
-import hudson.model.Cause;
-import hudson.model.FreeStyleBuild;
-import hudson.model.FreeStyleProject;
-import hudson.model.Result;
-import hudson.model.StreamBuildListener;
-import hudson.model.TaskListener;
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.util.StreamTaskListener;
 import rpc.IntegrityException;
 
-@PowerMockIgnore({"javax.crypto.*" })
-@RunWith(PowerMockRunner.class)
 public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 	
 	protected TaskListener listener;
@@ -49,7 +49,6 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 	String configPath="#/Vipin";
 	@Rule public JenkinsRule jenkinsRule = new JenkinsRule();
 	@Rule public TemporaryFolder temporaryFolder = new TemporaryFolder();
-	IntegrityConfigurable fakeConfigObj;
 	
 	@Before
 	public void setUp() throws Exception {
@@ -60,8 +59,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 			 name1=testRepo.userName1;
 			 name2=testRepo.userName2;
 			 workDir = testRepo.IntegrityDir;
-			 workspace = testRepo.IntegrityDirPath;
-			 fakeConfigObj = new IntegrityConfigurable("server1", "dummy.server.com", 7001, "dummy.server.com", 7001, false, "developer", "password");
+	         workspace = testRepo.IntegrityDirPath;
 		}
         catch (Throwable e) {
 			// TODO Auto-generated catch block
@@ -106,7 +104,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
     
     protected FreeStyleProject setupIntegrityProject() throws Exception
     {
-    	//setupIntegrityConfigurable();
+    	setupIntegrityConfigurable();
     	FreeStyleProject project = setupProject();
     	return project;
     }
@@ -152,15 +150,15 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
     
     protected FreeStyleBuild build(final FreeStyleProject project, final Result expectedResult, final String...expectedNewlyCommittedFiles) throws Exception {
        final FreeStyleBuild build = project.scheduleBuild2(0, new Cause.UserIdCause()).get();
-    	
         System.out.println(build.getLog(50));
-//        for(final String expectedNewlyCommittedFile : expectedNewlyCommittedFiles) {
-//        	 assertTrue(expectedNewlyCommittedFile + " file not found in workspace", build.getWorkspace().child(expectedNewlyCommittedFile).exists());
-//        }
-//        if(expectedResult != null) {
-//            assertBuildStatus(expectedResult, build);
-//        }
         return build;
     }
+    
+    protected void testUnlockMembers() throws Exception
+	{
+    	IntegrityConfigurable configObj= new IntegrityConfigurable("server1", "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, "ppumsv-ipdc16d.ptcnet.ptc.com", 7001, false, "developer", "password");
+    	FakeAPISession api = FakeAPISession.create(configObj);
+		IntegrityCMMember.unlockMembers(configObj, configPath);
+	}
    
 }
