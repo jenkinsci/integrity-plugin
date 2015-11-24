@@ -12,7 +12,7 @@ import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.session.SessionTable;
+import hudson.scm.api.session.ISessionPool;
 
 /**
  * This class implements the onDeleted event when a build is deleted
@@ -57,8 +57,8 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
 	    // TODO Auto-generated method stub
 	    super.onCompleted(r, listener);
 	    
-	    listener.getLogger().println("Executing cleanup.");
-	    SessionTable.clearSessions();
+	    LOGGER.info("Executing cleanup. Closing Session Pool");
+	    ISessionPool.getInstance().getPool().close();
 	}
 	
 }
