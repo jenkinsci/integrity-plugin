@@ -19,9 +19,9 @@ import com.mks.api.FileOption;
 public class FileAPIOption extends FileOption implements IAPIOption
 {
 
-    public FileAPIOption(String name, File value)
-    {
-	super(name, value);
-    }
+  public FileAPIOption(String name, File value)
+  {
+    super(name, value);
+  }
 
 }

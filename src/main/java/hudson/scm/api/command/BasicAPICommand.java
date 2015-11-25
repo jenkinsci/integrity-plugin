@@ -9,6 +9,7 @@ package hudson.scm.api.command;
 
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.mks.api.Command;
@@ -98,8 +99,8 @@ public abstract class BasicAPICommand implements IAPICommand
   {
     if (null == serverConfig)
     {
-      LOGGER
-          .severe("Unable to get Server configuration for " + cmd.getCommandName() + " operation");
+      LOGGER.severe("Unable to get Server configuration for " + cmd.getCommandName()
+          + " operation. Server config is null");
       throw new AbortException(
           "Unable to get Server configuration for " + cmd.getCommandName() + " operation");
     }
@@ -116,28 +117,34 @@ public abstract class BasicAPICommand implements IAPICommand
 
     } catch (NoSuchElementException e)
     {
-      LOGGER.severe("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation");
+      LOGGER.log(Level.SEVERE,
+          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
+              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
+              + " operation : " + e.getMessage(),
+          e);
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getStackTrace());
+          + cmd.getCommandName() + " operation : " + e.getMessage());
     } catch (IllegalStateException e)
     {
-      LOGGER.severe("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation");
+      LOGGER.log(Level.SEVERE,
+          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
+              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
+              + " operation : " + e.getMessage(),
+          e);
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getStackTrace());
+          + cmd.getCommandName() + " operation : " + e.getMessage());
     } catch (Exception e)
     {
-      LOGGER.severe("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation");
+      LOGGER.log(Level.SEVERE,
+          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
+              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
+              + " operation : " + e.getMessage(),
+          e);
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getStackTrace());
+          + cmd.getCommandName() + " operation : " + e.getMessage());
     }
 
     return res;
