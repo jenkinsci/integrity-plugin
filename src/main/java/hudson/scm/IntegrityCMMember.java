@@ -24,9 +24,6 @@ import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
-import hudson.scm.api.command.ProjectAddCommand;
-import hudson.scm.api.command.ProjectCheckinCommand;
-import hudson.scm.api.command.SubmitCPCommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
 import hudson.scm.api.option.IAPIOption;
@@ -124,7 +121,7 @@ public final class IntegrityCMMember
 	public static final boolean checkout(ISession api, String configPath, String memberID, String memberRev, Timestamp memberTimestamp,
 							File targetFile, boolean restoreTimestamp, String lineTerminator) throws APIException
 	{
-	    	IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKOUT_COMMAND, null);
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CHECKOUT_COMMAND, null);
 		
 		command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
 		command.addOption(new FileAPIOption(IAPIOption.TARGET_FILE, targetFile));
@@ -139,7 +136,7 @@ public final class IntegrityCMMember
 		command.addAdditionalParameters(IAPIOption.TARGET_FILE,targetFile);
 		
 		Response response =  command.execute(api);
-	        return BooleanUtils.toBoolean(response.getExitCode(), 0, 1);
+	    return BooleanUtils.toBoolean(response.getExitCode(), 0, 1);
 	}
 	
 	/**
