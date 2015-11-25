@@ -18,7 +18,7 @@ import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 
 /**
- *  This class is used to handle Sessions inside the {@link ISessionPool}
+ * This class is used to handle Sessions inside the {@link ISessionPool}
  *
  * @author Author: asen
  * @version $Revision: $
@@ -27,7 +27,9 @@ public class ISessionFactory extends BaseKeyedPooledObjectFactory<IntegrityConfi
 {
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
+   * 
    * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#create(java.lang.Object)
    */
   @Override
@@ -35,15 +37,17 @@ public class ISessionFactory extends BaseKeyedPooledObjectFactory<IntegrityConfi
   {
     LOGGER.info("Creating a new Integrity Session for the Session Pool");
     ISession api = APISession.create(settings);
-    if( null == api )
+    if (null == api)
     {
-        LOGGER.severe("An Integrity API Session could not be established!");
-        throw new AbortException("An Integrity API Session could not be established!");
+      LOGGER.severe("An Integrity API Session could not be established!");
+      throw new AbortException("An Integrity API Session could not be established!");
     }
     return api;
   }
 
-  /* (non-Javadoc)
+  /*
+   * (non-Javadoc)
+   * 
    * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#wrap(java.lang.Object)
    */
   @Override
@@ -51,9 +55,12 @@ public class ISessionFactory extends BaseKeyedPooledObjectFactory<IntegrityConfi
   {
     return new DefaultPooledObject<ISession>(value);
   }
-  
-  /* (non-Javadoc)
-   * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#destroyObject(java.lang.Object, org.apache.commons.pool2.PooledObject)
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#destroyObject(java.lang.Object,
+   * org.apache.commons.pool2.PooledObject)
    */
   @Override
   public void destroyObject(IntegrityConfigurable key, PooledObject<ISession> p) throws Exception
@@ -62,4 +69,10 @@ public class ISessionFactory extends BaseKeyedPooledObjectFactory<IntegrityConfi
     p.getObject().terminate();
   }
   
+  @Override
+  public boolean validateObject(IntegrityConfigurable key, PooledObject<ISession> p)
+  {
+    return p.getObject() != null;
+  }
+
 }

@@ -175,7 +175,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     public Void call() throws Exception
     {
       ISession api = ISessionPool.getInstance().getPool().borrowObject(serverConfig);
-     
+
       // Check to see if we need to release the APISession to clear some file handles
       LOGGER.fine("API open file handles: " + openFileHandler.get());
       if (openFileHandler.get() >= CHECKOUT_TRESHOLD)
@@ -226,6 +226,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   /**
    * This task wraps around the code necessary to checkout Integrity CM Members on remote machines
    */
+  @Override
   public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException
   {
     // Figure out where we should be checking out this project

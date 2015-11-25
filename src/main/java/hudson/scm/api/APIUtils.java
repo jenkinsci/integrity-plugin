@@ -23,36 +23,37 @@ import hudson.scm.api.option.IAPIOption;
 public class APIUtils
 {
 
-    /**
-     * Utility method to create a multi value field object
-     * 
-     * @param separator
-     * @param params
-     * @return 
-     */
-    public static MultiValue createMultiValueField(String separator, String... params)
+  /**
+   * Utility method to create a multi value field object
+   * 
+   * @param separator
+   * @param params
+   * @return
+   */
+  public static MultiValue createMultiValueField(String separator, String... params)
+  {
+    MultiValue mvFields = new MultiValue(separator);
+    for (String param : params)
     {
-	MultiValue mvFields = new MultiValue(separator);
-	for (String param : params){
-	    mvFields.add(param);
-	}
-	
-	return mvFields;
-    }
-    
-    public static WorkItem getWorkItem(Response response) throws APIException
-    {
-	return response.getWorkItems().next();
+      mvFields.add(param);
     }
 
-    /**
-     * @param response
-     * @param memberID 
-     * @return
-     */
-    public static String getAuthorInfo(Response response, String memberID)
-    {
-	String author = response.getWorkItem(memberID).getField(IAPIOption.AUTHOR).getValueAsString();
-	return author;
-    }
+    return mvFields;
+  }
+
+  public static WorkItem getWorkItem(Response response) throws APIException
+  {
+    return response.getWorkItems().next();
+  }
+
+  /**
+   * @param response
+   * @param memberID
+   * @return
+   */
+  public static String getAuthorInfo(Response response, String memberID)
+  {
+    String author = response.getWorkItem(memberID).getField(IAPIOption.AUTHOR).getValueAsString();
+    return author;
+  }
 }

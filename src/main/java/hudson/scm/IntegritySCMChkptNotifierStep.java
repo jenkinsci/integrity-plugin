@@ -21,49 +21,51 @@ import jenkins.tasks.SimpleBuildStep;
 @SuppressWarnings("unchecked")
 public class IntegritySCMChkptNotifierStep extends Notifier implements SimpleBuildStep
 {
-	private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
-	private final IntegrityConfigurable ciSettings;
-	private final String configPath;
-	private final String checkpointLabel;
-	private final String checkpointDesc;
-	
-	public IntegritySCMChkptNotifierStep(IntegrityConfigurable ciSettings, String configPath, String checkpointLabel, String checkpointDesc)
-	{
-		this.ciSettings = ciSettings;
-		this.configPath = configPath;
-		this.checkpointLabel = checkpointLabel;
-		this.checkpointDesc = checkpointDesc;
-	}
-	
-	public BuildStepMonitor getRequiredMonitorService()
-	{
-		return BuildStepMonitor.NONE;
-	}
+  private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
+  private final IntegrityConfigurable ciSettings;
+  private final String configPath;
+  private final String checkpointLabel;
+  private final String checkpointDesc;
 
-	public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener) throws InterruptedException, IOException
-	{
-		{
-			listener.getLogger().println("Preparing to execute si checkpoint for project " + configPath);
-			try
-			{
-				// Construct the checkpoint command
-				IAPICommand command = CommandFactory.createCommand(IAPICommand.CHECKPOINT_COMMAND, ciSettings);
-				command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
-				command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, checkpointLabel);
-				command.addAdditionalParameters(IAPIOption.CHECKPOINT_DESCRIPTION, checkpointDesc);
-				
-				command.execute();
-				
-				listener.getLogger().println("Successfully checkpointed project " + configPath);
-			}
-			catch (APIException aex)
-			{
-                		LOGGER.severe("API Exception caught...");
-                		ExceptionHandler eh = new ExceptionHandler(aex);
-                		aex.printStackTrace(listener.fatalError(eh.getMessage()));
-                		LOGGER.severe(eh.getMessage());
-                		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-			}
-		}
-	}
+  public IntegritySCMChkptNotifierStep(IntegrityConfigurable ciSettings, String configPath,
+      String checkpointLabel, String checkpointDesc)
+  {
+    this.ciSettings = ciSettings;
+    this.configPath = configPath;
+    this.checkpointLabel = checkpointLabel;
+    this.checkpointDesc = checkpointDesc;
+  }
+
+  public BuildStepMonitor getRequiredMonitorService()
+  {
+    return BuildStepMonitor.NONE;
+  }
+
+  public void perform(Run<?, ?> run, FilePath workspace, Launcher launcher, TaskListener listener)
+      throws InterruptedException, IOException
+  {
+    {
+      listener.getLogger().println("Preparing to execute si checkpoint for project " + configPath);
+      try
+      {
+        // Construct the checkpoint command
+        IAPICommand command =
+            CommandFactory.createCommand(IAPICommand.CHECKPOINT_COMMAND, ciSettings);
+        command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+        command.addAdditionalParameters(IAPIOption.CHECKPOINT_LABEL, checkpointLabel);
+        command.addAdditionalParameters(IAPIOption.CHECKPOINT_DESCRIPTION, checkpointDesc);
+
+        command.execute();
+
+        listener.getLogger().println("Successfully checkpointed project " + configPath);
+      } catch (APIException aex)
+      {
+        LOGGER.severe("API Exception caught...");
+        ExceptionHandler eh = new ExceptionHandler(aex);
+        aex.printStackTrace(listener.fatalError(eh.getMessage()));
+        LOGGER.severe(eh.getMessage());
+        LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      }
+    }
+  }
 }
