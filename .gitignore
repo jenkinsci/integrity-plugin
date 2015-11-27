@@ -5,3 +5,5 @@ release.txt
 executeBuild.js
 .idea/
 .iml
+/.classpath
+/work/

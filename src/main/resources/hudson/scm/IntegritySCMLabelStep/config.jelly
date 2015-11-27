@@ -16,7 +16,7 @@
 		<f:password />
 	</f:entry>
 
-	<f:entry title="Checkpoint Label" field="checkpointLabel" help="/plugin/integrity-plugin/help-checkpointLabel.html">
+	<f:entry title="Project Label" field="checkpointLabel">
     	<f:textbox />
 	</f:entry>
         

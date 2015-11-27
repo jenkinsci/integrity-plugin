@@ -6,20 +6,20 @@ import java.util.logging.Logger;
 /**
  * Contains the state of the current Integrity Configuration Management Project
  */
-public final class IntegrityRevisionState extends SCMRevisionState implements Serializable 
+public final class IntegrityRevisionState extends SCMRevisionState implements Serializable
 {
-	private static final long serialVersionUID = 1838332506014398677L;
-	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
-	private final String projectCacheTable;
+  private static final long serialVersionUID = 1838332506014398677L;
+  private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
+  private final String projectCacheTable;
 
-	public IntegrityRevisionState(String jobName, String configurationName, String projectCacheTable) 
-	{
-		LOGGER.fine("IntegrityRevisionState() invoked!");		
-		this.projectCacheTable = projectCacheTable;
-	}
-	
-	public String getProjectCache()
-	{
-		return projectCacheTable;
-	}
+  public IntegrityRevisionState(String jobName, String configurationName, String projectCacheTable)
+  {
+    LOGGER.fine("IntegrityRevisionState() invoked!");
+    this.projectCacheTable = projectCacheTable;
+  }
+
+  public String getProjectCache()
+  {
+    return projectCacheTable;
+  }
 }
