@@ -151,6 +151,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     this.includeList = "";
     this.excludeList = "";
     this.cleanCopy = false;
+    this.CPBasedMode = false;
     this.lineTerminator = "native";
     this.restoreTimestamp = true;
     this.skipAuthorInfo = true;
