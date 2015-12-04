@@ -1,21 +1,20 @@
 package hudson.scm.api.session;
 
+import java.io.IOException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
 import com.mks.api.CmdRunner;
 import com.mks.api.Command;
 import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
+import com.mks.api.Session;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 import hudson.scm.api.ExceptionHandler;
-
-import com.mks.api.Session;
-
-import java.io.IOException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
 
 /**
  * This class represents an Integration Point to a server. It also contains a Session object
@@ -340,5 +339,50 @@ public class APISession implements ISession
   public boolean isSecure()
   {
     return this.secure;
+  }
+
+  @Override
+  public String toString()
+  {
+    StringBuilder builder = new StringBuilder();
+    builder.append("Session Host :" + this.hostName + "/n");
+    builder.append("Session Port :" + this.port + "/n");
+    builder.append("Session User :" + this.userName + "/n");
+    return builder.toString();
+  }
+
+  /*
+   * (non-Javadoc)
+   * 
+   * @see hudson.scm.api.session.ISession#isAlive()
+   */
+  @Override
+  public boolean isAlive()
+  {
+    CmdRunner cmdRunner = null;
+    try
+    {
+      cmdRunner = session.createCmdRunner();
+    } catch (APIException e)
+    {
+      LOGGER.log(Level.FINE, "Unable to create command Runner. Terminating session. ", e);
+      terminate();
+      return false;
+    } finally
+    {
+      if (null != cmdRunner)
+      {
+        try
+        {
+          cmdRunner.release();
+        } catch (APIException e)
+        {
+          LOGGER.log(Level.FINE, "Unable to release command Runner. Terminating session. ", e);
+          terminate();
+          return false;
+        }
+      }
+    }
+    return true;
   }
 }
