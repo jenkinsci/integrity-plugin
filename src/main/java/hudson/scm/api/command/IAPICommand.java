@@ -45,7 +45,7 @@ public interface IAPICommand
     public Response execute(ISession api) throws APIException;
     
     /**
-     * Execute the command using an auto-generated Integrity Session API
+     * Default way to execute the command using an auto-generated Integrity Session API
      * @return
      * @throws APICommandException
      * @throws AbortException 
@@ -77,5 +77,10 @@ public interface IAPICommand
      * @param param
      */
     public void addSelection(String param);
+
+    /**
+     * Function to explicitly terminate/return sessions to Session Pool for WITH_INTERIM commands
+     */
+    public void terminateAPI();
     
 }

@@ -50,11 +50,13 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
     LOGGER.fine("RunListenerImpl.onDeleted() execution complete!");
   }
 
-  /* 
+  /*
    * Clear the session pool of APISession objects post the build run
    * 
    * (non-Javadoc)
-   * @see hudson.model.listeners.RunListener#onCompleted(hudson.model.Run, hudson.model.TaskListener)
+   * 
+   * @see hudson.model.listeners.RunListener#onCompleted(hudson.model.Run,
+   * hudson.model.TaskListener)
    */
   @Override
   public void onCompleted(R r, TaskListener listener)
@@ -62,10 +64,12 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
     // TODO Auto-generated method stub
     super.onCompleted(r, listener);
 
-    LOGGER.info("Executing cleanup. Clearing Session Pool");
     try
     {
-      ISessionPool.getInstance().getPool().clear();
+      int activeSessions = ISessionPool.getInstance().getPool().getNumActive();
+      // Empty the pool if there are no active sessions
+      if (activeSessions == 0)
+        ISessionPool.getInstance().getPool().clear();
     } catch (UnsupportedOperationException e)
     {
       LOGGER.log(Level.SEVERE, e.getMessage(), e);

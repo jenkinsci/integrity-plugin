@@ -12,6 +12,7 @@ import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
 
 import javax.servlet.ServletException;
@@ -319,8 +320,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @throws APIException
    * @throws SQLException
    * @throws AbortException
+   * @throws ExecutionException
+   * @throws InterruptedException
    */
-  private Response initializeCMProjectMembers() throws APIException, SQLException, AbortException
+  private Response initializeCMProjectMembers()
+      throws APIException, SQLException, AbortException, InterruptedException, ExecutionException
   {
     IntegrityCMProject siProject = getIntegrityProject();
 
@@ -339,7 +343,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
     Response viewRes = command.execute();
 
-    DerbyUtils.parseProject(siProject, viewRes.getWorkItems());
+    // Update Derby DB with the API results
+    siProject.parseProject(viewRes.getWorkItems());
+
+    // Terminate the Session associated with the view project command - with_interim session
+    command.terminateAPI();
     return viewRes;
   }
 
@@ -489,6 +497,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
       throw new AbortException("Caught Derby SQLException!");
+    } catch (ExecutionException e)
+    {
+      LOGGER.log(Level.SEVERE, "Execution Exception while parsing Derby Project Members", e);
+      listener.getLogger()
+          .println("Execution Exception while parsing Derby Project Members : " + e.getMessage());
+      throw new AbortException("Execution Exception while parsing Derby Project Members");
     } finally
     {
       if (writer != null)
@@ -611,6 +625,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listener.getLogger().println("A SQL Exception was caught!");
           listener.getLogger().println(sqlex.getMessage());
           LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+          return PollingResult.NO_CHANGES;
+        } catch (ExecutionException e)
+        {
+          LOGGER.log(Level.SEVERE, "Execution Exception while parsing Derby Project Members", e);
+          listener.getLogger().println(
+              "Execution Exception while parsing Derby Project Members : " + e.getMessage());
           return PollingResult.NO_CHANGES;
         }
       } else

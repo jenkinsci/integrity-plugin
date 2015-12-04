@@ -13,6 +13,7 @@ import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -20,6 +21,7 @@ import java.util.logging.Logger;
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
 import com.mks.api.response.APIException;
 
 import hudson.FilePath;
@@ -239,7 +241,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     listener.getLogger().println("Checkout directory is " + workspace);
 
     final ThreadLocalOpenFileHandler openFileHandler = new ThreadLocalOpenFileHandler();
-    ExecutorService executor = Executors.newFixedThreadPool(checkoutThreadPoolSize);
+    final ThreadFactory threadFactory =
+        new ThreadFactoryBuilder().setNameFormat("Integrity-Checkout-Task-%d").build();
+    ExecutorService executor = Executors.newFixedThreadPool(checkoutThreadPoolSize, threadFactory);
     @SuppressWarnings("rawtypes")
     final List<Future> coThreads = new ArrayList<Future>();
     // If we got here, then APISession was created successfully!
@@ -278,7 +282,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         {
           LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath()
               + " at revision " + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(/* generateAPISession */integrityConfig,
+          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
               openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
               targetFile, fetchChangedWorkspaceFiles)));
           fetchCount++;
@@ -288,7 +292,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
           {
             LOGGER.fine("Attempting to restore changed workspace file: "
                 + targetFile.getAbsolutePath() + " to revision " + memberRev);
-            coThreads.add(executor.submit(new CheckOutTask(/* generateAPISession */integrityConfig,
+            coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
                 openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
                 targetFile, false)));
             fetchCount++;
@@ -297,7 +301,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         {
           LOGGER.fine("Attempting to get new file: " + targetFile.getAbsolutePath()
               + " at revision " + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(/* generateAPISession */integrityConfig,
+          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
               openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
               targetFile, fetchChangedWorkspaceFiles)));
           addCount++;
@@ -305,7 +309,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         {
           LOGGER.fine("Attempting to update file: " + targetFile.getAbsolutePath() + " to revision "
               + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(/* generateAPISession */integrityConfig,
+          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
               openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
               targetFile, fetchChangedWorkspaceFiles)));
           updateCount++;
