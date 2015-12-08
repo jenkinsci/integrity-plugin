@@ -8,7 +8,9 @@ import java.io.PrintWriter;
 import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.Hashtable;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
@@ -24,8 +26,11 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
+import com.mks.api.response.Field;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+import com.mks.api.response.Item;
+import com.mks.api.response.ItemList;
 
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -416,10 +421,25 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
+        	List<String> cpidList = new ArrayList<String>();
+        	List<String> fileList = new ArrayList<String>();
+        	
+        	if(CPBasedMode)
+        	{
+        		Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
+        		if(lastSuccjob != null)
+        		{
+	        		Date lastSuccBuildDate = lastSuccjob.getTime();        		
+	        		cpidList = siProject.projectCPDiff(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), lastSuccBuildDate);
+	        		fileList = IntegrityCMMember.viewCP(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
+			    		cpidList);
+        		}
+        	}
+		    
           // Compare the current project with the old revision state
           LOGGER.fine("Found previous project state " + prevProjectCache);
-          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable,
-              skipAuthorInfo);
+          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, fileList,
+              skipAuthorInfo, CPBasedMode);
         }
       } else
       {
@@ -596,7 +616,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
           // Compare this project with the old project
           int changeCount = DerbyUtils.compareBaseline(serverConfig, prevProjectCache,
-              projectCacheTable, skipAuthorInfo);
+              projectCacheTable, null, skipAuthorInfo, false);
           // Finally decide whether or not we need to build again
           if (changeCount > 0)
           {
