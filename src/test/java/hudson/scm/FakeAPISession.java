@@ -347,5 +347,12 @@ public class FakeAPISession implements ISession
 	{
 	    return secure;
 	}
+
+  @Override
+  public boolean isAlive()
+  {
+    // TODO Auto-generated method stub
+    return false;
+  }
 }
 

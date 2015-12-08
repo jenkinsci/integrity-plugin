@@ -1,0 +1,124 @@
+// $Id: $
+// (c) Copyright 2015 by PTC Inc. All rights reserved.
+//
+// This Software is unpublished, valuable, confidential property of
+// PTC Inc. Any use or disclosure of this Software without the express
+// written permission of PTC Inc. is strictly prohibited.
+
+package hudson.scm;
+
+import java.io.StringReader;
+import java.sql.Connection;
+import java.sql.PreparedStatement;
+import java.sql.SQLException;
+import java.sql.Timestamp;
+import java.util.Calendar;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.Callable;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import com.mks.api.response.WorkItem;
+import com.mks.api.si.SIModelTypeName;
+
+import hudson.AbortException;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+
+/**
+ *
+ * @author Author: asen
+ * @version $Revision: $
+ */
+public class ParseProjectFolderTask implements Callable<Map<String, String>>
+{
+
+  private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
+  private final WorkItem wi;
+  private PreparedStatement insert = null;
+  private Map<String, String> pjConfigHash = new HashMap<String, String>();
+  private final String projectRoot;
+  private Connection db = null;
+
+  public ParseProjectFolderTask(WorkItem wi, IntegrityCMProject siProject) throws SQLException
+  {
+    // Get a connection from our pool
+    db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+    String insertSQL = DerbyUtils.INSERT_MEMBER_RECORD.replaceFirst("CM_PROJECT",
+        siProject.getProjectCacheTable());
+    this.insert = db.prepareStatement(insertSQL);
+    this.wi = wi;
+    // Compute the project root directory
+    projectRoot =
+        siProject.getProjectName().substring(0, siProject.getProjectName().lastIndexOf('/'));
+  }
+
+
+  @Override
+  public Map<String, String> call() throws AbortException, SQLException
+  {
+    LOGGER.log(Level.INFO, Thread.currentThread().getName()
+        + " :: Parse project folder task begin for : " + wi.getField("name").getValueAsString());
+    String entryType = (null != wi.getField("type") ? wi.getField("type").getValueAsString() : "");
+
+    if (wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT))
+    {
+      // Ignore pending subprojects in the tree...
+      if (entryType.equalsIgnoreCase("pending-sharesubproject"))
+      {
+        LOGGER.warning("Parse Folder Task: Skipping " + entryType + " " + wi.getId());
+      } else
+      {
+        try
+        {
+          // Save the configuration path for the current subproject, using the canonical path name
+          pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
+          // Save the relative directory path for this subproject
+          String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
+          pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));
+          // Save this directory entry
+          insert.clearParameters();
+          insert.setShort(1, (short) 1); // Type
+          insert.setString(2, wi.getField("name").getValueAsString()); // Name
+          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+              + " :: Parse Folder Task: Member: " + wi.getField("name").getValueAsString());
+          insert.setString(3, wi.getId()); // MemberID
+          LOGGER.log(Level.FINE,
+              Thread.currentThread().getName() + " :: Parse Folder Task: MemberID: " + wi.getId());
+          insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis())); // Timestamp
+          insert.setClob(5, new StringReader("")); // Description
+          insert.setString(6, wi.getId()); // ConfigPath
+          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+              + " :: Parse Folder Task: ConfigPath: " + wi.getId());
+
+          String subProjectRev = "";
+          if (wi.contains("memberrev"))
+          {
+            subProjectRev = wi.getField("memberrev").getItem().getId();
+          }
+          insert.setString(7, subProjectRev); // Revision
+          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+              + " :: Parse Folder Task: Revision: " + subProjectRev);
+          insert.setString(8, pjDir); // RelativeFile
+          LOGGER.log(Level.FINE,
+              Thread.currentThread().getName() + " :: Parse Folder Task: RelativeFile: " + pjDir);
+          LOGGER.log(Level.INFO, "Attempting to execute query " + insert);
+          insert.executeUpdate();
+        } finally
+        {
+          // Close the insert statement
+          if (null != insert)
+            insert.close();
+
+          // Close the database connection
+          if (null != db)
+            db.close();
+        }
+      }
+    }
+    LOGGER.log(Level.INFO, Thread.currentThread().getName()
+        + " :: Parse project folder task end for : " + wi.getField("name").getValueAsString());
+    return pjConfigHash;
+  }
+
+}
