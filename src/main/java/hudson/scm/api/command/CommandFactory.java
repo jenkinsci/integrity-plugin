@@ -38,10 +38,14 @@ public class CommandFactory
       return new ProjectCheckoutCommand();
     if (commandName.equalsIgnoreCase(IAPICommand.PROJECT_INFO_COMMAND))
       return new ProjectInfoCommand(integrityConfig);
+    if (commandName.equalsIgnoreCase(IAPICommand.PROJECT_CPDIFF_COMMAND))
+        return new ProjectCPDiffCommand(integrityConfig);
     if (commandName.equalsIgnoreCase(IAPICommand.REVISION_INFO_COMMAND))
       return new RevisionInfoCommand(integrityConfig);
     if (commandName.equalsIgnoreCase(IAPICommand.SUBMIT_CP_COMMAND))
       return new SubmitCPCommand(integrityConfig);
+    if (commandName.equalsIgnoreCase(IAPICommand.VIEW_CP_COMMAND))
+        return new ViewCPCommand(integrityConfig);
     if (commandName.equalsIgnoreCase(IAPICommand.UNLOCK_COMMAND))
       return new UnlockCommand(integrityConfig);
     if (commandName.equalsIgnoreCase(IAPICommand.VIEW_PROJECT_COMMAND))

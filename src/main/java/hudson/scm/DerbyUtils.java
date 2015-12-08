@@ -726,7 +726,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo) throws SQLException, IOException
+	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, List<String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -738,7 +738,12 @@ public class DerbyUtils
 		ResultSet rs = null;
 		
 		try
-		{			
+		{
+			if(CPMode)
+			{
+				if(membersInCP.isEmpty())
+					return changeCount;
+			}
 			// Get a connection from our pool
 			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();				
 			// Create the select statement for the previous baseline
@@ -777,7 +782,13 @@ public class DerbyUtils
 				rs.absolute(i);
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				// Obtain the member we're working with
-				String memberName = rowHash.get(CM_PROJECT.NAME).toString();
+				String memberName = rowHash.get(CM_PROJECT.NAME).toString();				
+				if(CPMode)
+				{
+					if(!membersInCP.contains(memberName))
+						continue;
+				}
+				
 				// Get the baseline project information for this member
 				LOGGER.fine("Comparing file against baseline " + memberName);
 				Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
