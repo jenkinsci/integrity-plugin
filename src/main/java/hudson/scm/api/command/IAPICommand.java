@@ -23,6 +23,7 @@ public interface IAPICommand
     static String PROJECT_CHECKOUT_COMMAND  =  "projectco";
     static String PROJECT_CHECKIN_COMMAND =  "projectci";
     static String PROJECT_INFO_COMMAND  =  "projectinfo";
+    static String PROJECT_CPDIFF_COMMAND  =  "projectcpdiff";
     static String VIEW_PROJECT_COMMAND  =  "viewproject";
     static String REVISION_INFO_COMMAND =  "revisioninfo";
     static String LOCK_COMMAND =  "lock";
@@ -31,6 +32,7 @@ public interface IAPICommand
     static String CREATE_CP_COMMAND =  "createcp";
     static String CLOSE_CP_COMMAND =  "closecp";
     static String SUBMIT_CP_COMMAND =  "submitcp";
+    static String VIEW_CP_COMMAND  =  "viewcp";
     static String CHECKPOINT_COMMAND =  "checkpoint";
     static String ADD_PROJECT_LABEL_COMMAND =  "addprojectlabel";
     static String EDIT_ISSUE_COMMAND = "editissue";
@@ -45,7 +47,7 @@ public interface IAPICommand
     public Response execute(ISession api) throws APIException;
     
     /**
-     * Execute the command using an auto-generated Integrity Session API
+     * Default way to execute the command using an auto-generated Integrity Session API
      * @return
      * @throws APICommandException
      * @throws AbortException 
@@ -77,5 +79,10 @@ public interface IAPICommand
      * @param param
      */
     public void addSelection(String param);
+
+    /**
+     * Function to explicitly terminate/return sessions to Session Pool for WITH_INTERIM commands
+     */
+    public void terminateAPI();
     
 }

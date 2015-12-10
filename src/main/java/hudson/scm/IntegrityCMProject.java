@@ -4,13 +4,24 @@ import java.io.IOException;
 import java.io.Serializable;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
+import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.ThreadFactory;
+import java.util.concurrent.TimeUnit;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -27,12 +38,19 @@ import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
+import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
+import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
+import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APIUtils;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
@@ -418,6 +436,64 @@ public class IntegrityCMProject implements Serializable
 
     return command.execute();
   }
+  
+  /**
+   * Performs a projectCPDiff on this Integrity CM Project
+   * 
+   * @param serverConf Authenticated Integrity API Session
+   * @param past Past date
+   * @return List of files in the closed CP
+   * @throws APIException
+   * @throws AbortException
+   */
+  public List<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
+		  throws APIException, AbortException
+	  {
+	  
+	  	final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy h:mm:ss aa");	  	
+		
+	    // Construct the command
+	    IAPICommand command =
+	        CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
+	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+	    command.addOption(new APIOption(IAPIOption.RECURSE));	    
+	    MultiValue mv = APIUtils.createMultiValueField(",", "id", "user");
+	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));	    
+	    command.addOption(new APIOption(IAPIOption.REV, "asof:" + dateFormat.format(past)));
+	    
+	    List<String> cpidList = new ArrayList<String>();
+
+	    Response res = command.execute();
+	    
+	    if (null != res)
+        {
+          if (res.getExitCode() == 0)
+          {
+		    WorkItem wi = res.getWorkItem(getConfigurationPath());
+	        Field cpField = wi.getField("CPEntries");        
+	        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
+	            {
+	              Item cpInfo = it.next();
+	              
+	              Field idField = cpInfo.getField("id");
+	              String id = idField.getValueAsString();
+	              cpidList.add(id);
+	              
+	              Field userField = cpInfo.getField("user");
+	              String user = userField.getValueAsString();
+	            }
+          } else
+          {
+	            LOGGER.severe("An error occured projectCPDiff!");
+	      }
+        } else
+        {
+            LOGGER.severe("An error occured projectCPDiff!");
+        }
+  
+        return cpidList;
+	  }
+
 
   /**
    * Returns the project path for this Integrity CM Project
@@ -533,6 +609,83 @@ public class IntegrityCMProject implements Serializable
   public String getProjectCacheTable()
   {
     return projectCacheTable;
+  }
+
+  /**
+   * Parses the output from the si viewproject command to get a list of members and updates Derby DB
+   * 
+   * @param workItems WorkItemIterator
+   * @throws APIException
+   * @throws SQLException
+   * @throws InterruptedException
+   * @throws ExecutionException
+   */
+  public void parseProject(WorkItemIterator workItems)
+      throws APIException, SQLException, InterruptedException, ExecutionException
+  {
+
+    ExecutorService executor = null;
+    Map<String, String> pjConfigHash = new Hashtable<String, String>();
+    List<Future<Void>> futures = new ArrayList<Future<Void>>();
+
+    // Setup the Derby DB for this Project
+    // Create a fresh set of tables for this project
+    DerbyUtils.createCMProjectTables(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(),
+        this.getProjectCacheTable());
+
+    LOGGER.log(Level.INFO, "Starting Parse tasks for Derby DB");
+
+    final ThreadFactory threadFactory =
+        new ThreadFactoryBuilder().setNameFormat("Parse-Derby-Project-Task-%d").build();
+    // Initialize executor for folder path processing
+    executor = Executors.newFixedThreadPool(10, threadFactory);
+
+    pjConfigHash.put(this.getProjectName(), this.getConfigurationPath());
+
+    while (workItems.hasNext())
+    {
+      WorkItem wi = workItems.next();
+
+      if (wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT))
+      {
+        // Parse folders separately from members in an asynchronous environment. This is to be
+        // executed before member parsing!
+        LOGGER.log(Level.FINE,
+            "Executing parse folder task :" + wi.getField("name").getValueAsString());
+        Map<String, String> future = executor.submit(new ParseProjectFolderTask(wi, this)).get();
+        for (String key : future.keySet())
+        {
+          LOGGER.log(Level.FINE, "Adding folder key in project configuration. Key: " + key
+              + ", Value: " + future.get(key));
+          pjConfigHash.put(key, future.get(key));
+        }
+      } else if (wi.getModelType().equals(SIModelTypeName.MEMBER))
+      {
+        // Parse member tasks
+        LOGGER.log(Level.FINE,
+            "Executing parse member task :" + wi.getField("name").getValueAsString());
+        futures.add(executor.submit(new ParseProjectMemberTask(wi, pjConfigHash, this)));
+      } else
+      {
+        LOGGER.log(Level.WARNING,
+            "View project output contains an invalid model type: " + wi.getModelType());
+      }
+    }
+
+    for (Future<Void> f : futures)
+    {
+      // Wait for all threads to finish
+      f.get();
+    }
+
+    LOGGER.log(Level.INFO, "Parsing project " + this.getConfigurationPath() + " complete!");
+
+    if (null != executor)
+    {
+      executor.shutdown();
+      executor.awaitTermination(2, TimeUnit.MINUTES);
+      LOGGER.log(Level.FINE, "Parse Project Executor shutdown.");
+    }
   }
 }
 

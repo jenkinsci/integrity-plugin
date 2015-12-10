@@ -19,4 +19,9 @@ public interface ISession
 
   public void refreshAPISession() throws APIException;
 
+  /**
+   * @return true if the Session is still active
+   */
+  public boolean isAlive();
+
 }

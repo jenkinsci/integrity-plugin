@@ -58,6 +58,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected String checkpointLabel;
   protected String configurationName;
   protected boolean cleanCopy;
+  protected boolean CPBasedMode;
   protected boolean skipAuthorInfo = true;
   protected String lineTerminator = "native";
   protected boolean restoreTimestamp = true;
@@ -159,6 +160,17 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   {
     return cleanCopy;
   }
+  
+  /**
+   * Returns true/false depending on whether CP based or File based change detection mode is used
+   * 
+   * @return
+   */
+  public boolean getCPBasedMode()
+  {
+    return CPBasedMode;
+  }
+  
 
   /**
    * Returns the line terminator to apply when obtaining files from the Integrity Server
@@ -351,7 +363,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   }
 
   /**
-   * Toggles whether or not the workspace is required to be cleaned
+   * Toggles whether or not the workspace is required to be cleaned 
    * 
    * @return
    */
@@ -359,6 +371,17 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   public final void setCleanCopy(boolean cleanCopy)
   {
     this.cleanCopy = cleanCopy;
+  }
+  
+  /**
+   * Toggles whether CP based or File based change detection mode to be used
+   * 
+   * @return
+   */
+  @DataBoundSetter
+  public final void setCPBasedMode(boolean CPBasedMode)
+  {
+    this.CPBasedMode = CPBasedMode;
   }
 
   /**

@@ -12,6 +12,8 @@ import java.util.NoSuchElementException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import org.apache.commons.pool2.KeyedObjectPool;
+
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
@@ -39,7 +41,8 @@ public abstract class BasicAPICommand implements IAPICommand
 
   protected Response res;
   protected boolean runCommandWithInterim = false;
-  private IntegrityConfigurable serverConfig;
+  protected final IntegrityConfigurable serverConfig;
+  private ISession api = null;
 
   /**
    * Constructor initialized with serverconfig id for commands to fire to a particular Integrity
@@ -54,7 +57,7 @@ public abstract class BasicAPICommand implements IAPICommand
 
   public BasicAPICommand()
   {
-    // Do Nothing
+    this.serverConfig = null;
   }
 
   /*
@@ -66,14 +69,22 @@ public abstract class BasicAPICommand implements IAPICommand
   public Response execute(ISession api) throws APIException
   {
     if (null == cmd)
+    {
+      LOGGER.log(Level.FINE, "Integration API Command cannot be null");
       throw new APIException("Integration API Command cannot be null");
+    }
 
     doPreAction();
 
     if (runCommandWithInterim)
+    {
+      LOGGER.log(Level.FINE, "Running API command with interim: " + cmd.getCommandName());
       res = api.runCommandWithInterim(cmd);
-    else
+    } else
+    {
+      LOGGER.log(Level.FINE, "Running API command: " + cmd.getCommandName());
       res = api.runCommand(cmd);
+    }
 
     if (null != res && !runCommandWithInterim)
     {
@@ -81,6 +92,8 @@ public abstract class BasicAPICommand implements IAPICommand
 
       if (resCode == 0)
       {
+        LOGGER.log(Level.FINE,
+            "Response for API command: " + cmd.getCommandName() + " : " + resCode);
         // execute post action only on success response
         doPostAction();
       }
@@ -105,18 +118,29 @@ public abstract class BasicAPICommand implements IAPICommand
           "Unable to get Server configuration for " + cmd.getCommandName() + " operation");
     }
 
-    ISession api = null;
     Response res;
+    KeyedObjectPool<IntegrityConfigurable, ISession> pool = ISessionPool.getInstance().getPool();
+
     try
     {
-      api = ISessionPool.getInstance().getPool().borrowObject(serverConfig);
-      res = execute(api);
+      LOGGER.log(Level.INFO, "Borrowing Session Object from Pool :" + serverConfig.getName()
+          + ", for running API command : " + cmd.getCommandName());
 
-      if (null != api)
-        ISessionPool.getInstance().getPool().returnObject(serverConfig, api);
+      api = pool.borrowObject(serverConfig);
+      res = execute(api);
 
     } catch (NoSuchElementException e)
     {
+      try
+      {
+        pool.invalidateObject(serverConfig, api);
+      } catch (Exception e1)
+      {
+        LOGGER.log(Level.SEVERE,
+            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
+        api = null;
+      }
+      api = null;
       LOGGER.log(Level.SEVERE,
           "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
               + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
@@ -127,6 +151,16 @@ public abstract class BasicAPICommand implements IAPICommand
           + cmd.getCommandName() + " operation : " + e.getMessage());
     } catch (IllegalStateException e)
     {
+      try
+      {
+        pool.invalidateObject(serverConfig, api);
+      } catch (Exception e1)
+      {
+        LOGGER.log(Level.SEVERE,
+            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
+        api = null;
+      }
+      api = null;
       LOGGER.log(Level.SEVERE,
           "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
               + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
@@ -137,14 +171,39 @@ public abstract class BasicAPICommand implements IAPICommand
           + cmd.getCommandName() + " operation : " + e.getMessage());
     } catch (Exception e)
     {
+      try
+      {
+        pool.invalidateObject(serverConfig, api);
+      } catch (Exception e1)
+      {
+        LOGGER.log(Level.SEVERE,
+            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
+        api = null;
+      }
+      api = null;
       LOGGER.log(Level.SEVERE,
-          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
+          "An Integrity API Session could not be established to " + serverConfig.getName() + ":"
               + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
               + " operation : " + e.getMessage(),
           e);
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
           + cmd.getCommandName() + " operation : " + e.getMessage());
+    } finally
+    {
+      try
+      {
+        if (null != api && !runCommandWithInterim)
+        {
+          LOGGER.log(Level.INFO,
+              "Returning session object back to pool :" + serverConfig.getName());
+          pool.returnObject(serverConfig, api);
+        }
+      } catch (Exception e)
+      {
+        LOGGER.log(Level.SEVERE,
+            "Failed to return Session back to Session Pool :" + serverConfig.getName(), e);
+      }
     }
 
     return res;
@@ -170,7 +229,7 @@ public abstract class BasicAPICommand implements IAPICommand
   @Override
   public void doPostAction()
   {
-    // do nothing
+    // NOOP
   }
 
   /*
@@ -181,7 +240,7 @@ public abstract class BasicAPICommand implements IAPICommand
   @Override
   public void doPreAction()
   {
-    // do nothing
+    // NOOP
   }
 
   /*
@@ -196,4 +255,18 @@ public abstract class BasicAPICommand implements IAPICommand
     commandHelperObjects.put(paramName, param);
   }
 
+  /*
+   * (non-Javadoc)
+   * 
+   * @see hudson.scm.api.command.IAPICommand#terminateAPI()
+   */
+  @Override
+  public void terminateAPI()
+  {
+    if (runCommandWithInterim && api != null)
+    {
+      LOGGER.log(Level.INFO, "Terminating API Session for WITH_INTERIM command :" + api.toString());
+      api.terminate();
+    }
+  }
 }

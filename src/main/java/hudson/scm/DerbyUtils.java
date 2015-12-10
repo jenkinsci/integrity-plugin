@@ -726,7 +726,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, boolean skipAuthorInfo) throws SQLException, IOException
+	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, List<String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -738,7 +738,12 @@ public class DerbyUtils
 		ResultSet rs = null;
 		
 		try
-		{			
+		{
+			if(CPMode)
+			{
+				if(membersInCP.isEmpty())
+					return changeCount;
+			}
 			// Get a connection from our pool
 			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();				
 			// Create the select statement for the previous baseline
@@ -777,7 +782,13 @@ public class DerbyUtils
 				rs.absolute(i);
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				// Obtain the member we're working with
-				String memberName = rowHash.get(CM_PROJECT.NAME).toString();
+				String memberName = rowHash.get(CM_PROJECT.NAME).toString();				
+				if(CPMode)
+				{
+					if(!membersInCP.contains(memberName))
+						continue;
+				}
+				
 				// Get the baseline project information for this member
 				LOGGER.fine("Comparing file against baseline " + memberName);
 				Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
@@ -884,181 +895,6 @@ public class DerbyUtils
 		}
 		
 		return changeCount;
-	}	
-	
-	/**
-	 * Parses the output from the si viewproject command to get a list of members
-	 * @param wit WorkItemIterator
-	 * @throws APIException 
-	 * @throws SQLException 
-	 */
-	public static synchronized void parseProject(IntegrityCMProject siProject, WorkItemIterator wit) throws APIException, SQLException
-	{
-		// Setup the Derby DB for this Project
-		Connection db = null;
-		PreparedStatement insert = null;
-		try
-		{
-			// Get a connection from our pool
-			db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
-			// Create a fresh set of tables for this project
-			DerbyUtils.createCMProjectTables(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(), siProject.getProjectCacheTable());
-			// Initialize the project config hash
-			Hashtable<String, String> pjConfigHash = new Hashtable<String, String>();
-			// Add the mapping for the current project
-			pjConfigHash.put(siProject.getProjectName(), siProject.getConfigurationPath());
-			// Compute the project root directory
-			String projectRoot = siProject.getProjectName().substring(0, siProject.getProjectName().lastIndexOf('/'));
-	
-			// Iterate through the list of members returned by the API
-			String insertSQL = DerbyUtils.INSERT_MEMBER_RECORD.replaceFirst("CM_PROJECT", siProject.getProjectCacheTable());
-			LOGGER.fine("Attempting to execute query " + insertSQL);
-			insert = db.prepareStatement(insertSQL);
-			
-			
-			while( wit.hasNext() )
-			{
-				WorkItem wi = wit.next();
-				String entryType = (null != wi.getField("type") ? wi.getField("type").getValueAsString() : "");
-				
-				if( wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT) )
-				{
-					// Ignore pending subprojects in the tree...
-					if( entryType.equalsIgnoreCase("pending-sharesubproject") )
-					{
-						LOGGER.warning("Skipping " + entryType + " " + wi.getId());
-					}
-					else
-					{
-						// Save the configuration path for the current subproject, using the canonical path name
-						pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
-						// Save the relative directory path for this subproject
-						String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
-						pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));				
-						// Save this directory entry
-						insert.clearParameters();
-						insert.setShort(1, (short)1);														// Type
-						insert.setString(2, wi.getField("name").getValueAsString());						// Name
-						insert.setString(3, wi.getId());													// MemberID
-						insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis()));	// Timestamp
-						insert.setClob(5, new StringReader(""));											// Description
-						insert.setString(6, wi.getId());													// ConfigPath
-						
-						String subProjectRev = "";
-						if (wi.contains("memberrev")) 
-						{
-							subProjectRev = wi.getField("memberrev").getItem().getId();
-						}						
-						insert.setString(7, subProjectRev);													// Revision
-						insert.setString(8, pjDir);															// RelativeFile
-						insert.executeUpdate();
-						
-					}
-				}
-				else if( wi.getModelType().equals(SIModelTypeName.MEMBER) )
-				{
-					// Ignore certain pending operations
-					if( entryType.endsWith("in-pending-sub") ||
-							entryType.equalsIgnoreCase("pending-add") ||
-							entryType.equalsIgnoreCase("pending-move-to-update") || 
-							entryType.equalsIgnoreCase("pending-rename-update") )
-					{
-						LOGGER.warning("Skipping " + entryType + " " + wi.getId());
-					}
-					else
-					{
-						// Figure out this member's parent project's canonical path name
-						String parentProject = wi.getField("parent").getValueAsString();				
-						// Save this member entry
-						String memberName = wi.getField("name").getValueAsString();
-						// Figure out the full member path
-						LOGGER.fine("Member context: " + wi.getContext());
-						LOGGER.fine("Member parent: " + parentProject);
-						LOGGER.fine("Member name: " + memberName);
-						
-						// Process this member only if we can figure out where to put it in the workspace
-						if( memberName.startsWith(projectRoot) )
-						{
-							String description = "";
-							// Per JENKINS-19791 some users are getting an exception when attempting 
-							// to read the 'memberdescription' field in the API response. This is an
-							// attempt to catch the exception and ignore it...!
-							try
-							{
-								if( null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString() )
-								{
-									description = fixDescription(wi.getField("memberdescription").getValueAsString());
-								}
-							}
-							catch( NoSuchElementException e ) 
-							{
-								// Ignore exception
-								LOGGER.warning("Cannot obtain the value for 'memberdescription' in API response for member: "+ memberName);
-								LOGGER.info("API Response has the following fields available: ");
-								for( @SuppressWarnings("unchecked")
-								final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext(); )
-								{
-									Field apiField = fieldsIterator.next();
-									LOGGER.info("Name: " + apiField.getName() + ", Value: "+ apiField.getValueAsString());
-								}
-							}
-							
-							Date timestamp = new Date();
-							// Per JENKINS-25068 some users are getting a null pointer exception when attempting 
-							// to read the 'membertimestamp' field in the API response. This is an attempt to work around it!							
-							try
-							{
-								Field timeFld = wi.getField("membertimestamp");
-								if( null != timeFld && null != timeFld.getDateTime() )
-								{
-									timestamp = timeFld.getDateTime();
-								}
-							}
-							catch( Exception e )
-							{
-								// Ignore exception
-								LOGGER.warning("Cannot obtain the value for 'membertimestamp' in API response for member: "+ memberName);
-								LOGGER.warning("Defaulting 'membertimestamp' to now - " + timestamp);
-							}
-							
-							insert.clearParameters();
-							insert.setShort(1, (short)0);										// Type
-							insert.setString(2, memberName);									// Name
-							insert.setString(3, wi.getId());									// MemberID
-							insert.setTimestamp(4, new Timestamp(timestamp.getTime()));			// Timestamp
-							insert.setClob(5, new StringReader(description));					// Description
-							insert.setString(6, pjConfigHash.get(parentProject));				// ConfigPath
-							insert.setString(7, wi.getField("memberrev").getItem().getId());	// Revision 
-							insert.setString(8, memberName.substring(projectRoot.length()));	// RelativeFile (for workspace)
-							insert.executeUpdate();
-						}
-						else
-						{
-							// Issue warning...
-							LOGGER.warning("Skipping " + memberName + " it doesn't appear to exist within this project " + projectRoot + "!");
-						}
-					}
-				}
-				else
-				{
-					LOGGER.warning("View project output contains an invalid model type: " + wi.getModelType());
-				}
-			}
-			
-			// Commit to the database
-			db.commit();
-		}
-		finally
-		{
-			// Close the insert statement
-			if( null != insert ){ insert.close(); }
-			
-			// Close the database connection
-			if( null != db ){ db.close(); }
-		}
-
-		// Log the completion of this operation
-		LOGGER.fine("Parsing project " + siProject.getConfigurationPath() + " complete!");		
 	}	
 	
 	/**
