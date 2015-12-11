@@ -471,7 +471,7 @@ public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<Str
 			                  String member = memberField.getValueAsString();
 			                  Field projectField = entriesInfo.getField("project");
 			                  String projectPath = projectField.getValueAsString();
-			                  member = projectPath.replace("project.pj", "") + member;
+			                  member = projectPath.substring(0, projectPath.lastIndexOf('\\')+1) + member;
 			                  membersInCP.add(member);
 			                }
 		        	  }
