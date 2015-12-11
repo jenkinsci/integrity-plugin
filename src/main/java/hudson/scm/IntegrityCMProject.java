@@ -6,14 +6,17 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -38,8 +41,10 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
+import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
+import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 import com.mks.api.response.WorkItemIterator;
@@ -47,6 +52,7 @@ import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
 import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APIUtils;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
@@ -432,6 +438,64 @@ public class IntegrityCMProject implements Serializable
 
     return command.execute();
   }
+  
+  /**
+   * Performs a projectCPDiff on this Integrity CM Project
+   * 
+   * @param serverConf Authenticated Integrity API Session
+   * @param past Past date
+   * @return Set of closed CPIDs
+   * @throws APIException
+   * @throws AbortException
+   */
+  public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
+		  throws APIException, AbortException
+	  {
+	  
+	  	final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy h:mm:ss aa");
+		
+	    // Construct the command
+	    IAPICommand command =
+	        CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
+	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+	    command.addOption(new APIOption(IAPIOption.RECURSE));	    
+	    MultiValue mv = APIUtils.createMultiValueField(",", "id", "user");
+	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));	    
+	    command.addOption(new APIOption(IAPIOption.REV, "asof:" + dateFormat.format(past)));
+	    
+	    Set<String> projectCPIDs = new HashSet<String>();
+
+	    Response res = command.execute();
+	    
+	    if (null != res)
+        {
+          if (res.getExitCode() == 0)
+          {
+		    WorkItem wi = res.getWorkItem(getConfigurationPath());
+	        Field cpField = wi.getField("CPEntries");        
+	        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
+	            {
+	              Item cpInfo = it.next();
+	              
+	              Field idField = cpInfo.getField("id");
+	              String id = idField.getValueAsString();
+	              projectCPIDs.add(id);
+	              
+	              Field userField = cpInfo.getField("user");
+	              String user = userField.getValueAsString();
+	            }
+          } else
+          {
+	            LOGGER.severe("An error occured projectCPDiff!");
+	      }
+        } else
+        {
+            LOGGER.severe("An error occured projectCPDiff!");
+        }
+  
+        return projectCPIDs;
+	  }
+
 
   /**
    * Returns the project path for this Integrity CM Project

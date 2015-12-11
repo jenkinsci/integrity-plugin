@@ -8,13 +8,23 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Timestamp;
+import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.List;
+import java.util.Set;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.BooleanUtils;
 
+import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.InterruptedException;
+import com.mks.api.response.Field;
+import com.mks.api.response.Item;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
 import com.mks.api.response.Response;
 
 import hudson.AbortException;
@@ -411,4 +421,78 @@ public final class IntegrityCMMember
 
     }
   }
+
+  /**
+   * View the change package
+   * 
+   * @param ciSettings Integrity API Session
+   * @param projectCPIDs List of Change Package ID
+   * @throws AbortException
+   * @throws APIException
+   */
+public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
+	      throws APIException, AbortException
+	  {
+	    LOGGER.fine("Viewing Change Package List");
+	    
+	    Set<String> membersInCP = new HashSet<String>();
+	   
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
+	    
+	    MultiValue mv = APIUtils.createMultiValueField(",", "member", "state", "project");
+	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));
+	    
+	    if(projectCPIDs.isEmpty())
+	    	return membersInCP;
+	    
+	    for (Iterator<String> projectCPID = projectCPIDs.iterator(); projectCPID.hasNext();)
+	    	command.addSelection(projectCPID.next());
+	    try
+	    {
+	    	Response res= command.execute();
+	    	
+	    	 // Process the response object
+	        if (null != res)
+	        {
+	          if (res.getExitCode() == 0)
+	          {
+	        	  for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
+	                {
+	        		  WorkItem stateWorkItem = itWrokItem.next();
+		        	  Field stateField = stateWorkItem.getField("state");
+		        	  if(stateField.getValueAsString().equals("Closed"))
+		        	  {
+		        		  Field entriesField = stateWorkItem.getField("MKSEntries");			        		  
+		        		  for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
+			                {
+			                  Item entriesInfo = it.next();
+			                  
+			                  Field memberField = entriesInfo.getField("member");
+			                  String member = memberField.getValueAsString();
+			                  Field projectField = entriesInfo.getField("project");
+			                  String projectPath = projectField.getValueAsString();
+			                  member = projectPath.replace("project.pj", "") + member;
+			                  membersInCP.add(member);
+			                }
+		        	  }
+	                }
+	          } else
+	          {
+	            LOGGER.severe("An error occured viewing Change Package!");
+	          }
+	        } else
+	        {
+	          LOGGER.severe("An error occured viewing Change Package!");
+	        }
+	        
+	    } catch (APIException ae)
+	    {
+	    	ExceptionHandler eh = new ExceptionHandler(ae);
+	        String exceptionString = eh.getMessage();
+
+	        LOGGER.fine("View Change Package failed: " + exceptionString);
+	    }
+	    
+	    return membersInCP;
+	  }
 }

@@ -16,9 +16,9 @@
 
   <developers>
     <developer>
-      <id>cdsouza</id>
-      <name>Cletus D'Souza</name>
-      <email>cdsouza@ptc.com</email>
+	  <id>ALM_JenkinsPlugin_Support</id>
+      <name>PTC ALM Jenkins Plugin Support Team</name>
+      <email>ALM_JenkinsPlugin_Support@ptc.com</email>
     </developer>
   </developers>
 	
