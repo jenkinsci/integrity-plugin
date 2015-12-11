@@ -9,10 +9,12 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
@@ -421,25 +423,23 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
-        	List<String> cpidList = new ArrayList<String>();
-        	List<String> fileList = new ArrayList<String>();
+        	Set<String> membersInCP = new HashSet<String>();
         	
-        	if(CPBasedMode)
+        	if(CPBasedMode && !cleanCopy)
         	{
+            	Set<String> projectCPIDs = new HashSet<String>();
         		Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
         		if(lastSuccjob != null)
         		{
-	        		Date lastSuccBuildDate = lastSuccjob.getTime();        		
-	        		cpidList = siProject.projectCPDiff(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), lastSuccBuildDate);
-	        		fileList = IntegrityCMMember.viewCP(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
-			    		cpidList);
+	        		Date lastSuccBuildDate = lastSuccjob.getTime();
+	        		projectCPIDs = siProject.projectCPDiff(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), lastSuccBuildDate);
+	        		membersInCP = IntegrityCMMember.viewCP(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs);
         		}
         	}
 		    
           // Compare the current project with the old revision state
           LOGGER.fine("Found previous project state " + prevProjectCache);
-          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, fileList,
-              skipAuthorInfo, CPBasedMode);
+          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP, skipAuthorInfo, CPBasedMode);
         }
       } else
       {
