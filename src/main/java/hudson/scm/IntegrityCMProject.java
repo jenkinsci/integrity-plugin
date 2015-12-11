@@ -10,11 +10,13 @@ import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
@@ -442,15 +444,15 @@ public class IntegrityCMProject implements Serializable
    * 
    * @param serverConf Authenticated Integrity API Session
    * @param past Past date
-   * @return List of files in the closed CP
+   * @return Set of closed CPIDs
    * @throws APIException
    * @throws AbortException
    */
-  public List<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
+  public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
 		  throws APIException, AbortException
 	  {
 	  
-	  	final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy h:mm:ss aa");	  	
+	  	final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy h:mm:ss aa");
 		
 	    // Construct the command
 	    IAPICommand command =
@@ -461,7 +463,7 @@ public class IntegrityCMProject implements Serializable
 	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));	    
 	    command.addOption(new APIOption(IAPIOption.REV, "asof:" + dateFormat.format(past)));
 	    
-	    List<String> cpidList = new ArrayList<String>();
+	    Set<String> projectCPIDs = new HashSet<String>();
 
 	    Response res = command.execute();
 	    
@@ -477,7 +479,7 @@ public class IntegrityCMProject implements Serializable
 	              
 	              Field idField = cpInfo.getField("id");
 	              String id = idField.getValueAsString();
-	              cpidList.add(id);
+	              projectCPIDs.add(id);
 	              
 	              Field userField = cpInfo.getField("user");
 	              String user = userField.getValueAsString();
@@ -491,7 +493,7 @@ public class IntegrityCMProject implements Serializable
             LOGGER.severe("An error occured projectCPDiff!");
         }
   
-        return cpidList;
+        return projectCPIDs;
 	  }
 
 

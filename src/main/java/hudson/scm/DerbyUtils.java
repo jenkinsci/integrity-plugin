@@ -19,6 +19,7 @@ import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
@@ -726,7 +727,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, List<String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
+	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, Set<String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -783,15 +784,38 @@ public class DerbyUtils
 				Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
 				// Obtain the member we're working with
 				String memberName = rowHash.get(CM_PROJECT.NAME).toString();				
-				if(CPMode)
-				{
-					if(!membersInCP.contains(memberName))
-						continue;
-				}
 				
 				// Get the baseline project information for this member
 				LOGGER.fine("Comparing file against baseline " + memberName);
 				Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
+				
+				if(CPMode)
+				{
+					if(!membersInCP.contains(memberName))
+					{
+						// This member did not change, so lets copy its old author information
+						if( null != baselineMemberInfo.get(CM_PROJECT.AUTHOR) )
+						{
+							rs.updateString(CM_PROJECT.AUTHOR.toString(), baselineMemberInfo.get(CM_PROJECT.AUTHOR).toString());
+						}
+						// Also, lets copy over the previous MD5 checksum
+						if( null != baselineMemberInfo.get(CM_PROJECT.CHECKSUM) )
+						{
+							rs.updateString(CM_PROJECT.CHECKSUM.toString(), baselineMemberInfo.get(CM_PROJECT.CHECKSUM).toString());
+						}
+						// Initialize the delta flag
+						rs.updateShort(CM_PROJECT.DELTA.toString(), (short)0);
+						
+						// Remove this member from the baseline project hashtable, so we'll be left with items that are dropped
+						baselinePJ.remove(memberName);
+						
+						// Update this row in the data source
+						rs.updateRow();	
+						
+						continue;
+					}						
+				}
+				
 				// This file was in the previous baseline as well...
 				if( null != baselineMemberInfo )
 				{
