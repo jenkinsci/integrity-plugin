@@ -470,8 +470,9 @@ public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<Str
 			                  Field memberField = entriesInfo.getField("member");
 			                  String member = memberField.getValueAsString();
 			                  Field projectField = entriesInfo.getField("project");
-			                  String projectPath = projectField.getValueAsString();
-			                  member = projectPath.substring(0, projectPath.lastIndexOf('\\')+1) + member;
+			                  String  project = projectField.getValueAsString();
+			                  if (project.lastIndexOf('/') > 0)
+			                	  member = project.substring(0, project.lastIndexOf('/') + 1) + member;
 			                  membersInCP.add(member);
 			                }
 		        	  }
