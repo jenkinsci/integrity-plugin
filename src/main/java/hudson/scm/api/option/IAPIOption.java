@@ -61,5 +61,5 @@ public interface IAPIOption
   public final String FORCE_CREATE = "forceCreate";
   public final String SESSION_ID = "sessionID";
   public final String REV = "r";
-
+  public final String ASOF = "asof:";
 }

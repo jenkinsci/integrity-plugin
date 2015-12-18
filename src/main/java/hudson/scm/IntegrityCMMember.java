@@ -36,6 +36,7 @@ import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
+import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
 
@@ -433,15 +434,11 @@ public final class IntegrityCMMember
 public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
 	      throws APIException, AbortException
 	  {
-	    LOGGER.fine("Viewing Change Package List");
+	    LOGGER.fine("Viewing Change Package List:" + projectCPIDs.toString());
 	    
 	    Set<String> membersInCP = new HashSet<String>();
 	   
-	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
-	    
-	    MultiValue mv = APIUtils.createMultiValueField(",", "member", "state", "project");
-	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));
-	    
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);	    
 	    if(projectCPIDs.isEmpty())
 	    	return membersInCP;
 	    
@@ -459,21 +456,23 @@ public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<Str
 	        	  for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
 	                {
 	        		  WorkItem stateWorkItem = itWrokItem.next();
-		        	  Field stateField = stateWorkItem.getField("state");
+		        	  Field stateField = stateWorkItem.getField(IAPIFields.CP_STATE);
 		        	  if(stateField.getValueAsString().equals("Closed"))
 		        	  {
-		        		  Field entriesField = stateWorkItem.getField("MKSEntries");			        		  
+		        		  Field entriesField = stateWorkItem.getField(IAPIFields.MKS_ENTRIES);
+		        		  LOGGER.fine("Iterating enteries of Change Package " + stateWorkItem.toString());
 		        		  for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
 			                {
 			                  Item entriesInfo = it.next();
 			                  
-			                  Field memberField = entriesInfo.getField("member");
+			                  Field memberField = entriesInfo.getField(IAPIFields.CP_MEMBER);
 			                  String member = memberField.getValueAsString();
-			                  Field projectField = entriesInfo.getField("project");
+			                  Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
 			                  String  project = projectField.getValueAsString();
 			                  if (project.lastIndexOf('/') > 0)
 			                	  member = project.substring(0, project.lastIndexOf('/') + 1) + member;
 			                  membersInCP.add(member);
+			                  LOGGER.fine("Change Package entery:" + member.toString());
 			                }
 		        	  }
 	                }
