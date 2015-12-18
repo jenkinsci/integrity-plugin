@@ -56,6 +56,7 @@ import hudson.scm.api.APIUtils;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
 
 /**
@@ -114,10 +115,10 @@ public class IntegrityCMProject implements Serializable
     try
     {
       // Get the metadata information about the project
-      Field pjNameFld = wi.getField("projectName");
-      Field pjTypeFld = wi.getField("projectType");
-      Field pjCfgPathFld = wi.getField("fullConfigSyntax");
-      Field pjChkptFld = wi.getField("lastCheckpoint");
+      Field pjNameFld = wi.getField(IAPIFields.PROJECT_NAME);
+      Field pjTypeFld = wi.getField(IAPIFields.PROJECT_TYPE);
+      Field pjCfgPathFld = wi.getField(IAPIFields.FULL_CONFIG_SYNTAX);
+      Field pjChkptFld = wi.getField(IAPIFields.LAST_CHECKPOINT);
       // Convert to our class fields
       // First obtain the project name field
       if (null != pjNameFld && null != pjNameFld.getValueAsString())
@@ -135,7 +136,7 @@ public class IntegrityCMProject implements Serializable
         if (isBuild())
         {
           // Next, we'll need to know the current build checkpoint for this configuration
-          Field pjRevFld = wi.getField("revision");
+          Field pjRevFld = wi.getField(IAPIFields.REVISION);
           if (null != pjRevFld && null != pjRevFld.getItem())
           {
             projectRevision = pjRevFld.getItem().getId();
@@ -450,18 +451,11 @@ public class IntegrityCMProject implements Serializable
    */
   public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
 		  throws APIException, AbortException
-	  {
-	  
-	  	final SimpleDateFormat dateFormat = new SimpleDateFormat("MMM d, yyyy h:mm:ss aa");
-		
+	  {	
 	    // Construct the command
-	    IAPICommand command =
-	        CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
 	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
-	    command.addOption(new APIOption(IAPIOption.RECURSE));	    
-	    MultiValue mv = APIUtils.createMultiValueField(",", "id", "user");
-	    command.addOption(new APIOption(IAPIOption.FIELDS, mv));	    
-	    command.addOption(new APIOption(IAPIOption.REV, "asof:" + dateFormat.format(past)));
+	    command.addOption(new APIOption(IAPIOption.REV, IAPIOption.ASOF + IntegritySCM.SDF.format(past)));
 	    
 	    Set<String> projectCPIDs = new HashSet<String>();
 
@@ -472,16 +466,16 @@ public class IntegrityCMProject implements Serializable
           if (res.getExitCode() == 0)
           {
 		    WorkItem wi = res.getWorkItem(getConfigurationPath());
-	        Field cpField = wi.getField("CPEntries");        
+	        Field cpField = wi.getField(IAPIFields.CP_ENTRIES);        
 	        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
 	            {
 	              Item cpInfo = it.next();
 	              
-	              Field idField = cpInfo.getField("id");
+	              Field idField = cpInfo.getField(IAPIFields.id);
 	              String id = idField.getValueAsString();
 	              projectCPIDs.add(id);
 	              
-	              Field userField = cpInfo.getField("user");
+	              Field userField = cpInfo.getField(IAPIFields.USER);
 	              String user = userField.getValueAsString();
 	            }
           } else
@@ -653,7 +647,7 @@ public class IntegrityCMProject implements Serializable
         // Parse folders separately from members in an asynchronous environment. This is to be
         // executed before member parsing!
         LOGGER.log(Level.FINE,
-            "Executing parse folder task :" + wi.getField("name").getValueAsString());
+            "Executing parse folder task :" + wi.getField(IAPIFields.NAME).getValueAsString());
         Map<String, String> future = executor.submit(new ParseProjectFolderTask(wi, this)).get();
         for (String key : future.keySet())
         {
@@ -665,7 +659,7 @@ public class IntegrityCMProject implements Serializable
       {
         // Parse member tasks
         LOGGER.log(Level.FINE,
-            "Executing parse member task :" + wi.getField("name").getValueAsString());
+            "Executing parse member task :" + wi.getField(IAPIFields.NAME).getValueAsString());
         futures.add(executor.submit(new ParseProjectMemberTask(wi, pjConfigHash, this)));
       } else
       {
