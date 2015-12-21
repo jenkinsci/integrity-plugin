@@ -436,7 +436,7 @@ public final class IntegrityCMMember
 public static final Map<String, String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
 	      throws APIException, AbortException
 	  {
-	    LOGGER.fine("Viewing Change Package List");
+	    LOGGER.fine("Viewing Change Package List :" + projectCPIDs.toString());
 	    
 	    Map<String, String> membersInCP = new HashMap<String, String>();
 	   
