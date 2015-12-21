@@ -96,6 +96,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     private String date;
     private String annotation;
     private String differences;
+    private String cpid;
     private String msg;
 
     /**
@@ -365,6 +366,17 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     {
       return differences;
     }
+    
+    /**
+     * Returns the Change package ID associated with this change
+     * 
+     * @return
+     */
+    public String getCpid()
+    {
+      return cpid;
+    }
+
 
     /**
      * Sets a string url representation containing the link to the Integrity Member differences view
@@ -374,6 +386,16 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     public void setDifferences(String differences)
     {
       this.differences = differences;
+    }
+    
+    /**
+     * Sets the Change package ID associated with this change
+     * 
+     * @param differences
+     */
+    public void setCpid(String cpid)
+    {
+      this.cpid = cpid;
     }
   }
 

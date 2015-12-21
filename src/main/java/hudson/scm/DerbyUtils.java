@@ -18,6 +18,7 @@ import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
@@ -74,16 +75,17 @@ public class DerbyUtils
 														CM_PROJECT.AUTHOR + " VARCHAR(100), " +
 														CM_PROJECT.CONFIG_PATH + " VARCHAR(32500), " +
 														CM_PROJECT.REVISION + " VARCHAR(32500), " +
-														CM_PROJECT.OLD_REVISION + " VARCHAR(32500), " +
+														CM_PROJECT.OLD_REVISION + " VARCHAR(32500), " +														
 														CM_PROJECT.RELATIVE_FILE + " VARCHAR(32500), " +
 														CM_PROJECT.CHECKSUM + " VARCHAR(32), " +
-														CM_PROJECT.DELTA + " SMALLINT)"; 		/* 0 = Unchanged; 1 = Added; 2 = Changed; 3 = Dropped */
+														CM_PROJECT.DELTA + " SMALLINT, " +
+														CM_PROJECT.CPID + " VARCHAR(32500) ) "; 		/* 0 = Unchanged; 1 = Added; 2 = Changed; 3 = Dropped */
 	public static final String DROP_PROJECT_TABLE = "DROP TABLE CM_PROJECT";
 	public static final String SELECT_MEMBER_1 = "SELECT " + CM_PROJECT.ID + " FROM CM_PROJECT WHERE " + CM_PROJECT.ID + " = 1";	
 	public static final String INSERT_MEMBER_RECORD = "INSERT INTO CM_PROJECT " +
 														"(" + CM_PROJECT.TYPE + ", " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " +
 														CM_PROJECT.TIMESTAMP + ", " + CM_PROJECT.DESCRIPTION + ", " + CM_PROJECT.CONFIG_PATH + ", " +
-														CM_PROJECT.REVISION + ", " + CM_PROJECT.RELATIVE_FILE + ") " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?)";
+														CM_PROJECT.REVISION + ", " + CM_PROJECT.RELATIVE_FILE + ", " + CM_PROJECT.CPID + ") " + "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)";
 	public static final String BASELINE_SELECT = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " + CM_PROJECT.TIMESTAMP + ", " +
 													CM_PROJECT.DESCRIPTION + ", " + CM_PROJECT.AUTHOR + ", " + CM_PROJECT.CONFIG_PATH + ", " +
 													CM_PROJECT.REVISION + ", " + CM_PROJECT.RELATIVE_FILE + ", " + CM_PROJECT.CHECKSUM +
@@ -92,12 +94,12 @@ public class DerbyUtils
 	public static final String DELTA_SELECT = "SELECT " + CM_PROJECT.TYPE + ", " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " +
 												CM_PROJECT.TIMESTAMP + ", " + CM_PROJECT.DESCRIPTION + ", " + CM_PROJECT.AUTHOR + ", " +
 												CM_PROJECT.CONFIG_PATH + ", " + CM_PROJECT.REVISION + ", " + CM_PROJECT.OLD_REVISION + ", " +
-												CM_PROJECT.RELATIVE_FILE + ", " + CM_PROJECT.CHECKSUM + ", " + CM_PROJECT.DELTA +
+												CM_PROJECT.RELATIVE_FILE + ", " + CM_PROJECT.CHECKSUM + ", " + CM_PROJECT.DELTA + ", " + CM_PROJECT.CPID +
 												" FROM CM_PROJECT WHERE " + CM_PROJECT.TYPE + " = 0";
 	public static final String PROJECT_SELECT = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.MEMBER_ID + ", " + CM_PROJECT.TIMESTAMP + ", " +
 												CM_PROJECT.DESCRIPTION + ", " + CM_PROJECT.AUTHOR + ", " + CM_PROJECT.CONFIG_PATH + ", " +
 												CM_PROJECT.REVISION + ", " + CM_PROJECT.OLD_REVISION + ", " + CM_PROJECT.RELATIVE_FILE + ", " + 
-												CM_PROJECT.CHECKSUM + ", " + CM_PROJECT.DELTA +
+												CM_PROJECT.CHECKSUM + ", " + CM_PROJECT.DELTA + ", " + CM_PROJECT.CPID +
 												" FROM CM_PROJECT WHERE " + CM_PROJECT.TYPE + " = 0 ORDER BY " + CM_PROJECT.NAME + " ASC";
 
 	public static final String SUB_PROJECT_SELECT = "SELECT " + CM_PROJECT.NAME + ", " + CM_PROJECT.CONFIG_PATH + ", " +  CM_PROJECT.REVISION +
@@ -727,7 +729,7 @@ public class DerbyUtils
 	 * @throws SQLException 
 	 * @throws IOException 
 	 */
-	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, Set<String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
+	public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache, String projectCacheTable, Map<String, String> membersInCP, boolean skipAuthorInfo, boolean CPMode) throws SQLException, IOException
 	{
 		// Re-initialize our return variable
 		int changeCount = 0;
@@ -765,6 +767,7 @@ public class DerbyUtils
 				memberInfo.put(CM_PROJECT.AUTHOR, (null == rowHash.get(CM_PROJECT.AUTHOR) ? "" : rowHash.get(CM_PROJECT.AUTHOR).toString()));
 				memberInfo.put(CM_PROJECT.CONFIG_PATH, (null == rowHash.get(CM_PROJECT.CONFIG_PATH) ? "" : rowHash.get(CM_PROJECT.CONFIG_PATH).toString()));
 				memberInfo.put(CM_PROJECT.REVISION, (null == rowHash.get(CM_PROJECT.REVISION) ? "" : rowHash.get(CM_PROJECT.REVISION).toString()));
+				memberInfo.put(CM_PROJECT.CPID, (null == rowHash.get(CM_PROJECT.CPID) ? "" : rowHash.get(CM_PROJECT.CPID).toString()));
 				memberInfo.put(CM_PROJECT.RELATIVE_FILE, (null == rowHash.get(CM_PROJECT.RELATIVE_FILE) ? "" : rowHash.get(CM_PROJECT.RELATIVE_FILE).toString()));
 				memberInfo.put(CM_PROJECT.CHECKSUM, (null == rowHash.get(CM_PROJECT.CHECKSUM) ? "" : rowHash.get(CM_PROJECT.CHECKSUM).toString()));
 				baselinePJ.put(rowHash.get(CM_PROJECT.NAME).toString(), memberInfo);
@@ -791,7 +794,7 @@ public class DerbyUtils
 				
 				if(CPMode)
 				{
-					if(!membersInCP.contains(memberName))
+					if(!membersInCP.containsKey(memberName))
 					{
 						// This member did not change, so lets copy its old author information
 						if( null != baselineMemberInfo.get(CM_PROJECT.AUTHOR) )
@@ -813,7 +816,14 @@ public class DerbyUtils
 						rs.updateRow();	
 						
 						continue;
-					}						
+					}else{
+						// Initialize the cpid
+						String cpid = membersInCP.get(memberName);
+						rs.updateString(CM_PROJECT.CPID.toString(), cpid);						
+						
+						// Update this row in the data source
+						rs.updateRow();	
+					}
 				}
 				
 				// This file was in the previous baseline as well...
@@ -894,9 +904,10 @@ public class DerbyUtils
 				rs.updateString(CM_PROJECT.DESCRIPTION.toString(), memberInfo.get(CM_PROJECT.DESCRIPTION).toString());
 				rs.updateString(CM_PROJECT.AUTHOR.toString(), memberInfo.get(CM_PROJECT.AUTHOR).toString());
 				rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), memberInfo.get(CM_PROJECT.CONFIG_PATH).toString());
-				rs.updateString(CM_PROJECT.REVISION.toString(), memberInfo.get(CM_PROJECT.REVISION).toString());
+				rs.updateString(CM_PROJECT.REVISION.toString(), memberInfo.get(CM_PROJECT.REVISION).toString());				
 				rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
 				rs.updateShort(CM_PROJECT.DELTA.toString(), (short)3);
+				rs.updateString(CM_PROJECT.CPID.toString(), memberInfo.get(CM_PROJECT.CPID).toString());
 				rs.insertRow();
 				rs.moveToCurrentRow();
 				
