@@ -15,7 +15,7 @@ public class ViewCPCommand extends BasicAPICommand {
     {
 		super(serverConfig);
 		cmd = new Command(Command.SI, VIEW_CP_COMMAND);
-	    MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.CP_MEMBER, IAPIFields.CP_STATE, IAPIFields.PROJECT);
+	    MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.CP_MEMBER, IAPIFields.CP_STATE, IAPIFields.PROJECT, IAPIFields.id);
 	    cmd.addOption(new APIOption(IAPIOption.FIELDS, mv));
     }
 }

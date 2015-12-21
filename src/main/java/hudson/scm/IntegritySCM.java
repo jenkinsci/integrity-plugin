@@ -9,6 +9,7 @@ import java.io.Serializable;
 import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.Iterator;
@@ -424,7 +425,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
-        	Set<String> membersInCP = new HashSet<String>();
+        	Map<String, String> membersInCP = new HashMap<String, String>();
         	
         	if(CPBasedMode && !cleanCopy)
         	{
