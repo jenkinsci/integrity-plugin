@@ -9,9 +9,11 @@ import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
 
@@ -431,14 +433,14 @@ public final class IntegrityCMMember
    * @throws AbortException
    * @throws APIException
    */
-public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
+public static final Map<String, String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
 	      throws APIException, AbortException
 	  {
-	    LOGGER.fine("Viewing Change Package List:" + projectCPIDs.toString());
+	    LOGGER.fine("Viewing Change Package List :" + projectCPIDs.toString());
 	    
-	    Set<String> membersInCP = new HashSet<String>();
+	    Map<String, String> membersInCP = new HashMap<String, String>();
 	   
-	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);	    
+	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
 	    if(projectCPIDs.isEmpty())
 	    	return membersInCP;
 	    
@@ -457,6 +459,8 @@ public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<Str
 	                {
 	        		  WorkItem stateWorkItem = itWrokItem.next();
 		        	  Field stateField = stateWorkItem.getField(IAPIFields.CP_STATE);
+		        	  Field idField = stateWorkItem.getField(IAPIFields.id);
+		        	  String  cp = idField.getValueAsString();
 		        	  if(stateField.getValueAsString().equals("Closed"))
 		        	  {
 		        		  Field entriesField = stateWorkItem.getField(IAPIFields.MKS_ENTRIES);
@@ -470,8 +474,8 @@ public static final Set<String> viewCP(IntegrityConfigurable ciSettings, Set<Str
 			                  Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
 			                  String  project = projectField.getValueAsString();
 			                  if (project.lastIndexOf('/') > 0)
-			                	  member = project.substring(0, project.lastIndexOf('/') + 1) + member;
-			                  membersInCP.add(member);
+			                	  member = project.substring(0, project.lastIndexOf('/') + 1) + member;			                  
+			                  membersInCP.put(member, cp);
 			                  LOGGER.fine("Change Package entery:" + member.toString());
 			                }
 		        	  }

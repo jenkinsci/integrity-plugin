@@ -104,6 +104,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
           LOGGER.log(Level.FINE,
               Thread.currentThread().getName() + " :: Parse Folder Task: RelativeFile: " + pjDir);
           LOGGER.log(Level.INFO, "Attempting to execute query " + insert);
+          insert.setString(9, ""); // Cpid
           insert.executeUpdate();
         } finally
         {

@@ -80,6 +80,12 @@ public enum CM_PROJECT
       return "DELTA";
     }
   },
+  CPID {
+    public String toString()
+    {
+      return "CPID";
+    }  
+  },
   UNDEFINED {
     public String toString()
     {

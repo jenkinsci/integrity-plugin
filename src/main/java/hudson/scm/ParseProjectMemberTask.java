@@ -172,6 +172,7 @@ public class ParseProjectMemberTask implements Callable<Void>
           LOGGER.log(Level.FINE,
               Thread.currentThread().getName() + " :: Parse Member Task: RelativeFile: "
                   + memberName.substring(projectRoot.length()));
+          insert.setString(9, ""); // Cpid
           LOGGER.log(Level.INFO, "Attempting to execute query " + insert);
           insert.executeUpdate();
 
