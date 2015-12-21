@@ -26,6 +26,7 @@ import com.mks.api.response.WorkItem;
 
 import hudson.AbortException;
 import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.option.IAPIFields;
 
 
 /**
@@ -66,8 +67,8 @@ public class ParseProjectMemberTask implements Callable<Void>
   public Void call() throws AbortException, SQLException
   {
     LOGGER.log(Level.INFO, Thread.currentThread().getName() + " :: Parse member task begin for : "
-        + wi.getField("name").getValueAsString());
-    String entryType = (null != wi.getField("type") ? wi.getField("type").getValueAsString() : "");
+        + wi.getField(IAPIFields.NAME).getValueAsString());
+    String entryType = (null != wi.getField(IAPIFields.TYPE) ? wi.getField(IAPIFields.TYPE).getValueAsString() : "");
 
     // Ignore certain pending operations
     if (entryType.endsWith("in-pending-sub") || entryType.equalsIgnoreCase("pending-add")
@@ -79,9 +80,9 @@ public class ParseProjectMemberTask implements Callable<Void>
     } else
     {
       // Figure out this member's parent project's canonical path name
-      String parentProject = wi.getField("parent").getValueAsString();
+      String parentProject = wi.getField(IAPIFields.PARENT).getValueAsString();
       // Save this member entry
-      String memberName = wi.getField("name").getValueAsString();
+      String memberName = wi.getField(IAPIFields.NAME).getValueAsString();
       // Figure out the full member path
       LOGGER.log(Level.FINE, Thread.currentThread().getName()
           + " :: Parse Member Task: Member context: " + wi.getContext());
@@ -99,11 +100,11 @@ public class ParseProjectMemberTask implements Callable<Void>
         // attempt to catch the exception and ignore it...!
         try
         {
-          if (null != wi.getField("memberdescription")
-              && null != wi.getField("memberdescription").getValueAsString())
+          if (null != wi.getField(IAPIFields.MEMBER_DESCRIPTION)
+              && null != wi.getField(IAPIFields.MEMBER_DESCRIPTION).getValueAsString())
           {
             description =
-                DerbyUtils.fixDescription(wi.getField("memberdescription").getValueAsString());
+                DerbyUtils.fixDescription(wi.getField(IAPIFields.MEMBER_DESCRIPTION).getValueAsString());
           }
         } catch (NoSuchElementException e)
         {
@@ -130,7 +131,7 @@ public class ParseProjectMemberTask implements Callable<Void>
         // around it!
         try
         {
-          Field timeFld = wi.getField("membertimestamp");
+          Field timeFld = wi.getField(IAPIFields.MEMBER_TIMESTAMP);
           if (null != timeFld && null != timeFld.getDateTime())
           {
             timestamp = timeFld.getDateTime();
@@ -163,9 +164,9 @@ public class ParseProjectMemberTask implements Callable<Void>
           insert.setString(6, pjConfigHash.get(parentProject)); // ConfigPath
           LOGGER.log(Level.FINE, Thread.currentThread().getName()
               + " :: Parse Member Task: ConfigPath : " + pjConfigHash.get(parentProject));
-          insert.setString(7, wi.getField("memberrev").getItem().getId()); // Revision
+          insert.setString(7, wi.getField(IAPIFields.MEMBER_REV).getItem().getId()); // Revision
           LOGGER.log(Level.FINE, Thread.currentThread().getName()
-              + " :: Parse Member Task: Revision: " + wi.getField("memberrev").getItem().getId());
+              + " :: Parse Member Task: Revision: " + wi.getField(IAPIFields.MEMBER_REV).getItem().getId());
           insert.setString(8, memberName.substring(projectRoot.length())); // RelativeFile (for
                                                                            // workspace)
           LOGGER.log(Level.FINE,
@@ -195,7 +196,7 @@ public class ParseProjectMemberTask implements Callable<Void>
       }
     }
     LOGGER.log(Level.INFO, Thread.currentThread().getName() + " :: Parse member task end for : "
-        + wi.getField("name").getValueAsString());
+        + wi.getField(IAPIFields.NAME).getValueAsString());
     return null;
   }
 

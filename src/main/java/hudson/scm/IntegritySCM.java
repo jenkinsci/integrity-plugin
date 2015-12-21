@@ -50,6 +50,7 @@ import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
+import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
@@ -340,8 +341,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
 
     command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
-    MultiValue mv = APIUtils.createMultiValueField(",", "name", "context", "cpid", "memberrev",
-        "membertimestamp", "memberdescription", "type");
+    MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME, IAPIFields.CONTEXT,
+        IAPIFields.CP_ID, IAPIFields.MEMBER_REV, IAPIFields.MEMBER_TIMESTAMP, IAPIFields.MEMBER_DESCRIPTION, IAPIFields.TYPE);
     command.addOption(new APIOption(IAPIOption.FIELDS, mv));
 
     // Apply our include/exclude filters
@@ -561,7 +562,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                   checkpointLabel));
       LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());
       WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
-      String chkpt = wi.getResult().getField("resultant").getItem().getId();
+      String chkpt = wi.getResult().getField(IAPIFields.RESULTANT).getItem().getId();
       listener.getLogger().println("Successfully executed pre-build checkpoint for project "
           + siProject.getConfigurationPath() + ", new revision is " + chkpt);
       // Update the siProject to use the new checkpoint as the basis for this build
