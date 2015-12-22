@@ -6,8 +6,6 @@
 // written permission of PTC Inc. is strictly prohibited.
 package hudson.scm;
 
-import java.io.File;
-import java.io.IOException;
 import java.io.Serializable;
 import java.text.SimpleDateFormat;
 import java.util.Map;
@@ -17,13 +15,8 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.Run;
-import hudson.model.TaskListener;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.command.BasicAPICommand;
 import hudson.scm.browsers.IntegrityWebUI;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;

@@ -70,7 +70,7 @@ public abstract class BasicAPICommand implements IAPICommand
   {
     if (null == cmd)
     {
-      LOGGER.log(Level.FINE, "Integration API Command cannot be null");
+      LOGGER.log(Level.SEVERE, "Integration API Command cannot be null");
       throw new APIException("Integration API Command cannot be null");
     }
 
@@ -123,7 +123,7 @@ public abstract class BasicAPICommand implements IAPICommand
 
     try
     {
-      LOGGER.log(Level.INFO, "Borrowing Session Object from Pool :" + serverConfig.getName()
+      LOGGER.log(Level.FINEST, "Borrowing Session Object from Pool :" + serverConfig.getName()
           + ", for running API command : " + cmd.getCommandName());
 
       api = pool.borrowObject(serverConfig);
@@ -195,7 +195,7 @@ public abstract class BasicAPICommand implements IAPICommand
       {
         if (null != api && !runCommandWithInterim)
         {
-          LOGGER.log(Level.INFO,
+          LOGGER.log(Level.FINEST,
               "Returning session object back to pool :" + serverConfig.getName());
           pool.returnObject(serverConfig, api);
         }
@@ -265,7 +265,7 @@ public abstract class BasicAPICommand implements IAPICommand
   {
     if (runCommandWithInterim && api != null)
     {
-      LOGGER.log(Level.INFO, "Terminating API Session for WITH_INTERIM command :" + api.toString());
+      LOGGER.log(Level.FINEST, "Terminating API Session for WITH_INTERIM command :" + api.toString());
       api.terminate();
     }
   }
