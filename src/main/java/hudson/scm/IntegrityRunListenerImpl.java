@@ -69,7 +69,10 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
       int activeSessions = ISessionPool.getInstance().getPool().getNumActive();
       // Empty the pool if there are no active sessions
       if (activeSessions == 0)
+      {
+        LOGGER.log(Level.FINEST, "Clearing Integrity Session Pool");
         ISessionPool.getInstance().getPool().clear();
+      }
     } catch (UnsupportedOperationException e)
     {
       LOGGER.log(Level.SEVERE, e.getMessage(), e);

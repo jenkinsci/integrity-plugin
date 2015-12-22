@@ -17,6 +17,7 @@ import java.util.logging.Logger;
 
 import com.mks.api.Command;
 import com.mks.api.response.APIException;
+import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 
 import hudson.scm.IntegrityConfigurable;
@@ -349,10 +350,10 @@ public class FakeAPISession implements ISession
 	}
 
   @Override
-  public boolean isAlive()
+  public void ping() throws APIException, InterruptedException
   {
     // TODO Auto-generated method stub
-    return false;
+    
   }
 }
 

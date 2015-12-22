@@ -66,7 +66,7 @@ public class ParseProjectMemberTask implements Callable<Void>
   @Override
   public Void call() throws AbortException, SQLException
   {
-    LOGGER.log(Level.INFO, Thread.currentThread().getName() + " :: Parse member task begin for : "
+    LOGGER.log(Level.FINE, Thread.currentThread().getName() + " :: Parse member task begin for : "
         + wi.getField(IAPIFields.NAME).getValueAsString());
     String entryType = (null != wi.getField(IAPIFields.TYPE) ? wi.getField(IAPIFields.TYPE).getValueAsString() : "");
 
@@ -84,11 +84,11 @@ public class ParseProjectMemberTask implements Callable<Void>
       // Save this member entry
       String memberName = wi.getField(IAPIFields.NAME).getValueAsString();
       // Figure out the full member path
-      LOGGER.log(Level.FINE, Thread.currentThread().getName()
+      LOGGER.log(Level.FINEST, Thread.currentThread().getName()
           + " :: Parse Member Task: Member context: " + wi.getContext());
-      LOGGER.log(Level.FINE, Thread.currentThread().getName()
+      LOGGER.log(Level.FINEST, Thread.currentThread().getName()
           + " :: Parse Member Task: Member parent: " + parentProject);
-      LOGGER.log(Level.FINE,
+      LOGGER.log(Level.FINEST,
           Thread.currentThread().getName() + " :: Parse Member Task: Member name: " + memberName);
 
       // Process this member only if we can figure out where to put it in the workspace
@@ -113,13 +113,13 @@ public class ParseProjectMemberTask implements Callable<Void>
               Thread.currentThread().getName()
                   + " :: Parse Member Task: Cannot obtain the value for 'memberdescription' in API response for member: "
                   + memberName);
-          LOGGER.log(Level.INFO, Thread.currentThread().getName()
+          LOGGER.log(Level.FINE, Thread.currentThread().getName()
               + " :: Parse Member Task: API Response has the following fields available: ");
           for (@SuppressWarnings("unchecked")
           final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext();)
           {
             Field apiField = fieldsIterator.next();
-            LOGGER.log(Level.INFO,
+            LOGGER.log(Level.FINE,
                 Thread.currentThread().getName() + " :: Parse Member Task: Name: "
                     + apiField.getName() + ", Value: " + apiField.getValueAsString());
           }
@@ -152,28 +152,28 @@ public class ParseProjectMemberTask implements Callable<Void>
           insert.clearParameters();
           insert.setShort(1, (short) 0); // Type
           insert.setString(2, memberName); // Name
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Member Task: Member Name: " + memberName);
           insert.setString(3, wi.getId()); // MemberID
-          LOGGER.log(Level.FINE,
+          LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Member Task: MemberID: " + wi.getId());
           insert.setTimestamp(4, new Timestamp(timestamp.getTime())); // Timestamp
           insert.setClob(5, new StringReader(description)); // Description
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Member Task: Description: " + description);
           insert.setString(6, pjConfigHash.get(parentProject)); // ConfigPath
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Member Task: ConfigPath : " + pjConfigHash.get(parentProject));
           insert.setString(7, wi.getField(IAPIFields.MEMBER_REV).getItem().getId()); // Revision
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Member Task: Revision: " + wi.getField(IAPIFields.MEMBER_REV).getItem().getId());
           insert.setString(8, memberName.substring(projectRoot.length())); // RelativeFile (for
                                                                            // workspace)
-          LOGGER.log(Level.FINE,
+          LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Member Task: RelativeFile: "
                   + memberName.substring(projectRoot.length()));
           insert.setString(9, ""); // Cpid
-          LOGGER.log(Level.INFO, "Attempting to execute query " + insert);
+          LOGGER.log(Level.FINE, "Attempting to execute query " + insert);
           insert.executeUpdate();
 
           db.commit();
@@ -196,7 +196,7 @@ public class ParseProjectMemberTask implements Callable<Void>
                 + " it doesn't appear to exist within this project " + projectRoot + "!");
       }
     }
-    LOGGER.log(Level.INFO, Thread.currentThread().getName() + " :: Parse member task end for : "
+    LOGGER.log(Level.FINE, Thread.currentThread().getName() + " :: Parse member task end for : "
         + wi.getField(IAPIFields.NAME).getValueAsString());
     return null;
   }
