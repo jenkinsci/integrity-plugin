@@ -12,7 +12,6 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
-import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -29,11 +28,8 @@ import org.kohsuke.stapler.StaplerRequest;
 
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
-import com.mks.api.response.Field;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
-import com.mks.api.response.Item;
-import com.mks.api.response.ItemList;
 
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -342,8 +338,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
 
     command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
-    MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME, IAPIFields.CONTEXT,
-        IAPIFields.CP_ID, IAPIFields.MEMBER_REV, IAPIFields.MEMBER_TIMESTAMP, IAPIFields.MEMBER_DESCRIPTION, IAPIFields.TYPE);
+    MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME,
+        IAPIFields.CONTEXT, IAPIFields.CP_ID, IAPIFields.MEMBER_REV, IAPIFields.MEMBER_TIMESTAMP,
+        IAPIFields.MEMBER_DESCRIPTION, IAPIFields.TYPE);
     command.addOption(new APIOption(IAPIOption.FIELDS, mv));
 
     // Apply our include/exclude filters
@@ -425,23 +422,27 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
-        	Map<String, String> membersInCP = new HashMap<String, String>();
-        	
-        	if(CPBasedMode && !cleanCopy)
-        	{
-            	Set<String> projectCPIDs = new HashSet<String>();
-        		Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
-        		if(lastSuccjob != null)
-        		{
-	        		Date lastSuccBuildDate = lastSuccjob.getTime();
-	        		projectCPIDs = siProject.projectCPDiff(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), lastSuccBuildDate);
-	        		membersInCP = IntegrityCMMember.viewCP(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs);
-        		}
-        	}
-		    
+          Map<String, String> membersInCP = new HashMap<String, String>();
+
+          if (CPBasedMode && !cleanCopy)
+          {
+            Set<String> projectCPIDs = new HashSet<String>();
+            Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
+            if (lastSuccjob != null)
+            {
+              Date lastSuccBuildDate = lastSuccjob.getTime();
+              projectCPIDs = siProject.projectCPDiff(
+                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
+                  lastSuccBuildDate);
+              membersInCP = IntegrityCMMember.viewCP(
+                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs);
+            }
+          }
+
           // Compare the current project with the old revision state
           LOGGER.fine("Found previous project state " + prevProjectCache);
-          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP, skipAuthorInfo, CPBasedMode);
+          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
+              skipAuthorInfo, CPBasedMode);
         }
       } else
       {
@@ -612,8 +613,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           String projectCacheTable = DerbyUtils.registerProjectCache(
               ((DescriptorImpl) this.getDescriptor()).getDataSource(), job.getName(),
               configurationName, 0);
-          // Re-evaluate the config path to resolve any groovy expressions...
-          initializeCMProject(job.getCharacteristicEnvVars(), configPath);
+
+          initializeCMProject(job.getCharacteristicEnvVars(), projectCacheTable);
           initializeCMProjectMembers();
 
           // Compare this project with the old project

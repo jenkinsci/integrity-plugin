@@ -68,6 +68,7 @@ public class ISessionPool
     config.setMaxTotalPerKey(maxTotalPerKey);
     config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
+    config.setTestOnCreate(true);
     // config.setTestOnReturn(true);
     config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
     config.setEvictionPolicyClassName("hudson.scm.api.session.SessionPoolEvictionPolicy");
