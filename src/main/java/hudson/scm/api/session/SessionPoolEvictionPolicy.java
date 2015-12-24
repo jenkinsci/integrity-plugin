@@ -59,6 +59,6 @@ public class SessionPoolEvictionPolicy extends DefaultEvictionPolicy<ISession>
     } else
       return true;
 
-    return super.evict(config, underTest, idleCount) || (null == session);
+    return super.evict(config, underTest, idleCount);
   }
 }
