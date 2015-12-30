@@ -173,6 +173,10 @@ public abstract class BasicAPICommand implements IAPICommand
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
           + cmd.getCommandName() + " operation : " + e.getMessage());
+    } catch (APIException aex)
+    {
+      // Do Nothing. Rethrow
+      throw aex;
     } catch (Exception e)
     {
       try
