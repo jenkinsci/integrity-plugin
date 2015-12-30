@@ -8,11 +8,8 @@ import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
 import java.sql.Timestamp;
-import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Logger;
@@ -20,14 +17,13 @@ import java.util.logging.Logger;
 import org.apache.commons.codec.digest.DigestUtils;
 import org.apache.commons.lang.BooleanUtils;
 
-import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
-import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Field;
+import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Item;
+import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 import com.mks.api.response.WorkItemIterator;
-import com.mks.api.response.Response;
 
 import hudson.AbortException;
 import hudson.FilePath;
@@ -279,7 +275,7 @@ public final class IntegrityCMMember
 
         // Construct the project add command
         IAPICommand addCommand =
-        CommandFactory.createCommand(IAPICommand.PROJECT_ADD_COMMAND, ciSettings);
+            CommandFactory.createCommand(IAPICommand.PROJECT_ADD_COMMAND, ciSettings);
         addCommand.addOption(new APIOption(IAPIOption.PROJECT, configPath));
         addCommand.addOption(new APIOption(IAPIOption.CP_ID, cpid));
         addCommand.addOption(new FileAPIOption(IAPIOption.SOURCE_FILE, new File("" + member)));
@@ -433,70 +429,70 @@ public final class IntegrityCMMember
    * @throws AbortException
    * @throws APIException
    */
-public static final Map<String, String> viewCP(IntegrityConfigurable ciSettings, Set<String> projectCPIDs)
-	      throws APIException, AbortException
-	  {
-	    LOGGER.fine("Viewing Change Package List :" + projectCPIDs.toString());
-	    
-	    Map<String, String> membersInCP = new HashMap<String, String>();
-	   
-	    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
-	    if(projectCPIDs.isEmpty())
-	    	return membersInCP;
-	    
-	    for (Iterator<String> projectCPID = projectCPIDs.iterator(); projectCPID.hasNext();)
-	    	command.addSelection(projectCPID.next());
-	    try
-	    {
-	    	Response res= command.execute();
-	    	
-	    	 // Process the response object
-	        if (null != res)
-	        {
-	          if (res.getExitCode() == 0)
-	          {
-	        	  for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
-	                {
-	        		  WorkItem stateWorkItem = itWrokItem.next();
-		        	  Field stateField = stateWorkItem.getField(IAPIFields.CP_STATE);
-		        	  Field idField = stateWorkItem.getField(IAPIFields.id);
-		        	  String  cp = idField.getValueAsString();
-		        	  if(stateField.getValueAsString().equals("Closed"))
-		        	  {
-		        		  Field entriesField = stateWorkItem.getField(IAPIFields.MKS_ENTRIES);
-		        		  LOGGER.fine("Iterating enteries of Change Package " + stateWorkItem.toString());
-		        		  for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
-			                {
-			                  Item entriesInfo = it.next();
-			                  
-			                  Field memberField = entriesInfo.getField(IAPIFields.CP_MEMBER);
-			                  String member = memberField.getValueAsString();
-			                  Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
-			                  String  project = projectField.getValueAsString();
-			                  if (project.lastIndexOf('/') > 0)
-			                	  member = project.substring(0, project.lastIndexOf('/') + 1) + member;			                  
-			                  membersInCP.put(member, cp);
-			                  LOGGER.fine("Change Package entery:" + member.toString());
-			                }
-		        	  }
-	                }
-	          } else
-	          {
-	            LOGGER.severe("An error occured viewing Change Package!");
-	          }
-	        } else
-	        {
-	          LOGGER.severe("An error occured viewing Change Package!");
-	        }
-	        
-	    } catch (APIException ae)
-	    {
-	    	ExceptionHandler eh = new ExceptionHandler(ae);
-	        String exceptionString = eh.getMessage();
+  public static final Map<String, String> viewCP(IntegrityConfigurable ciSettings,
+      Set<String> projectCPIDs) throws APIException, AbortException
+  {
+    LOGGER.fine("Viewing Change Package List :" + projectCPIDs.toString());
 
-	        LOGGER.fine("View Change Package failed: " + exceptionString);
-	    }
-	    
-	    return membersInCP;
-	  }
+    Map<String, String> membersInCP = new HashMap<String, String>();
+
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
+    if (projectCPIDs.isEmpty())
+      return membersInCP;
+
+    for (Iterator<String> projectCPID = projectCPIDs.iterator(); projectCPID.hasNext();)
+      command.addSelection(projectCPID.next());
+    try
+    {
+      Response res = command.execute();
+
+      // Process the response object
+      if (null != res)
+      {
+        if (res.getExitCode() == 0)
+        {
+          for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
+          {
+            WorkItem stateWorkItem = itWrokItem.next();
+            Field stateField = stateWorkItem.getField(IAPIFields.CP_STATE);
+            Field idField = stateWorkItem.getField(IAPIFields.id);
+            String cp = idField.getValueAsString();
+            if (stateField.getValueAsString().equals("Closed"))
+            {
+              Field entriesField = stateWorkItem.getField(IAPIFields.MKS_ENTRIES);
+              LOGGER.fine("Iterating enteries of Change Package " + stateWorkItem.toString());
+              for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
+              {
+                Item entriesInfo = it.next();
+
+                Field memberField = entriesInfo.getField(IAPIFields.CP_MEMBER);
+                String member = memberField.getValueAsString();
+                Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
+                String project = projectField.getValueAsString();
+                if (project.lastIndexOf('/') > 0)
+                  member = project.substring(0, project.lastIndexOf('/') + 1) + member;
+                membersInCP.put(member, cp);
+                LOGGER.fine("Change Package entery:" + member.toString());
+              }
+            }
+          }
+        } else
+        {
+          LOGGER.severe("An error occured viewing Change Package!");
+        }
+      } else
+      {
+        LOGGER.severe("An error occured viewing Change Package!");
+      }
+
+    } catch (APIException ae)
+    {
+      ExceptionHandler eh = new ExceptionHandler(ae);
+      String exceptionString = eh.getMessage();
+
+      LOGGER.fine("View Change Package failed: " + exceptionString);
+    }
+
+    return membersInCP;
+  }
 }

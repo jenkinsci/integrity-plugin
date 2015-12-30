@@ -37,11 +37,12 @@ public class ISessionPool
   private KeyedObjectPool<IntegrityConfigurable, ISession> pool;
   // Max APIsessions in the pool, per IntegrityConfigurable. Note that this has to be higher than
   // the checkout thread count to prevent CO threads from blocking
-  private int maxTotalPerKey = 10;
+  private int maxTotalPerKey = 15;
   // Max idle APIsession objects in the pool, per IntegrityConfigurable
   private int maxIdlePerKey = 2;
   // 3 mins before idle Sessions are checked for eviction
   private long minEvictableIdleTimeMillis = 600000;
+  private GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
 
   private static class SingletonHolder
   {
@@ -64,9 +65,8 @@ public class ISessionPool
 
   private void startPool()
   {
-    GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
-    config.setMaxTotalPerKey(maxTotalPerKey);
-    config.setMaxIdlePerKey(maxIdlePerKey);
+    // config.setMaxTotalPerKey(maxTotalPerKey);
+    // config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
     config.setTestOnCreate(true);
     // config.setTestOnReturn(true);
@@ -87,6 +87,13 @@ public class ISessionPool
   {
     return pool;
   }
+  
+  /**
+   * @return
+   */
+  public GenericKeyedObjectPoolConfig getPoolConfig(){
+    return config;
+  }
 
   /**
    *
@@ -105,14 +112,14 @@ public class ISessionPool
     public ISession create(IntegrityConfigurable settings) throws Exception
     {
       LOGGER.log(Level.FINE, "Creating a new Integrity Session for the Session Pool :"
-          + settings.getUserName() + "@" + settings.getHostName() + ":" + settings.getPort());
+          + settings.getConfigId() + " :: " + settings.toString());
       ISession api = APISession.create(settings);
       if (null == api)
       {
         LOGGER.log(Level.SEVERE, "An Integrity API Session could not be established :"
-            + settings.getUserName() + "@" + settings.getHostName() + ":" + settings.getPort());
+            + settings.getConfigId() + " :: " + settings.toString());
         throw new AbortException("An Integrity API Session could not be established :"
-            + settings.getUserName() + "@" + settings.getHostName() + ":" + settings.getPort());
+            + settings.getConfigId() + " :: " + settings.toString());
       }
       return api;
     }
@@ -137,7 +144,8 @@ public class ISessionPool
     @Override
     public void destroyObject(IntegrityConfigurable key, PooledObject<ISession> p) throws Exception
     {
-      LOGGER.log(Level.FINEST, "Terminating Integrity Session Pool object : " + key.toString());
+      LOGGER.log(Level.FINEST, "Terminating Integrity Session Pool object : " + key.getConfigId()
+          + " :: " + key.toString());
       p.getObject().terminate();
     }
 
@@ -150,22 +158,25 @@ public class ISessionPool
     @Override
     public boolean validateObject(IntegrityConfigurable key, PooledObject<ISession> p)
     {
-      LOGGER.log(Level.FINEST, "Validating Integrity Session Pool object : " + key.toString());
+      LOGGER.log(Level.FINEST, "Validating Integrity Session Pool object : " + key.getConfigId()
+          + " :: " + key.toString());
       ISession session = p.getObject();
       if (null != session)
       {
         try
         {
+          // Sessions may custom timeout(configured on the Integrity Server) lying in the pool.
+          // Ping the pool session before any commands are executed on them.
           session.ping();
         } catch (InterruptedException e)
         {
-          LOGGER.log(Level.FINEST,
-              "Failed to ping Integrity Session Pool object : " + key.toString(), e);
+          LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+              + key.getConfigId() + " :: " + key.toString(), e);
           return false;
         } catch (APIException e)
         {
-          LOGGER.log(Level.FINEST,
-              "Failed to ping Integrity Session Pool object : " + key.toString(), e);
+          LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+              + key.getConfigId() + " :: " + key.toString(), e);
           return false;
         }
       } else
@@ -173,5 +184,6 @@ public class ISessionPool
 
       return true;
     }
+
   }
 }

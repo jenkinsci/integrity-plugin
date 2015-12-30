@@ -352,8 +352,16 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Update Derby DB with the API results
     siProject.parseProject(viewRes.getWorkItems());
 
-    // Terminate the Session associated with the view project command - with_interim session
-    command.terminateAPI();
+    try
+    {
+      // Terminate the Session associated with the view project command - with_interim session
+      command.terminateAPI();
+    } catch (Exception e)
+    {
+      // Log and ignore. This exception is thrown if there is an exception while invalidating
+      // session pool session.
+      LOGGER.log(Level.FINE, "Exception terminating interim API Session for View Project");
+    }
     return viewRes;
   }
 
@@ -890,7 +898,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.fine("ipHostName: " + ipHostName);
       LOGGER.fine("ipPort: " + ipPort);
 
-      IntegrityConfigurable ic = new IntegrityConfigurable("TEMP_ID", ipHostName, ipPort, hostName,
+      IntegrityConfigurable ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName,
           port, secure, userName, password);
       ISession api = APISession.create(ic);
       if (null != api)

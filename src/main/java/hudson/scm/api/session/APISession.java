@@ -108,7 +108,7 @@ public class APISession implements ISession
     // Create the Session
     session = ip.createSession(userName, password);
     // No need to ping here as the ping validation is handled by the ISessionPool class
-    //ping();
+    // ping();
   }
 
   /*
@@ -362,9 +362,9 @@ public class APISession implements ISession
   public String toString()
   {
     StringBuilder builder = new StringBuilder();
-    builder.append("Session Host :" + this.hostName + "/n");
-    builder.append("Session Port :" + this.port + "/n");
-    builder.append("Session User :" + this.userName + "/n");
+    builder.append("\n Session Host :" + this.hostName + "  ");
+    builder.append("Session Port :" + this.port + " ");
+    builder.append("Session User :" + this.userName + " ");
     return builder.toString();
   }
 

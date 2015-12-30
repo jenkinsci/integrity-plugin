@@ -133,12 +133,14 @@ public abstract class BasicAPICommand implements IAPICommand
     {
       try
       {
-        pool.invalidateObject(serverConfig, api);
+        if (api != null)
+          pool.invalidateObject(serverConfig, api);
       } catch (Exception e1)
       {
         LOGGER.log(Level.SEVERE,
             "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        api = null;
+        if (api != null)
+          api = null;
       }
       api = null;
       LOGGER.log(Level.SEVERE,
@@ -153,12 +155,14 @@ public abstract class BasicAPICommand implements IAPICommand
     {
       try
       {
-        pool.invalidateObject(serverConfig, api);
+        if (api != null)
+          pool.invalidateObject(serverConfig, api);
       } catch (Exception e1)
       {
         LOGGER.log(Level.SEVERE,
             "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        api = null;
+        if (api != null)
+          api = null;
       }
       api = null;
       LOGGER.log(Level.SEVERE,
@@ -169,16 +173,22 @@ public abstract class BasicAPICommand implements IAPICommand
       throw new AbortException("An Integrity API Session could not be established to "
           + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
           + cmd.getCommandName() + " operation : " + e.getMessage());
+    } catch (APIException aex)
+    {
+      // Do Nothing. Rethrow
+      throw aex;
     } catch (Exception e)
     {
       try
       {
-        pool.invalidateObject(serverConfig, api);
+        if (api != null)
+          pool.invalidateObject(serverConfig, api);
       } catch (Exception e1)
       {
         LOGGER.log(Level.SEVERE,
             "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        api = null;
+        if (api != null)
+          api = null;
       }
       api = null;
       LOGGER.log(Level.SEVERE,
@@ -261,12 +271,14 @@ public abstract class BasicAPICommand implements IAPICommand
    * @see hudson.scm.api.command.IAPICommand#terminateAPI()
    */
   @Override
-  public void terminateAPI()
+  public void terminateAPI() throws Exception
   {
     if (runCommandWithInterim && api != null)
     {
-      LOGGER.log(Level.FINEST, "Terminating API Session for WITH_INTERIM command :" + api.toString());
+      LOGGER.log(Level.FINEST,
+          "Terminating API Session for WITH_INTERIM command :" + api.toString());
       api.terminate();
+      ISessionPool.getInstance().getPool().invalidateObject(serverConfig, api);
     }
   }
 }
