@@ -176,6 +176,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 
     public Void call() throws Exception
     {
+      //PERF: Don't ping Integrity Server on borrow during checkout.
+      ISessionPool.getInstance().getPoolConfig().setTestOnBorrow(false);
+      
       ISession api = ISessionPool.getInstance().getPool().borrowObject(serverConfig);
 
       // Check to see if we need to release the APISession to clear some file handles
@@ -203,6 +206,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       {
         if (null != api)
           ISessionPool.getInstance().getPool().returnObject(serverConfig, api);
+        ISessionPool.getInstance().getPoolConfig().setTestOnBorrow(true);
       }
 
       openFileHandler.set(openFileHandler.get() + 1);
@@ -282,9 +286,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         {
           LOGGER.fine("Attempting to checkout file: " + targetFile.getAbsolutePath()
               + " at revision " + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
-              openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
-              targetFile, fetchChangedWorkspaceFiles)));
+          coThreads.add(executor
+              .submit(new CheckOutTask(integrityConfig, openFileHandler, memberName, configPath,
+                  memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
           fetchCount++;
         } else if (deltaFlag == 0 && fetchChangedWorkspaceFiles && checksum.length() > 0)
         {
@@ -292,26 +296,25 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
           {
             LOGGER.fine("Attempting to restore changed workspace file: "
                 + targetFile.getAbsolutePath() + " to revision " + memberRev);
-            coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
-                openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
-                targetFile, false)));
+            coThreads.add(executor.submit(new CheckOutTask(integrityConfig, openFileHandler,
+                memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, false)));
             fetchCount++;
           }
         } else if (deltaFlag == 1)
         {
           LOGGER.fine("Attempting to get new file: " + targetFile.getAbsolutePath()
               + " at revision " + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
-              openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
-              targetFile, fetchChangedWorkspaceFiles)));
+          coThreads.add(executor
+              .submit(new CheckOutTask(integrityConfig, openFileHandler, memberName, configPath,
+                  memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
           addCount++;
         } else if (deltaFlag == 2)
         {
           LOGGER.fine("Attempting to update file: " + targetFile.getAbsolutePath() + " to revision "
               + memberRev);
-          coThreads.add(executor.submit(new CheckOutTask(integrityConfig,
-              openFileHandler, memberName, configPath, memberID, memberRev, memberTimestamp,
-              targetFile, fetchChangedWorkspaceFiles)));
+          coThreads.add(executor
+              .submit(new CheckOutTask(integrityConfig, openFileHandler, memberName, configPath,
+                  memberID, memberRev, memberTimestamp, targetFile, fetchChangedWorkspaceFiles)));
           updateCount++;
         } else if (deltaFlag == 3)
         {
