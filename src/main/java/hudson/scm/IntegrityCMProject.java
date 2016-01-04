@@ -6,7 +6,6 @@ import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
@@ -41,7 +40,6 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
 import com.google.common.util.concurrent.ThreadFactoryBuilder;
-import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
 import com.mks.api.response.Item;
@@ -52,7 +50,6 @@ import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.APIUtils;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
@@ -655,7 +652,7 @@ public class IntegrityCMProject implements Serializable
         Map<String, String> future = executor.submit(new ParseProjectFolderTask(wi, this)).get();
         for (String key : future.keySet())
         {
-          LOGGER.log(Level.FINE, "Adding folder key in project configuration. Key: " + key
+          LOGGER.log(Level.FINEST, "Adding folder key in project configuration. Key: " + key
               + ", Value: " + future.get(key));
           pjConfigHash.put(key, future.get(key));
         }

@@ -58,7 +58,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
   @Override
   public Map<String, String> call() throws AbortException, SQLException
   {
-    LOGGER.log(Level.INFO, Thread.currentThread().getName()
+    LOGGER.log(Level.FINE, Thread.currentThread().getName()
         + " :: Parse project folder task begin for : " + wi.getField(IAPIFields.NAME).getValueAsString());
     String entryType = (null != wi.getField(IAPIFields.TYPE) ? wi.getField(IAPIFields.TYPE).getValueAsString() : "");
 
@@ -81,15 +81,15 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
           insert.clearParameters();
           insert.setShort(1, (short) 1); // Type
           insert.setString(2, wi.getField(IAPIFields.NAME).getValueAsString()); // Name
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Folder Task: Member: " + wi.getField(IAPIFields.NAME).getValueAsString());
           insert.setString(3, wi.getId()); // MemberID
-          LOGGER.log(Level.FINE,
+          LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Folder Task: MemberID: " + wi.getId());
           insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis())); // Timestamp
           insert.setClob(5, new StringReader("")); // Description
           insert.setString(6, wi.getId()); // ConfigPath
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Folder Task: ConfigPath: " + wi.getId());
 
           String subProjectRev = "";
@@ -98,12 +98,12 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
             subProjectRev = wi.getField(IAPIFields.MEMBER_REV).getItem().getId();
           }
           insert.setString(7, subProjectRev); // Revision
-          LOGGER.log(Level.FINE, Thread.currentThread().getName()
+          LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Folder Task: Revision: " + subProjectRev);
           insert.setString(8, pjDir); // RelativeFile
-          LOGGER.log(Level.FINE,
+          LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Folder Task: RelativeFile: " + pjDir);
-          LOGGER.log(Level.INFO, "Attempting to execute query " + insert);
+          LOGGER.log(Level.FINEST, "Attempting to execute query " + insert);
           insert.setString(9, ""); // Cpid
           insert.executeUpdate();
         } finally
@@ -118,7 +118,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
         }
       }
     }
-    LOGGER.log(Level.INFO, Thread.currentThread().getName()
+    LOGGER.log(Level.FINE, Thread.currentThread().getName()
         + " :: Parse project folder task end for : " + wi.getField(IAPIFields.NAME).getValueAsString());
     return pjConfigHash;
   }

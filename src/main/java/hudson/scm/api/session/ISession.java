@@ -2,6 +2,7 @@ package hudson.scm.api.session;
 
 import com.mks.api.Command;
 import com.mks.api.response.APIException;
+import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 
 public interface ISession
@@ -20,8 +21,11 @@ public interface ISession
   public void refreshAPISession() throws APIException;
 
   /**
-   * @return true if the Session is still active
+   * Ping the API session to test connectivity
+   * 
+   * @throws APIException
+   * @throws InterruptedException
    */
-  public boolean isAlive();
+  void ping() throws APIException, InterruptedException;
 
 }
