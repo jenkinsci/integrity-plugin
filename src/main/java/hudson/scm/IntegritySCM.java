@@ -438,7 +438,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
             Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
             if (lastSuccjob != null)
             {
-              Date lastSuccBuildDate = lastSuccjob.getTime();
+              Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
               projectCPIDs = siProject.projectCPDiff(
                   DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
                   lastSuccBuildDate);

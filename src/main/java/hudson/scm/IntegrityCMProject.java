@@ -450,14 +450,14 @@ public class IntegrityCMProject implements Serializable
    * @throws APIException
    * @throws AbortException
    */
-  public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date past)
+  public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date pastDate)
 		  throws APIException, AbortException
 	  {	
 	    // Construct the command
 	    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
 	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
-	    command.addOption(new APIOption(IAPIOption.REV, IAPIOption.ASOF + IntegritySCM.SDF.format(past)));
-	    
+	    command.addOption(new APIOption(IAPIOption.REV, IAPIOption.ASOF_REVISION_PREFIX + IAPIOption.TIMESTAMP_PREFIX + pastDate.getTime()));
+
 	    Set<String> projectCPIDs = new HashSet<String>();
 
 	    Response res = command.execute();
