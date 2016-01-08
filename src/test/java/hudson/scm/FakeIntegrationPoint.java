@@ -1,9 +1,7 @@
-// $Id: FakeIntegrationPoint.java 1.2 2015/03/30 20:19:12IST Reid, Randall (rreid) Exp  $
-// (c) Copyright 2014 by PTC Inc. All rights reserved.
-//
-// This Software is unpublished, valuable, confidential property of
-// PTC Inc. Any use or disclosure of this Software without the express
-// written permission of PTC Inc. is strictly prohibited.
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
 
 package hudson.scm;
 
