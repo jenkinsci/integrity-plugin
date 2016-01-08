@@ -1,13 +1,7 @@
-//  
-//   $Id: FakeObject.java 1.4 2013/02/27 19:49:45IST alivogiannis Exp  $
-//
-//   Copyright 2011 by PTC Inc. All rights reserved.
-//
-//   This Software is unpublished, valuable, confidential property of
-//   PTC Inc.   Any use or disclosure of this Software
-//   without the express written permission of PTC Inc.
-//   is strictly prohibited.
-//
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
 
 package hudson.scm;
 
