@@ -56,6 +56,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
     digester.addBeanPropertySetter("*/items/item/date");
     digester.addBeanPropertySetter("*/items/item/annotation");
     digester.addBeanPropertySetter("*/items/item/differences");
+    digester.addBeanPropertySetter("*/items/item/viewCP");
     digester.addBeanPropertySetter("*/items/item/cpid");
     digester.addBeanPropertySetter("*/items/item/msg");
     // The digested node/item is added to the change set through {{java.util.List.add()}}

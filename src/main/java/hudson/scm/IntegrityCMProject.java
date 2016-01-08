@@ -1,6 +1,5 @@
 /*******************************************************************************
- * Contributors:
- *     PTC 2016
+ * Contributors: PTC 2016
  *******************************************************************************/
 package hudson.scm;
 
@@ -384,7 +383,12 @@ public class IntegrityCMProject implements Serializable
               memberInfo.get(CM_PROJECT.MEMBER_ID).toString(),
               memberInfo.get(CM_PROJECT.REVISION).toString(), oldRev)
           : ""));
-      item.appendChild(differences);      
+      item.appendChild(differences);
+      // Add the <viewCP> element
+      Element viewCP = xmlDoc.createElement("viewCP");
+      viewCP.appendChild(xmlDoc.createCDATASection(
+          IntegrityCMMember.getViewCP(memberInfo.get(CM_PROJECT.CPID).toString())));
+      item.appendChild(viewCP);
     } catch (UnsupportedEncodingException uee)
     {
       LOGGER.warning(
@@ -444,7 +448,7 @@ public class IntegrityCMProject implements Serializable
 
     return command.execute();
   }
-  
+
   /**
    * Performs a projectCPDiff on this Integrity CM Project
    * 
@@ -455,45 +459,47 @@ public class IntegrityCMProject implements Serializable
    * @throws AbortException
    */
   public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date pastDate)
-		  throws APIException, AbortException
-	  {	
-	    // Construct the command
-	    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
-	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
-	    command.addOption(new APIOption(IAPIOption.REV, IAPIOption.ASOF_REVISION_PREFIX + IAPIOption.TIMESTAMP_PREFIX + pastDate.getTime()));
+      throws APIException, AbortException
+  {
+    // Construct the command
+    IAPICommand command =
+        CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
+    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+    command.addOption(new APIOption(IAPIOption.REV,
+        IAPIOption.ASOF_REVISION_PREFIX + IAPIOption.TIMESTAMP_PREFIX + pastDate.getTime()));
 
-	    Set<String> projectCPIDs = new HashSet<String>();
+    Set<String> projectCPIDs = new HashSet<String>();
 
-	    Response res = command.execute();
-	    
-	    if (null != res)
+    Response res = command.execute();
+
+    if (null != res)
+    {
+      if (res.getExitCode() == 0)
+      {
+        WorkItem wi = res.getWorkItem(getConfigurationPath());
+        Field cpField = wi.getField(IAPIFields.CP_ENTRIES);
+        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
         {
-          if (res.getExitCode() == 0)
-          {
-		    WorkItem wi = res.getWorkItem(getConfigurationPath());
-	        Field cpField = wi.getField(IAPIFields.CP_ENTRIES);        
-	        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
-	            {
-	              Item cpInfo = it.next();
-	              
-	              Field idField = cpInfo.getField(IAPIFields.id);
-	              String id = idField.getValueAsString();
-	              projectCPIDs.add(id);
-	              
-	              Field userField = cpInfo.getField(IAPIFields.USER);
-	              String user = userField.getValueAsString();
-	            }
-          } else
-          {
-	            LOGGER.severe("An error occured projectCPDiff!");
-	      }
-        } else
-        {
-            LOGGER.severe("An error occured projectCPDiff!");
+          Item cpInfo = it.next();
+
+          Field idField = cpInfo.getField(IAPIFields.id);
+          String id = idField.getValueAsString();
+          projectCPIDs.add(id);
+
+          Field userField = cpInfo.getField(IAPIFields.USER);
+          String user = userField.getValueAsString();
         }
-  
-        return projectCPIDs;
-	  }
+      } else
+      {
+        LOGGER.severe("An error occured projectCPDiff!");
+      }
+    } else
+    {
+      LOGGER.severe("An error occured projectCPDiff!");
+    }
+
+    return projectCPIDs;
+  }
 
 
   /**
