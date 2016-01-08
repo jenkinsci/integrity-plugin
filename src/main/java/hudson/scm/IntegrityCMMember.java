@@ -1,6 +1,5 @@
 /*******************************************************************************
- * Contributors:
- *     PTC 2016
+ * Contributors: PTC 2016
  *******************************************************************************/
 package hudson.scm;
 
@@ -117,6 +116,22 @@ public final class IntegrityCMMember
     sb.append(memberRev);
     sb.append("&selection=");
     sb.append(URLEncoder.encode(memberID, ENCODING));
+    return sb.toString();
+  }
+
+
+  /**
+   * Returns an URL encoded string representation for invoking this Integrity CP view This assumes
+   * that IntegrityCMProject.compareBaseline() was invoked!
+   * 
+   * @param cpid
+   * @return
+   */
+  public static String getViewCP(String cpid)
+  {
+    StringBuilder sb = new StringBuilder();
+    sb.append("viewcp?selection=");
+    sb.append(cpid);
     return sb.toString();
   }
 
