@@ -104,6 +104,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
               Thread.currentThread().getName() + " :: Parse Folder Task: RelativeFile: " + pjDir);
           LOGGER.log(Level.FINEST, "Attempting to execute query " + insert);
           insert.setString(9, ""); // Cpid
+          insert.setShort(10, (short) 0); // Delta defaulted to "No change" for CP mode
           insert.executeUpdate();
         } finally
         {

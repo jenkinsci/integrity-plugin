@@ -52,11 +52,14 @@ import com.mks.api.response.WorkItemIterator;
 import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
+import hudson.scm.IntegrityCMMember.CPInfo;
+import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
+import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 import hudson.scm.api.option.IAPIOption;
 
 /**
@@ -693,6 +696,101 @@ public class IntegrityCMProject implements Serializable
       executor.awaitTermination(2, TimeUnit.MINUTES);
       LOGGER.log(Level.FINE, "Parse Project Executor shutdown.");
     }
+  }
+
+  public String getChangeLogforCPMode(String version, Map<CPInfo, List<CPMember>> membersInCP)
+  {
+    try
+    {
+      // Initialize the XML document builder
+      DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      // Initialize the XML Document and change log
+      xmlDoc = docBuilder.newDocument();
+      changeLog = new StringBuffer();
+      // Create the root <changelog> element
+      Element changeLogElem = xmlDoc.createElement("changelog");
+      // Add the <changelog> to the xmlDoc
+      xmlDoc.appendChild(changeLogElem);
+
+      // Create the <items> element
+      Element items = xmlDoc.createElement("items");
+      // Set the version attribute to the <items> element
+      items.setAttribute("version", version);
+      // Append the <items> to the root element <changelog>
+      changeLogElem.appendChild(items);
+
+      for (CPInfo cpInfo : membersInCP.keySet())
+      {
+        List<CPMember> cpMembers = membersInCP.get(cpInfo);
+        Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
+
+        for (CPMember cpMember : cpMembers)
+        {
+          // Create the individual <item> element for the add/update/drop
+          Element item = xmlDoc.createElement("item");
+          CP_MEMBER_OPERATION operation = cpMember.getOperationType();
+          if (operation == CP_MEMBER_OPERATION.ADD)
+          {
+            item.setAttribute("action", "add");
+          } else if (operation == CP_MEMBER_OPERATION.DROP)
+          {
+            item.setAttribute("action", "delete");
+          } else if (operation == CP_MEMBER_OPERATION.UPDATE)
+          {
+            item.setAttribute("action", "update");
+          } else if (operation == CP_MEMBER_OPERATION.CREATESUBPROJECT)
+          {
+            item.setAttribute("action", "add");
+          } else if (operation == CP_MEMBER_OPERATION.RENAME)
+          {
+            item.setAttribute("action", "undefined");
+          } else if (operation == CP_MEMBER_OPERATION.MOVEMEMBER)
+          {
+            item.setAttribute("action", "update");
+          } else if (operation == CP_MEMBER_OPERATION.UPDATEREVISION)
+          {
+            item.setAttribute("action", "update");
+          }
+
+          memberInfo.put(CM_PROJECT.AUTHOR, cpMember.getUser());
+          memberInfo.put(CM_PROJECT.CONFIG_PATH, cpMember.getConfigpath());
+          memberInfo.put(CM_PROJECT.CPID, cpInfo.getId());
+          memberInfo.put(CM_PROJECT.DESCRIPTION, "");
+          memberInfo.put(CM_PROJECT.NAME, cpMember.getMemberName());
+          memberInfo.put(CM_PROJECT.TIMESTAMP, new Timestamp(cpInfo.getClosedDate().getTime()));
+          memberInfo.put(CM_PROJECT.REVISION, cpMember.getRevision());
+          memberInfo.put(CM_PROJECT.MEMBER_ID, cpMember.getMemberName());
+
+          // Append the <item> to the <items> element
+          items.appendChild(writeChangeLog(item, memberInfo));
+        }
+      }
+
+      // Write the content into a String
+      TransformerFactory tfactory = TransformerFactory.newInstance();
+      Transformer serializer = tfactory.newTransformer();
+      // Setup indenting for a readable output
+      serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+      serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+      StringWriter sw = new StringWriter();
+      serializer.transform(new DOMSource(xmlDoc), new StreamResult(sw));
+      changeLog.append(sw.toString());
+      sw.close();
+    } catch (ParserConfigurationException pce)
+    {
+      LOGGER.warning("Caught Parser Configuration Exception while generating Change Log!");
+      LOGGER.warning(pce.getMessage());
+    } catch (TransformerException tfe)
+    {
+      LOGGER.warning("Caught Transformer Exception while generating Change Log!");
+      LOGGER.warning(tfe.getMessage());
+    } catch (IOException ioe)
+    {
+      LOGGER.warning("Caught IO Exception while generating Change Log!");
+      LOGGER.warning(ioe.getMessage());
+    }
+
+    return changeLog.toString();
   }
 }
 

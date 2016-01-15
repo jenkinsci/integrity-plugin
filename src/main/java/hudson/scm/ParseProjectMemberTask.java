@@ -172,6 +172,7 @@ public class ParseProjectMemberTask implements Callable<Void>
               Thread.currentThread().getName() + " :: Parse Member Task: RelativeFile: "
                   + memberName.substring(projectRoot.length()));
           insert.setString(9, ""); // Cpid
+          insert.setShort(10, (short) 0); // Delta defaulted to "No change" for CP mode
           LOGGER.log(Level.FINE, "Attempting to execute query " + insert);
           insert.executeUpdate();
 
