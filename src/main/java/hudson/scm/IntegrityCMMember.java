@@ -10,11 +10,16 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.URLEncoder;
+import java.sql.SQLException;
 import java.sql.Timestamp;
-import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.Iterator;
+import java.util.List;
 import java.util.Map;
 import java.util.Set;
+import java.util.TreeMap;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
@@ -38,6 +43,7 @@ import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.FileAPIOption;
 import hudson.scm.api.option.IAPIFields;
+import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
 
@@ -445,73 +451,232 @@ public final class IntegrityCMMember
    * 
    * @param ciSettings Integrity API Session
    * @param projectCPIDs List of Change Package ID
+   * @param cpCacheTable
+   * @param membersInCP
    * @throws AbortException
    * @throws APIException
+   * @throws SQLException
    */
-  public static final Map<String, String> viewCP(IntegrityConfigurable ciSettings,
-      Set<String> projectCPIDs) throws APIException, AbortException
+  public static final Map<CPInfo, List<CPMember>> viewCP(IntegrityConfigurable ciSettings,
+      Set<String> projectCPIDs, String cpCacheTable, Map<CPInfo, List<CPMember>> membersInCP)
+          throws APIException, AbortException, SQLException
   {
+    LOGGER.log(Level.FINE, "Retrieving cached CPs.");
+
+    DerbyUtils.getCPCacheTable(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(), cpCacheTable);
+    projectCPIDs
+        .addAll(DerbyUtils.doCPCacheOperations(cpCacheTable, null, null, IAPIFields.GET_OPERATION));
+
     LOGGER.fine("Viewing Change Package List :" + projectCPIDs.toString());
-
-    Map<String, String> membersInCP = new HashMap<String, String>();
-
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
     if (projectCPIDs.isEmpty())
       return membersInCP;
 
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_CP_COMMAND, ciSettings);
+
     for (Iterator<String> projectCPID = projectCPIDs.iterator(); projectCPID.hasNext();)
       command.addSelection(projectCPID.next());
-    try
+    Response res = command.execute();
+
+    // Process the response object
+    if (null != res && res.getExitCode() == 0)
     {
-      Response res = command.execute();
-
-      // Process the response object
-      if (null != res)
+      for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
       {
-        if (res.getExitCode() == 0)
+        WorkItem workItem = itWrokItem.next();
+        Field stateField = workItem.getField(IAPIFields.CP_STATE);
+        Field idField = workItem.getField(IAPIFields.id);
+        String cp = idField.getValueAsString();
+        String cpState = stateField.getValueAsString();
+        String user = workItem.getField(IAPIFields.USER).getValueAsString();
+        LOGGER.fine("CP ID: " + cp + ", State :" + cpState);
+        if (cpState.equalsIgnoreCase("Closed"))
         {
-          for (WorkItemIterator itWrokItem = res.getWorkItems(); itWrokItem.hasNext();)
-          {
-            WorkItem stateWorkItem = itWrokItem.next();
-            Field stateField = stateWorkItem.getField(IAPIFields.CP_STATE);
-            Field idField = stateWorkItem.getField(IAPIFields.id);
-            String cp = idField.getValueAsString();
-            if (stateField.getValueAsString().equals("Closed"))
-            {
-              Field entriesField = stateWorkItem.getField(IAPIFields.MKS_ENTRIES);
-              LOGGER.fine("Iterating enteries of Change Package " + stateWorkItem.toString());
-              for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
-              {
-                Item entriesInfo = it.next();
+          Date closedDate = workItem.getField(IAPIFields.CLOSED_DATE).getDateTime();
+          List<CPMember> memberList = new ArrayList<CPMember>();
+          Field entriesField = workItem.getField(IAPIFields.MKS_ENTRIES);
+          LOGGER.fine("Iterating entries of Change Package " + workItem.toString());
 
-                Field memberField = entriesInfo.getField(IAPIFields.CP_MEMBER);
-                String member = memberField.getValueAsString();
-                Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
-                String project = projectField.getValueAsString();
-                if (project.lastIndexOf('/') > 0)
-                  member = project.substring(0, project.lastIndexOf('/') + 1) + member;
-                membersInCP.put(member, cp);
-                LOGGER.fine("Change Package entery:" + member.toString());
+          for (Iterator<Item> it = entriesField.getList().iterator(); it.hasNext();)
+          {
+            Item entriesInfo = it.next();
+
+            Field memberField = entriesInfo.getField(IAPIFields.CP_MEMBER);
+            String member = memberField.getValueAsString();
+            Field projectField = entriesInfo.getField(IAPIFields.PROJECT);
+            String operationType = entriesInfo.getField(IAPIFields.TYPE).getValueAsString();
+            String revision = entriesInfo.getField(IAPIFields.REVISION).getValueAsString();
+            String project = projectField.getValueAsString();
+            String configpath = entriesInfo.getField(IAPIFields.CONFIG_PATH).getValueAsString();
+            String location =
+                entriesInfo.getField(IAPIFields.CONFIG_PATH).getValueAsString().replace("#", "");
+            if (project.lastIndexOf('/') > 0)
+              member = project.substring(0, project.lastIndexOf('/') + 1) + member;
+
+            CPMember cpMember = new CPMember(member, CP_MEMBER_OPERATION.searchEnum(operationType),
+                revision, location, configpath, user);
+
+            if (memberList.contains(cpMember))
+            {
+              boolean removed = false;
+              for (Iterator<CPMember> memIt = memberList.iterator(); memIt.hasNext();)
+              {
+                CPMember inListCpMem = memIt.next();
+                if (inListCpMem.getMemberName().equals(cpMember.getMemberName()))
+                {
+                  String inListCPMemRev = inListCpMem.getRevision().replace(".", "");
+                  String incomingRevision = revision.replace(".", "");
+                  if (Integer.parseInt(inListCPMemRev) < Integer.parseInt(incomingRevision))
+                  {
+                    // Consider the latest revision only and consider that revision's operation
+                    // for build
+                    memIt.remove();
+                    removed = true;
+                  }
+                }
               }
-            }
+              if (removed)
+                memberList.add(cpMember);
+            } else
+              memberList.add(cpMember);
+            LOGGER.fine("Change Package entry:" + member.toString());
           }
+
+          LOGGER.log(Level.FINE,
+              "Adding CP members for CP: " + cp + "with Closed Date :" + closedDate);
+          membersInCP.put(new CPInfo(cp, closedDate), memberList);
+
+          // Delete the cached CPID, if exists
+          LOGGER.log(Level.FINE, "Deleting cached CP : " + cp);
+          DerbyUtils.doCPCacheOperations(cpCacheTable, cp, cpState, IAPIFields.DELETE_OPERATION);
         } else
         {
-          LOGGER.severe("An error occured viewing Change Package!");
+          // Insert CPID with State into Derby
+          LOGGER.log(Level.FINE,
+              "CP State not closed. Caching CP : " + cp + " with State : " + cpState);
+          DerbyUtils.doCPCacheOperations(cpCacheTable, cp, cpState, IAPIFields.ADD_OPERATION);
         }
-      } else
-      {
-        LOGGER.severe("An error occured viewing Change Package!");
       }
-
-    } catch (APIException ae)
+    } else
     {
-      ExceptionHandler eh = new ExceptionHandler(ae);
-      String exceptionString = eh.getMessage();
-
-      LOGGER.fine("View Change Package failed: " + exceptionString);
+      LOGGER.severe("An error occured viewing Change Package!");
     }
 
+    // Sort by closed date
+    membersInCP = new TreeMap<CPInfo, List<CPMember>>(membersInCP);
     return membersInCP;
   }
+
+  /**
+   *
+   * @author Author: asen
+   * @version $Revision: $
+   */
+  public static class CPMember implements Comparable<CPMember>
+  {
+    private final String memberName;
+    private final CP_MEMBER_OPERATION operationType;
+    private final String revision;
+    private final String location;
+    private final String user;
+    private final String configpath;
+
+    public CPMember(final String memberName, final CP_MEMBER_OPERATION operation,
+        final String revision, final String location, final String configpath, final String user)
+    {
+      this.memberName = memberName;
+      this.operationType = operation;
+      this.revision = revision;
+      this.location = location;
+      this.user = user;
+      this.configpath = configpath;
+    }
+
+    public String getMemberName()
+    {
+      return memberName;
+    }
+
+    public CP_MEMBER_OPERATION getOperationType()
+    {
+      return operationType;
+    }
+
+    public String getRevision()
+    {
+      return revision;
+    }
+
+    public String getLocation()
+    {
+      return location;
+    }
+
+    public String getUser()
+    {
+      return user;
+    }
+
+    public String getConfigpath()
+    {
+      return configpath;
+    }
+
+    @Override
+    public int compareTo(CPMember o)
+    {
+      return this.memberName.compareTo(o.getMemberName());
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      return this.memberName.equals(((CPMember) obj).getMemberName());
+    }
+  }
+
+  /**
+   *
+   * @author Author: asen
+   * @version $Revision: $
+   */
+  public static class CPInfo implements Comparable<CPInfo>
+  {
+    private final String id;
+    private final Date closedDate;
+
+    public CPInfo(final String id, final Date closedDate)
+    {
+      this.id = id;
+      this.closedDate = closedDate;
+    }
+
+    public String getId()
+    {
+      return id;
+    }
+
+    public Date getClosedDate()
+    {
+      return closedDate;
+    }
+
+    @Override
+    public int compareTo(CPInfo o)
+    {
+      return this.closedDate.compareTo(o.getClosedDate());
+    }
+
+    @Override
+    public boolean equals(Object obj)
+    {
+      return this.id.equals(((CPInfo) obj).getId());
+    }
+
+    @Override
+    public int hashCode()
+    {
+      return this.id.hashCode();
+    }
+  }
+
 }
