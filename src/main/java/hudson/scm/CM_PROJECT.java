@@ -1,3 +1,6 @@
+/*******************************************************************************
+ * Contributors: PTC 2016
+ *******************************************************************************/
 package hudson.scm;
 
 public enum CM_PROJECT
@@ -84,7 +87,13 @@ public enum CM_PROJECT
     public String toString()
     {
       return "CPID";
-    }  
+    }
+  },
+  CP_STATE {
+    public String toString()
+    {
+      return "CP_STATE";
+    }
   },
   UNDEFINED {
     public String toString()

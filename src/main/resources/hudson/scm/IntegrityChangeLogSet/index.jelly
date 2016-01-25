@@ -12,7 +12,7 @@
   	<th class="changeset-message">Author</th>
   	<th class="changeset-message">Filename</th>
   	<th class="changeset-message">Revision</th>
-  	<th class="changeset-message">Cpid</th>
+  	<th class="changeset-message">C.P. ID</th>
   	<th class="changeset-message">Date</th>
   	<th class="changeset-message">Comments</th>
   </tr>
@@ -29,7 +29,7 @@
   	<td>${cs.author}</td>
   	<td>${cs.file}</td>
   	<td><a href="${browser.getChangeSetLink(cs)}" target="_blank">${cs.rev}</a></td>
-  	<td>${cs.cpid}</td>
+  	<td><a href="${browser.getViewCPLink(cs)}" target="_blank">${cs.cpid}</a></td>
   	<td>${cs.date}</td>
   	<td>${cs.msg}</td>
   </tr>

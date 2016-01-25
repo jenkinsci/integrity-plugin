@@ -1,3 +1,6 @@
+/*******************************************************************************
+ * Contributors: PTC 2016
+ *******************************************************************************/
 package hudson.scm;
 
 import java.io.File;
@@ -41,6 +44,8 @@ import hudson.model.Job;
 import hudson.model.ModelObject;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.scm.IntegrityCMMember.CPInfo;
+import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.ExceptionHandler;
@@ -229,9 +234,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     try
     {
-      projectCacheTable =
-          DerbyUtils.getProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
-              jobName, configurationName, run.getNumber());
+      projectCacheTable = DerbyUtils.getCachedTableFromRegistry("PROJECT_CACHE_TABLE",
+          ((DescriptorImpl) this.getDescriptor()).getDataSource(), jobName, configurationName,
+          run.getNumber());
     } catch (SQLException sqlex)
     {
       LOGGER.severe("SQL Exception caught...");
@@ -321,6 +326,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   /**
    * Primes the Integrity Project Member metadata information
    * 
+   * @param cpBasedMode
+   * 
    * @return response Integrity API Response
    * @throws APIException
    * @throws SQLException
@@ -383,6 +390,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
     listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
 
+    Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
+
     // Lets start with creating an authenticated Integrity API Session for various parts of this
     // operation...
     IntegrityConfigurable desSettings =
@@ -430,8 +439,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
-          Map<String, String> membersInCP = new HashMap<String, String>();
-
           if (CPBasedMode && !cleanCopy)
           {
             Set<String> projectCPIDs = new HashSet<String>();
@@ -442,8 +449,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
               projectCPIDs = siProject.projectCPDiff(
                   DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
                   lastSuccBuildDate);
-              membersInCP = IntegrityCMMember.viewCP(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs);
+
+              IntegrityCMMember.viewCP(
+                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+                  job.getFullName().replace("/", "_"), membersInCP);
             }
           }
 
@@ -493,7 +502,15 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
         // Write out the change log file, which will be used by the parser to report the updates
         listener.getLogger().println("Writing build change log...");
-        writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+        if (CPBasedMode)
+        {
+          writer.println(
+              siProject.getChangeLogforCPMode(String.valueOf(run.getNumber()), membersInCP));
+        } else
+        {
+          writer
+              .println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+        }
         listener.getLogger()
             .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
         // Delete non-members in this workspace, if appropriate...
@@ -601,6 +618,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   {
     // Log the call for now...
     LOGGER.fine("compareRemoteRevisionWith() invoked...!");
+    int changeCount = 0;
 
     // Lets get the baseline from our last build
     if (null != baseline && baseline instanceof IntegrityRevisionState)
@@ -623,16 +641,41 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
               configurationName, 0);
 
           initializeCMProject(job.getCharacteristicEnvVars(), projectCacheTable);
-          initializeCMProjectMembers();
+          Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
 
-          // Compare this project with the old project
-          int changeCount = DerbyUtils.compareBaseline(serverConfig, prevProjectCache,
-              projectCacheTable, null, skipAuthorInfo, false);
+          if (CPBasedMode)
+          {
+            Set<String> projectCPIDs = new HashSet<String>();
+            Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
+            if (lastSuccjob != null)
+            {
+              Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
+              projectCPIDs = getIntegrityProject().projectCPDiff(
+                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
+                  lastSuccBuildDate);
+
+              IntegrityCMMember.viewCP(
+                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+                  job.getFullName().replace("/", ""), membersInCP);
+              changeCount = membersInCP.size();
+            }
+          } else
+          {
+            initializeCMProjectMembers();
+
+            // Compare this project with the old project for file mode
+            changeCount = DerbyUtils.compareBaseline(serverConfig, prevProjectCache,
+                projectCacheTable, membersInCP, skipAuthorInfo, false);
+          }
           // Finally decide whether or not we need to build again
           if (changeCount > 0)
           {
-            listener.getLogger()
-                .println("Project contains changes a total of " + changeCount + " changes!");
+            if (CPBasedMode)
+              listener.getLogger()
+                  .println("Detected total " + changeCount + " closed change packages.");
+            else
+              listener.getLogger()
+                  .println("Project contains changes a total of " + changeCount + " changes!");
             return PollingResult.SIGNIFICANT;
           } else
           {
@@ -898,8 +941,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.fine("ipHostName: " + ipHostName);
       LOGGER.fine("ipPort: " + ipPort);
 
-      IntegrityConfigurable ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName,
-          port, secure, userName, password);
+      IntegrityConfigurable ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port,
+          secure, userName, password);
       ISession api = APISession.create(ic);
       if (null != api)
       {

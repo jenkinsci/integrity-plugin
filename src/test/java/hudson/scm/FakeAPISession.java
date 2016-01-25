@@ -1,13 +1,7 @@
-//  
-//   $Id: FakeAPISession.java 1.8 2014/09/24 01:08:32IST gisraeli Exp  $
-//
-//   Copyright 2011 by PTC Inc. All rights reserved.
-//
-//   This Software is unpublished, valuable, confidential property of
-//   PTC Inc.   Any use or disclosure of this Software
-//   without the express written permission of PTC Inc.
-//   is strictly prohibited.
-//
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
 
 package hudson.scm;
 

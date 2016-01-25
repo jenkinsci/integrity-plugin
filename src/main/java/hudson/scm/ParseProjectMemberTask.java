@@ -1,9 +1,8 @@
-// $Id: $
-// (c) Copyright 2015 by PTC Inc. All rights reserved.
-//
-// This Software is unpublished, valuable, confidential property of
-// PTC Inc. Any use or disclosure of this Software without the express
-// written permission of PTC Inc. is strictly prohibited.
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
+
 
 package hudson.scm;
 
@@ -173,6 +172,7 @@ public class ParseProjectMemberTask implements Callable<Void>
               Thread.currentThread().getName() + " :: Parse Member Task: RelativeFile: "
                   + memberName.substring(projectRoot.length()));
           insert.setString(9, ""); // Cpid
+          insert.setShort(10, (short) 0); // Delta defaulted to "No change" for CP mode
           LOGGER.log(Level.FINE, "Attempting to execute query " + insert);
           insert.executeUpdate();
 

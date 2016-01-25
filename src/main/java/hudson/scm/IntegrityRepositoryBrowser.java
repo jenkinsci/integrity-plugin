@@ -1,3 +1,7 @@
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
 package hudson.scm;
 
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
@@ -15,5 +19,7 @@ public abstract class IntegrityRepositoryBrowser extends RepositoryBrowser<Integ
    * @return URL containing the link to difference two revisions
    */
   public abstract URL getDiffLink(IntegrityChangeLog logEntry) throws IOException;
+  
+  public abstract URL getViewCPLink(IntegrityChangeLog logEntry) throws IOException;
 
 }

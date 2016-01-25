@@ -1,3 +1,6 @@
+/*******************************************************************************
+ * Contributors: PTC 2016
+ *******************************************************************************/
 package hudson.scm;
 
 import java.io.IOException;
@@ -49,11 +52,14 @@ import com.mks.api.response.WorkItemIterator;
 import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
+import hudson.scm.IntegrityCMMember.CPInfo;
+import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.command.CommandFactory;
 import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
+import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 import hudson.scm.api.option.IAPIOption;
 
 /**
@@ -380,7 +386,12 @@ public class IntegrityCMProject implements Serializable
               memberInfo.get(CM_PROJECT.MEMBER_ID).toString(),
               memberInfo.get(CM_PROJECT.REVISION).toString(), oldRev)
           : ""));
-      item.appendChild(differences);      
+      item.appendChild(differences);
+      // Add the <viewCP> element
+      Element viewCP = xmlDoc.createElement("viewCP");
+      viewCP.appendChild(xmlDoc.createCDATASection(
+          IntegrityCMMember.getViewCP(memberInfo.get(CM_PROJECT.CPID).toString())));
+      item.appendChild(viewCP);
     } catch (UnsupportedEncodingException uee)
     {
       LOGGER.warning(
@@ -440,7 +451,7 @@ public class IntegrityCMProject implements Serializable
 
     return command.execute();
   }
-  
+
   /**
    * Performs a projectCPDiff on this Integrity CM Project
    * 
@@ -451,45 +462,47 @@ public class IntegrityCMProject implements Serializable
    * @throws AbortException
    */
   public Set<String> projectCPDiff(IntegrityConfigurable serverConf, Date pastDate)
-		  throws APIException, AbortException
-	  {	
-	    // Construct the command
-	    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
-	    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
-	    command.addOption(new APIOption(IAPIOption.REV, IAPIOption.ASOF_REVISION_PREFIX + IAPIOption.TIMESTAMP_PREFIX + pastDate.getTime()));
+      throws APIException, AbortException
+  {
+    // Construct the command
+    IAPICommand command =
+        CommandFactory.createCommand(IAPICommand.PROJECT_CPDIFF_COMMAND, serverConf);
+    command.addOption(new APIOption(IAPIOption.PROJECT, fullConfigSyntax));
+    command.addOption(new APIOption(IAPIOption.REV,
+        IAPIOption.ASOF_REVISION_PREFIX + IAPIOption.TIMESTAMP_PREFIX + pastDate.getTime()));
 
-	    Set<String> projectCPIDs = new HashSet<String>();
+    Set<String> projectCPIDs = new HashSet<String>();
 
-	    Response res = command.execute();
-	    
-	    if (null != res)
+    Response res = command.execute();
+
+    if (null != res)
+    {
+      if (res.getExitCode() == 0)
+      {
+        WorkItem wi = res.getWorkItem(getConfigurationPath());
+        Field cpField = wi.getField(IAPIFields.CP_ENTRIES);
+        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
         {
-          if (res.getExitCode() == 0)
-          {
-		    WorkItem wi = res.getWorkItem(getConfigurationPath());
-	        Field cpField = wi.getField(IAPIFields.CP_ENTRIES);        
-	        for (Iterator<Item> it = cpField.getList().iterator(); it.hasNext();)
-	            {
-	              Item cpInfo = it.next();
-	              
-	              Field idField = cpInfo.getField(IAPIFields.id);
-	              String id = idField.getValueAsString();
-	              projectCPIDs.add(id);
-	              
-	              Field userField = cpInfo.getField(IAPIFields.USER);
-	              String user = userField.getValueAsString();
-	            }
-          } else
-          {
-	            LOGGER.severe("An error occured projectCPDiff!");
-	      }
-        } else
-        {
-            LOGGER.severe("An error occured projectCPDiff!");
+          Item cpInfo = it.next();
+
+          Field idField = cpInfo.getField(IAPIFields.id);
+          String id = idField.getValueAsString();
+          projectCPIDs.add(id);
+
+          Field userField = cpInfo.getField(IAPIFields.USER);
+          String user = userField.getValueAsString();
         }
-  
-        return projectCPIDs;
-	  }
+      } else
+      {
+        LOGGER.severe("An error occured projectCPDiff!");
+      }
+    } else
+    {
+      LOGGER.severe("An error occured projectCPDiff!");
+    }
+
+    return projectCPIDs;
+  }
 
 
   /**
@@ -683,6 +696,101 @@ public class IntegrityCMProject implements Serializable
       executor.awaitTermination(2, TimeUnit.MINUTES);
       LOGGER.log(Level.FINE, "Parse Project Executor shutdown.");
     }
+  }
+
+  public String getChangeLogforCPMode(String version, Map<CPInfo, List<CPMember>> membersInCP)
+  {
+    try
+    {
+      // Initialize the XML document builder
+      DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+      // Initialize the XML Document and change log
+      xmlDoc = docBuilder.newDocument();
+      changeLog = new StringBuffer();
+      // Create the root <changelog> element
+      Element changeLogElem = xmlDoc.createElement("changelog");
+      // Add the <changelog> to the xmlDoc
+      xmlDoc.appendChild(changeLogElem);
+
+      // Create the <items> element
+      Element items = xmlDoc.createElement("items");
+      // Set the version attribute to the <items> element
+      items.setAttribute("version", version);
+      // Append the <items> to the root element <changelog>
+      changeLogElem.appendChild(items);
+
+      for (CPInfo cpInfo : membersInCP.keySet())
+      {
+        List<CPMember> cpMembers = membersInCP.get(cpInfo);
+        Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
+
+        for (CPMember cpMember : cpMembers)
+        {
+          // Create the individual <item> element for the add/update/drop
+          Element item = xmlDoc.createElement("item");
+          CP_MEMBER_OPERATION operation = cpMember.getOperationType();
+          if (operation == CP_MEMBER_OPERATION.ADD)
+          {
+            item.setAttribute("action", "add");
+          } else if (operation == CP_MEMBER_OPERATION.DROP)
+          {
+            item.setAttribute("action", "delete");
+          } else if (operation == CP_MEMBER_OPERATION.UPDATE)
+          {
+            item.setAttribute("action", "update");
+          } else if (operation == CP_MEMBER_OPERATION.CREATESUBPROJECT)
+          {
+            item.setAttribute("action", "add");
+          } else if (operation == CP_MEMBER_OPERATION.RENAME)
+          {
+            item.setAttribute("action", "undefined");
+          } else if (operation == CP_MEMBER_OPERATION.MOVEMEMBER)
+          {
+            item.setAttribute("action", "update");
+          } else if (operation == CP_MEMBER_OPERATION.UPDATEREVISION)
+          {
+            item.setAttribute("action", "update");
+          }
+
+          memberInfo.put(CM_PROJECT.AUTHOR, cpMember.getUser());
+          memberInfo.put(CM_PROJECT.CONFIG_PATH, cpMember.getConfigpath());
+          memberInfo.put(CM_PROJECT.CPID, cpInfo.getId());
+          memberInfo.put(CM_PROJECT.DESCRIPTION, "");
+          memberInfo.put(CM_PROJECT.NAME, cpMember.getMemberName());
+          memberInfo.put(CM_PROJECT.TIMESTAMP, new Timestamp(cpInfo.getClosedDate().getTime()));
+          memberInfo.put(CM_PROJECT.REVISION, cpMember.getRevision());
+          memberInfo.put(CM_PROJECT.MEMBER_ID, cpMember.getMemberName());
+
+          // Append the <item> to the <items> element
+          items.appendChild(writeChangeLog(item, memberInfo));
+        }
+      }
+
+      // Write the content into a String
+      TransformerFactory tfactory = TransformerFactory.newInstance();
+      Transformer serializer = tfactory.newTransformer();
+      // Setup indenting for a readable output
+      serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+      serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+      StringWriter sw = new StringWriter();
+      serializer.transform(new DOMSource(xmlDoc), new StreamResult(sw));
+      changeLog.append(sw.toString());
+      sw.close();
+    } catch (ParserConfigurationException pce)
+    {
+      LOGGER.warning("Caught Parser Configuration Exception while generating Change Log!");
+      LOGGER.warning(pce.getMessage());
+    } catch (TransformerException tfe)
+    {
+      LOGGER.warning("Caught Transformer Exception while generating Change Log!");
+      LOGGER.warning(tfe.getMessage());
+    } catch (IOException ioe)
+    {
+      LOGGER.warning("Caught IO Exception while generating Change Log!");
+      LOGGER.warning(ioe.getMessage());
+    }
+
+    return changeLog.toString();
   }
 }
 

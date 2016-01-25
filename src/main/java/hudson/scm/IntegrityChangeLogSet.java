@@ -1,19 +1,23 @@
+/*******************************************************************************
+ * Contributors:
+ *     PTC 2016
+ *******************************************************************************/
 package hudson.scm;
-
-import hudson.model.Run;
-import hudson.model.User;
-import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 
 import java.util.AbstractList;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.Collections;
 import java.util.Date;
 import java.util.Iterator;
-import java.util.Collection;
 import java.util.List;
 
 import org.kohsuke.stapler.export.Exported;
 import org.kohsuke.stapler.export.ExportedBean;
+
+import hudson.model.Run;
+import hudson.model.User;
+import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 
 /**
  * This class is a representation of all the Changes that were performed between builds. At this
@@ -98,6 +102,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     private String differences;
     private String cpid;
     private String msg;
+    private String viewCP;
 
     /**
      * Default constructor for the Digester
@@ -396,6 +401,26 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     public void setCpid(String cpid)
     {
       this.cpid = cpid;
+    }
+
+    /**
+     * Gets the URL for viewing a change package
+     * 
+     * @return
+     */
+    public String getViewCP()
+    {
+      return viewCP;
+    }
+    
+    /**
+     * Sets a string url representation containing the link to the Integrity View CP view
+     * 
+     * @param annotation
+     */
+    public void setViewCP(String viewCP)
+    {
+      this.viewCP = viewCP;
     }
   }
 
