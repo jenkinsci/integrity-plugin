@@ -29,10 +29,12 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
+import com.mks.api.Command;
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
 
 import hudson.AbortException;
 import hudson.EnvVars;
@@ -921,6 +923,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      * @return
      * @throws IOException
      * @throws ServletException
+     * @throws APIException 
      */
     public FormValidation doTestConnection(
         @QueryParameter("serverConfig.hostName") final String hostName,
@@ -930,7 +933,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         @QueryParameter("serverConfig.secure") final boolean secure,
         @QueryParameter("serverConfig.ipHostName") final String ipHostName,
         @QueryParameter("serverConfig.ipPort") final int ipPort)
-            throws IOException, ServletException
+            throws IOException, ServletException, APIException
     {
       LOGGER.fine("Testing Integrity API Connection...");
       LOGGER.fine("hostName: " + hostName);
@@ -946,6 +949,21 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       ISession api = APISession.create(ic);
       if (null != api)
       {
+    	Command  cmd = new Command(Command.IM, "about");
+    	Response res = api.runCommand(cmd);
+    	WorkItemIterator wit = res.getWorkItems();
+    	while(wit.hasNext())
+    	{
+    		WorkItem wi = wit.next();
+    		String version = wi.getField("version").getValueAsString();
+    		String versions[] = version.split("\\.");
+    		int majorVer = Integer.parseInt(versions[0]);
+    		int minorVer = Integer.parseInt(versions[1]);
+    		String strVerMsg = "Integrity server version: " + version;
+    		LOGGER.fine(strVerMsg);
+    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 9))
+   			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
+    	}
         api.terminate();
         return FormValidation.ok("Connection successful!");
       } else
