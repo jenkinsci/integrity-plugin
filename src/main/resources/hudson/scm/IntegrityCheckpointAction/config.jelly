@@ -1,12 +1,13 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-  <f:entry title="Tag Name" field="tagName">
-    <j:set var="tagName" value="${instance.getTagName()}"/>
-    <j:if test="${instance.getTagName() == null}">
-        <j:set var="tagName" value="${descriptor.getDefaultTagName()}"/>
-    </j:if>
-    <f:textbox name="mks.tagName" value="${tagName}" 
-               checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/tagNameCheck?value='+escape(this.value)" />
-  </f:entry>
+	<f:entry title="Server Configuration ${hudson.utils.Util.filter(scms,hudson.scm.IntegritySCM.class)}" field="serverConfig" help="/plugin/integrity-plugin/help-ServerConfig.html">
+		<f:select />
+	</f:entry>
+	
+	<f:entry title="Checkpoint Label" field="checkpointLabel">
+    	<f:textbox clazz="required" checkMessage="'Checkpoint Label' is a required field!" name="checkpointLabel" value="${h.ifThenElse(instance.checkpointLabel==null,descriptor.checkpointLabel,instance.checkpointLabel)}" 
+    		checkUrl="'${rootURL}/publisher/IntegrityCheckpointAction/checkpointLabelCheck?value='+escape(this.value)" />
+ 	</f:entry>
+
 </j:jelly>
 

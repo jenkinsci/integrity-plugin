@@ -1,7 +1,6 @@
 package hudson.scm;
 
-import hudson.model.AbstractBuild;
-import hudson.util.IOException2;
+import hudson.model.Run;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLogPath;
 
@@ -35,7 +34,7 @@ public class IntegrityChangeLogParser extends ChangeLogParser
 	 * @see hudson.scm.ChangeLogParser#parse(hudson.model.AbstractBuild, java.io.File)
 	 */
 	@Override
-	public IntegrityChangeLogSet parse(@SuppressWarnings("rawtypes") AbstractBuild build, File changeLogFile) throws IOException, SAXException 
+	public IntegrityChangeLogSet parse(@SuppressWarnings("rawtypes") Run run, RepositoryBrowser<?> browser, File changeLogFile) throws IOException, SAXException 
 	{
 		List<IntegrityChangeLog> changeSetList = new ArrayList<IntegrityChangeLog>();
 		Digester digester = new Digester();
@@ -66,15 +65,15 @@ public class IntegrityChangeLogParser extends ChangeLogParser
         }
         catch( IOException e ) 
         {
-            throw new IOException2("Failed to parse " + changeLogFile, e);
+            throw new IOException("Failed to parse " + changeLogFile, e);
         } 
         catch( SAXException e ) 
         {
-            throw new IOException2("Failed to parse " + changeLogFile, e);
+            throw new IOException("Failed to parse " + changeLogFile, e);
         }
         		
         // Create a new Integrity Change Log Set populated with a list of Entries...
-        return new IntegrityChangeLogSet(build, changeSetList, integrityURL);
+        return new IntegrityChangeLogSet(run, browser, changeSetList, integrityURL);
 	}
 
 }

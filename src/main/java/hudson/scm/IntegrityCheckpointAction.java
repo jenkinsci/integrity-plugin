@@ -1,47 +1,67 @@
 package hudson.scm;
 
-import java.io.IOException;
-import java.util.HashMap;
-import java.util.Map;
-
-import javax.servlet.ServletException;
-
 import groovy.lang.Binding;
 import groovy.lang.GroovyShell;
-import hudson.tasks.Publisher;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.Hudson;
-import hudson.model.BuildListener;
-import hudson.model.Result;
 import hudson.Extension;
 import hudson.Launcher;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
+import hudson.tasks.Publisher;
 import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
-import org.kohsuke.stapler.StaplerRequest;
-import org.kohsuke.stapler.QueryParameter;
+import java.io.IOException;
+import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import javax.servlet.ServletException;
+
+import net.sf.json.JSONObject;
+
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.codehaus.groovy.control.CompilerConfiguration;
-
-import net.sf.json.JSONObject;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
 
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItem;
 
-public class IntegrityCheckpointAction extends Notifier
+
+public class IntegrityCheckpointAction extends Notifier implements Serializable
 {
-	private String tagName;
+	private static final long serialVersionUID = 3344676447487492553L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private String checkpointLabel;
 	private final Log logger = LogFactory.getLog(getClass());
+	private String serverConfig;
+	private String configurationName;
 	
 	@Extension
 	public static final IntegrityCheckpointDescriptorImpl CHECKPOINT_DESCRIPTOR = new IntegrityCheckpointDescriptorImpl();
 
+	@DataBoundConstructor
+	public IntegrityCheckpointAction(String serverConfig, String checkpointLabel)
+	{
+		setCheckpointLabel(checkpointLabel);
+		setServerConfig(serverConfig);
+	}
+	
 	/**
 	 * Utility function to convert a groovy expression to a string
 	 * @param env Environment containing the name/value pairs for substitution
@@ -70,17 +90,17 @@ public class IntegrityCheckpointAction extends Notifier
 	/**
 	 * Checks if the given value is a valid Integrity Label.
 	 * If it's invalid, this method gives you the reason as string.
-	 * @param tagName The checkpoint label name
+	 * @param checkpointLabel The checkpoint label name
 	 * @return the error message, or null if label is valid
 	 */
-	public static String isInvalidTag(String tagName)
+	public static String isInvalidTag(String checkpointLabel)
 	{
-		if (tagName == null || tagName.length() == 0)
+		if (checkpointLabel == null || checkpointLabel.length() == 0)
 		{
 			return "The label string is empty!";
 		}
 
-		char ch = tagName.charAt(0);
+		char ch = checkpointLabel.charAt(0);
 		if (!(('A' <= ch && ch <= 'Z') || ('a' <= ch && ch <= 'z')))
 		{
 			return "The label must start with an alpha character!";
@@ -88,7 +108,7 @@ public class IntegrityCheckpointAction extends Notifier
 
 		for (char invalid : "$,.:;/\\@".toCharArray())
 		{
-			if (tagName.indexOf(invalid) >= 0)
+			if (checkpointLabel.indexOf(invalid) >= 0)
 			{
 				return "The label may cannot contain one of the following characters: $ , . : ; / \\ @";
 			}
@@ -101,40 +121,120 @@ public class IntegrityCheckpointAction extends Notifier
 	 * Returns the label pattern for the Checkpoint
 	 * @return Checkpoint Label
 	 */
-	public String getTagName()
+	public String getCheckpointLabel()
 	{
-		if( tagName == null || tagName.length() == 0 )
+		if( checkpointLabel == null || checkpointLabel.length() == 0 )
 		{
-			return CHECKPOINT_DESCRIPTOR.getDefaultTagName();
+			return IntegrityCheckpointDescriptorImpl.defaultCheckpointLabel;
 		}
 
-		return tagName;
+		return checkpointLabel;
 	}
 	
 	/**
 	 * Sets the label for the Checkpoint
-	 * @param tagName The Checkpoint Label
+	 * @param checkpointLabel The Checkpoint Label
 	 */
-	public void setTagName(String tagName)
+	public void setCheckpointLabel(String checkpointLabel)
 	{
-		this.tagName = tagName;
+		this.checkpointLabel = checkpointLabel;
 	}
 	
 	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
+	 * Returns the simple server configuration name
 	 * @return
 	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
+	public String getServerConfig() 
 	{
-		if (abstractProject.getParent() instanceof Hudson)
+		return serverConfig;
+	}
+	
+	/**
+	 * Sets the simple server configuration name
+	 * @param serverConfig
+	 */
+	public void setServerConfig(String serverConfig) 
+	{
+		this.serverConfig = serverConfig;
+	}
+	
+	/**
+	 * Returns the build configuration name for this project
+	 * @return
+	 */
+	public String getConfigurationName() 
+	{
+		return configurationName;
+	}
+	
+	/**
+	 * Sets the build configuration name for this project
+	 * @param configurationName
+	 */
+	private void setConfigurationName(AbstractBuild<?,?> thisBuild) 
+	{
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
 		{
-			return abstractProject;
+			this.configurationName = ((IntegritySCM)thisProject.getScm()).getConfigurationName();
+			LOGGER.fine("IntegrityCheckpointAction - Configuration Name = " + configurationName);
 		}
 		else
 		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
+			LOGGER.severe("IntegrityCheckpointAction - Configuration Name could not be initialized!");
 		}
+	}
+	
+	/**
+	 * Applies a project label to a project or subproject
+	 * @param api Integrity API Session wrapper
+	 * @param listener Jenkins build listener
+	 * @param siProject IntegrityCMProject object
+	 * @param fullConfigPath Integrity project configuration path
+	 * @param projectName Integrity project/subproject name
+	 * @param revision Integrity project/subproject revision
+	 * @param chkptLabel Checkpoint label string
+	 * @throws APIException
+	 */
+	private void applyProjectLabel(APISession api, BuildListener listener, IntegrityCMProject siProject, String fullConfigPath, String projectName, String revision, String chkptLabel) throws APIException 
+	{
+		// Looks like the checkpoint was done before the build, so lets apply the label now
+		listener.getLogger().println("Preparing to execute si addprojectlabel for " + fullConfigPath);
+		listener.getLogger().println(" (" + projectName + ", " +  revision + ")");
+		Response res = siProject.addProjectLabel(api, chkptLabel, projectName, revision);
+		logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+		listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + revision);        					
+		
+	}
+	
+	/**
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
+	 * @return
+	 */
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
+	{
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), 
+																		desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityCheckpointAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityCheckpointAction - Project User password = " + password.getEncryptedValue());
+		}
+		else
+		{
+			LOGGER.severe("IntegrityCheckpointAction - Failed to initialize project specific connection settings!");
+			return desSettings;
+		}
+		
+		return ciSettings;
 	}
 	
 	/**
@@ -142,85 +242,94 @@ public class IntegrityCheckpointAction extends Notifier
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
+		// Set the configuration name for this build
+		setConfigurationName(build);
+		
 		if( ! Result.SUCCESS.equals(build.getResult()) )
 		{
 			listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
 			return true;
 		}
-
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
-
-		if( !(rootProject.getScm() instanceof IntegritySCM) )
-		{
-			listener.getLogger().println("Integrity Checkpoint is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			return true;
-		}
-
-		IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-		APISession api = scm.createAPISession();
+		
+		APISession api = APISession.create(getProjectSettings(build));
 		if( null != api )
 		{
 			// Evaluate the groovy tag name
 			Map<String, String> env = build.getEnvironment(listener);
-			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, tagName);
-			try
-			{	
-        		try
-        		{
-        			// Get information about the project
-        			IntegrityCMProject siProject = scm.getIntegrityProject();
-        			// Ensure this is not a build project configuration
-        			if( ! siProject.isBuild() )
-        			{
-    					// A checkpoint wasn't done before the build, so lets checkpoint this build now...
-        				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
-        				Response res = siProject.checkpoint(api, chkptLabel);
-    					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
-    					WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
-    					String chkpt = wi.getResult().getField("resultant").getItem().getId();
-    					listener.getLogger().println("Successfully checkpointed project " + scm.getConfigPath() + 
-    												" with label '" + chkptLabel + "', new revision is " + chkpt);
-        			}
-        			else
-        			{
-        				// Check to see if the user has requested a checkpoint before the build
-        				if( scm.getCheckpointBeforeBuild() )
-        				{
-        					// Looks like the checkpoint was done before the build, so lets apply the label now
-	        				listener.getLogger().println("Preparing to execute si addprojectlabel for " + siProject.getConfigurationPath());
-	        				Response res = siProject.addProjectLabel(api, chkptLabel);
-	    					logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
-	    					listener.getLogger().println("Successfully added label '" + chkptLabel + "' to revision " + siProject.getProjectRevision());        					
-        				}
-        				else
-        				{
-        					listener.getLogger().println("Cannot checkpoint a build project configuration: " + scm.getConfigPath() + "!");
-        				}
-        			}
-        		}
-        		catch(APIException aex)
-        		{
-            		logger.error("API Exception caught...");
-            		ExceptionHandler eh = new ExceptionHandler(aex);
-            		logger.error(eh.getMessage());
-            		logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-            		throw new Exception(eh.getMessage());
-        		}
-        		finally
-        		{
-        			api.Terminate();
-        		}
-        	}
-        	catch (Throwable e) 
-        	{
-        		e.printStackTrace(listener.fatalError(e.getMessage()));
-				logger.error("Exception caught!  " + e);
-				return false;
-        	}
+			String chkptLabel = IntegrityCheckpointAction.evalGroovyExpression(env, checkpointLabel);
+    		try
+    		{
+    			// Get information about the project
+    			IntegrityCMProject siProject = IntegritySCM.findProject(getConfigurationName());
+    			if( null != siProject )
+    			{
+	    			// Ensure this is not a build project configuration
+	    			if( ! siProject.isBuild() )
+	    			{
+						// A checkpoint wasn't done before the build, so lets checkpoint this build now...
+	    				listener.getLogger().println("Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
+	    				Response res = siProject.checkpoint(api, chkptLabel);
+						logger.debug(res.getCommandString() + " returned " + res.getExitCode());        					
+						WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
+						String chkpt = wi.getResult().getField("resultant").getItem().getId();
+						listener.getLogger().println("Successfully checkpointed project " + siProject.getConfigurationPath() + 
+													" with label '" + chkptLabel + "', new revision is " + chkpt);
+	    			}
+	    			else
+	    			{
+	    				// Check to see if the user has requested a checkpoint before the build
+	    				if( siProject.getCheckpointBeforeBuild() ) 
+	    				{
+	    					// Attach label to 'main' project
+	    					applyProjectLabel(api, listener, siProject, siProject.getConfigurationPath(), siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
+	    					
+	    					// Attach label to 'subProjects'
+	    					for (Hashtable<CM_PROJECT, Object> memberInfo: DerbyUtils.viewSubProjects(siProject.getProjectCacheTable())) 
+	    					{
+	    						String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
+	    						String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
+	    						String revision = String.class.cast(memberInfo.get(CM_PROJECT.REVISION));
+	   							applyProjectLabel(api, listener, siProject, fullConfigPath, projectName, revision, chkptLabel);
+	    					}
+	    				}
+	    				else
+	    				{
+	    					listener.getLogger().println("Cannot checkpoint a build project configuration: " + siProject.getConfigurationPath() + "!");
+	    				}
+	    			}
+    			}
+    			else
+    			{
+    				LOGGER.severe("Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'");    				
+					listener.getLogger().println("ERROR: Cannot find Integrity CM Project information for configuration '" + getConfigurationName() + "'!");    				
+    			}
+    		}
+    		catch( APIException aex )
+    		{
+        		LOGGER.severe("API Exception caught...");
+        		ExceptionHandler eh = new ExceptionHandler(aex);
+        		aex.printStackTrace(listener.fatalError(eh.getMessage()));
+        		LOGGER.severe(eh.getMessage());
+        		LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+        		return false;
+    		}
+    		catch( SQLException sqlex )
+    		{
+		    	LOGGER.severe("SQL Exception caught...");
+	    		listener.getLogger().println("A SQL Exception was caught!"); 
+	    		listener.getLogger().println(sqlex.getMessage());
+	    		LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+	    		return false;			
+    		}
+    		finally
+    		{
+    			api.Terminate();
+    		}
+        		
 		}
 		else
 		{
-			logger.error("An API Session could not be established!  Cannot perform checkpoint operation!");
+			LOGGER.severe("An API Session could not be established!  Cannot perform checkpoint operation!");
 			listener.getLogger().println("An API Session could not be established!  Cannot perform checkpoint operation!");
 			return false;
 		}
@@ -234,7 +343,7 @@ public class IntegrityCheckpointAction extends Notifier
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**
@@ -261,24 +370,21 @@ public class IntegrityCheckpointAction extends Notifier
 	 */
     public static class IntegrityCheckpointDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private static Log desLogger = LogFactory.getLog(IntegrityCheckpointDescriptorImpl.class);
-		private String defaultTagName;
-    			
+		public static final String defaultCheckpointLabel = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
+
     	public IntegrityCheckpointDescriptorImpl()
     	{
         	// Log the construction...
-    		super(IntegrityCheckpointAction.class);
-			this.defaultTagName = "${env['JOB_NAME']}-${env['BUILD_NUMBER']}-${new java.text.SimpleDateFormat(\"yyyy_MM_dd\").format(new Date())}";
+    		super(IntegrityCheckpointAction.class); 
 			load();    		
-        	desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
+        	LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			IntegrityCheckpointAction chkptAction = new IntegrityCheckpointAction();
-			chkptAction.setTagName(formData.getString("tagName"));
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
+			IntegrityCheckpointAction chkptAction = (IntegrityCheckpointAction) super.newInstance(req, formData);
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.newInstance() executed!");   
 			return chkptAction;
 		}    	
     	
@@ -291,31 +397,39 @@ public class IntegrityCheckpointAction extends Notifier
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			this.defaultTagName = req.getParameter("tagName");
 			save();
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			desLogger.debug("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
+			LOGGER.fine("IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
-		public String getDefaultTagName()
+		/**
+		 * Returns the defaultCheckpointLabel for a checkpoint
+		 * @return
+		 */
+		public String getCheckpointLabel()
 		{
-			return defaultTagName;
+			return defaultCheckpointLabel;
 		}
-
-		public void setDefaultTagName(String defaultTagName)
+		
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
 		{
-			this.defaultTagName = defaultTagName;
+			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
 		}
-
-		public FormValidation doTagNameCheck(@QueryParameter("value") final String tagName) throws IOException, ServletException
+		
+		public FormValidation doCheckpointLabelCheck(@QueryParameter("value") final String checkpointLabel) throws IOException, ServletException
 		{
-			if( tagName == null || tagName.length() == 0 )
+			if( checkpointLabel == null || checkpointLabel.length() == 0 )
 			{
 				return FormValidation.error("Please specify a label for this Checkpoint!");
 			}
@@ -325,7 +439,7 @@ public class IntegrityCheckpointAction extends Notifier
 				String s = null;
 				try
 				{
-					s = evalGroovyExpression(new HashMap<String, String>(), tagName);
+					s = evalGroovyExpression(new HashMap<String, String>(), checkpointLabel);
 				}
 				catch(CompilationFailedException e)
 				{
@@ -343,5 +457,5 @@ public class IntegrityCheckpointAction extends Notifier
 			}
 			return FormValidation.ok();
 		}
-    }	
+    }
 }

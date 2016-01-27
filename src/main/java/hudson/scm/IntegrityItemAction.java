@@ -1,19 +1,22 @@
 package hudson.scm;
 
 import java.io.IOException;
+import java.io.Serializable;
 import java.io.StringWriter;
 import java.util.Iterator;
 import java.util.List;
+import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.Extension;
 import hudson.Launcher;
-import hudson.Util;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
@@ -21,7 +24,10 @@ import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AbstractTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import net.sf.json.JSONObject;
@@ -34,15 +40,12 @@ import com.mks.api.response.Field;
 import com.mks.api.response.Item;
 import com.mks.api.response.Response;
 import com.mks.api.response.WorkItemIterator;
-import com.mks.api.util.Base64;
 
-public class IntegrityItemAction extends Notifier
+public class IntegrityItemAction extends Notifier implements Serializable
 {
-	private String hostName;
-	private int port;
-	private boolean secure;
-    private String userName;
-    private String password;
+	private static final long serialVersionUID = 7067049279037277420L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private String serverConfig;
 	private String queryDefinition;
 	private String stateField;
 	private String successValue;
@@ -61,49 +64,13 @@ public class IntegrityItemAction extends Notifier
 	@Extension
 	public static final IntegrityItemDescriptorImpl ITEM_DESCRIPTOR = new IntegrityItemDescriptorImpl();
 
-    /**
-     * Returns the host name of the Integrity (Workflow) Server
-     * @return
-     */
-    public String getHostName()
+	/**
+	 * Returns the simple server configuration name
+	 * @return
+	 */
+    public String getServerConfig()
     {
-    	return hostName;
-    }
-    
-    /**
-     * Returns the port of the Integrity (Workflow) Server
-     * @return
-     */    
-    public int getPort()
-    {
-    	return port;
-    }
-
-    /**
-     * Returns true/false depending on secure sockets are enabled
-     * @return
-     */        
-    public boolean getSecure()
-    {
-    	return secure;
-    }
-
-    /**
-     * Returns the User connecting to the Integrity (Workflow) Server
-     * @return
-     */    
-    public String getUserName()
-    {
-    	return userName;
-    }
-    
-    /**
-     * Returns the clear password of the user connecting to the Integrity (Workflow) Server
-     * @return
-     */        
-    public String getPassword()
-    {
-    	return (password != null && password.length() > 0 ? Base64.decode(password) : password);
+    	return serverConfig;
     }
 	
 	/**
@@ -202,11 +169,6 @@ public class IntegrityItemAction extends Notifier
 	 */
     public String getTestSuiteContainsField()
     {
-		if( testSuiteContainsField == null || testSuiteContainsField.length() == 0 )
-		{
-			testSuiteContainsField = ITEM_DESCRIPTOR.getDefaultTestSuiteContainsField();
-		}
-		
     	return testSuiteContainsField;
     }
 
@@ -216,11 +178,6 @@ public class IntegrityItemAction extends Notifier
 	 */
     public String getTestPassedVerdictName()
     {
-		if( testPassedVerdictName == null || testPassedVerdictName.length() == 0 )
-		{
-			testPassedVerdictName = ITEM_DESCRIPTOR.getDefaultTestPassedVerdictName();
-		}
-		
     	return testPassedVerdictName;
     }
 
@@ -230,11 +187,6 @@ public class IntegrityItemAction extends Notifier
 	 */
     public String getTestFailedVerdictName()
     {
-		if( testFailedVerdictName == null || testFailedVerdictName.length() == 0 )
-		{
-			testFailedVerdictName = ITEM_DESCRIPTOR.getDefaultTestFailedVerdictName();
-		}
-		
     	return testFailedVerdictName;
     }
 
@@ -244,59 +196,18 @@ public class IntegrityItemAction extends Notifier
 	 */
     public String getTestSkippedVerdictName()
     {
-		if( testSkippedVerdictName == null || testSkippedVerdictName.length() == 0 )
-		{
-			testSkippedVerdictName = ITEM_DESCRIPTOR.getDefaultTestSkippedVerdictName();
-		}
-		
     	return testSkippedVerdictName;
     }
     
     /**
-     * Sets the host name of the Integrity (Workflow) Server
-     * @param hostName
+     * Sets the simple server configuration name
+     * @param serverConfig
      */
-    public void setHostName(String hostName)
+    public void setServerConfig(String serverConfig)
     {
-    	this.hostName = hostName;
+    	this.serverConfig = serverConfig;
     }
-
-    /**
-     * Sets the port of the Integrity (Workflow) Server
-     * @param port
-     */    
-    public void setPort(int port)
-    {
-    	this.port = port;
-    }
-
-    /**
-     * Toggles whether or not secure sockets are enabled
-     * @param secure
-     */        
-    public void setSecure(boolean secure)
-    {
-    	this.secure = secure;
-    }
-
-    /**
-     * Sets the User connecting to the Integrity (Workflow) Server
-     * @param userName
-     */
-    public void setUserName(String userName)
-    {
-    	this.userName = userName;
-    }
-    
-    /**
-     * Sets the encrypted Password of the user connecting to the Integrity (Workflow) Server
-     * @param password
-     */        
-    public void setPassword(String password)
-    {
-    	this.password = Base64.encode(password);
-    }
-	
+    	
 	/**
 	 * Sets the query definition expression to obtain the build item
 	 * @param queryDefinition Query Definition Expression
@@ -423,46 +334,6 @@ public class IntegrityItemAction extends Notifier
     	this.testSkippedVerdictName = testSkippedVerdictName;
     }
     
-	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
-	 * @return
-	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-	{
-		if (abstractProject.getParent() instanceof Hudson)
-		{
-			return abstractProject;
-		}
-		else
-		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-		}
-	}
-	
-    /**
-     * Creates an authenticated API Session against the Integrity (Workflow) Server
-     * @return An authenticated API Session
-     */
-    public APISession createAPISession()
-    {
-    	// Attempt to open a connection to the Integrity (Workflow) Server
-    	try
-    	{
-    		Logger.debug("Creating Integrity API Session...");
-    		return new APISession(null, 0, hostName, port, userName, Base64.decode(password), secure);
-    	}
-    	catch(APIException aex)
-    	{
-    		Logger.error("API Exception caught...");
-    		ExceptionHandler eh = new ExceptionHandler(aex);
-    		Logger.error(eh.getMessage());
-    		Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-    		aex.printStackTrace();
-    		return null;
-    	}				
-    }
-	
     /**
      * Wrapper function to edit a specific Integrity Build Item with a status and log
      * @param build Jenkins abstract build item
@@ -513,7 +384,7 @@ public class IntegrityItemAction extends Notifier
 		// Finally execute the edit item command
 		Response editIssueResponse = api.runCommand(editIssue);
 		int returnCode = editIssueResponse.getExitCode();
-		Logger.debug(editIssueResponse.getCommandString() + " returned " + returnCode);        					
+		LOGGER.fine(editIssueResponse.getCommandString() + " returned " + returnCode);        					
 		listener.getLogger().println("Updated build item '" + buildItemID + "' with build status!");
 		
 		return (returnCode == 0 ? true :  false);
@@ -541,22 +412,31 @@ public class IntegrityItemAction extends Notifier
 		// Update Integrity for this Test Case result
 		try
 		{
+			LOGGER.fine("Attempting to update test result for Integrity Test - " + testCaseID);
 			api.runCommand(editresult);
 		}
 		catch (APIException aex)
 		{
+			LOGGER.fine("Caught API Exception...");
+			LOGGER.log(Level.SEVERE, "APIException", aex);
+			
 			ExceptionHandler eh = new ExceptionHandler(aex);
+			LOGGER.fine(eh.getMessage());
 			String message = eh.getMessage();
 			if( message.indexOf("MKS124746") > 0 || (message.indexOf("result for test case") > 0 && message.indexOf("does not exist") > 0) )
 			{
-				Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-				Logger.debug(eh.getMessage());
-				Logger.warn("An attempt was made to update a Test Result for non-meaningful content.  Perhaps you've incorrectly configured your Tests?");
+				LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+				LOGGER.fine(eh.getMessage());
+				LOGGER.warning("An attempt was made to update a Test Result for non-meaningful content.  Perhaps you've incorrectly configured your Tests?");
 			}
 			else
 			{
 				throw aex;
 			}
+		}
+		catch (Exception e)
+		{
+			LOGGER.log(Level.SEVERE, "Exception", e);
 		}
 
     }
@@ -604,7 +484,7 @@ public class IntegrityItemAction extends Notifier
     		else
     		{
         		// Seems like a root package type test, but there is no test name - very odd!
-    			Logger.warn("Invalid format for Test Case ID - should be in the format <packagename>.<classname>.<testname>!");
+    			LOGGER.warning("Invalid format for Test Case ID - should be in the format <packagename>.<classname>.<testname>!");
     			junitTestCaseID.append("(root)/" + testCaseID);
     			return junitTestCaseID.toString();
     		}
@@ -621,36 +501,52 @@ public class IntegrityItemAction extends Notifier
      * @throws APIException
      */
 	@SuppressWarnings("unchecked")
-	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, List<Item> testCaseList) throws APIException
+	private void updateTestResult(TestResult testResult, BuildListener listener, APISession api, String testSessionID, Response walkResponse, List<Item> testCaseList) throws APIException
     {
+		// Look for the specific Tests we're interested in...
 		for( Item test : testCaseList  )
 		{ 
-			Field testCaseIDFld = test.getField(testCaseTestNameField);
+			Field testCaseIDFld = null;
+			Field containsFld = null;
+			try
+			{
+				// This should work on a 10.5 and prior...
+				testCaseIDFld = test.getField(testCaseTestNameField);
+				containsFld = test.getField(testSuiteContainsField);
+			}
+			catch( NoSuchElementException nsee )
+			{
+				// 10.6 and beyond...
+				testCaseIDFld = walkResponse.getWorkItem(test.getId()).getField(testCaseTestNameField);
+				containsFld = walkResponse.getWorkItem(test.getId()).getField(testSuiteContainsField);
+			}
+			
 			if( null != testCaseIDFld && null != testCaseIDFld.getValueAsString() )
 			{
 				String testCaseID = testCaseIDFld.getValueAsString();
 				String junitTestName = getJUnitID(testCaseID);
-				Logger.debug("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
+				LOGGER.fine("Looking for external test " + testCaseID + " internal JUnit ID " + junitTestName);
 				TestResult caseResult = testResult.findCorrespondingResult(junitTestName);
 				// Update Integrity only if we find a matching Test Case Result
 				if( null != caseResult )
 				{
 					// Execute the edit test result command
+					LOGGER.fine("Located internal JUnit Test - " + junitTestName);
 					editTestResult(api, (caseResult.isPassed() ? "Test " + caseResult.getId() + " has passed" : caseResult.getErrorDetails()), 
 									(caseResult.isPassed() ? testPassedVerdictName : testFailedVerdictName), testSessionID, test.getId());
 				}
 				else
 				{
 					// Lets mark the Test Result as skipped for this Test Case
+					LOGGER.warning("Could not locate internal JUnit Test - " + junitTestName);
 					editTestResult(api, "Test " + getJUnitID(testCaseID) + " was not run!", testSkippedVerdictName, testSessionID, test.getId());
 				}
 			}
 			
 			// Process the next level of Test Cases
-			Field containsFld = test.getField(testSuiteContainsField);
 			if( null != containsFld && null != containsFld.getList() )
 			{
-				updateTestResult(testResult, listener, api, testSessionID, containsFld.getList());
+				updateTestResult(testResult, listener, api, testSessionID, walkResponse, containsFld.getList());
 			}
 		}
     }
@@ -668,16 +564,16 @@ public class IntegrityItemAction extends Notifier
             if (childReport.result instanceof TestResult) 
             {
             	TestResult testResult = (TestResult) childReport.result;            	
-        		Logger.debug("Total tests run: " + testResult.getTotalCount());
-        		Logger.debug("Total passed count: " + testResult.getPassCount());
-        		Logger.debug("Total failed count: " + testResult.getFailCount());
-        		Logger.debug("Total skipped count: " + testResult.getSkipCount());
-        		Logger.debug("Failed Test Details:");
+        		LOGGER.fine("Total tests run: " + testResult.getTotalCount());
+        		LOGGER.fine("Total passed count: " + testResult.getPassCount());
+        		LOGGER.fine("Total failed count: " + testResult.getFailCount());
+        		LOGGER.fine("Total skipped count: " + testResult.getSkipCount());
+        		LOGGER.fine("Failed Test Details:");
         		Iterator<? extends TestResult> failedResultIterator = testResult.getFailedTests().iterator();
         		while( failedResultIterator.hasNext() )
         		{
         			TestResult caseResult = failedResultIterator.next();
-        			Logger.debug("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
+        			LOGGER.fine("ID: " + caseResult.getId() + " " + caseResult.getErrorDetails());	
         		}
             	
                 return testResult;
@@ -712,7 +608,7 @@ public class IntegrityItemAction extends Notifier
 			Field testSessionFld = walkResponse.getWorkItem(testSessionID).getField(testSessionTestsField);
 			if( null != testSessionFld && null != testSessionFld.getList() )
 			{
-				updateTestResult(getTestResult(testResultAction), listener, api, testSessionID, testSessionFld.getList()); 
+				updateTestResult(getTestResult(testResultAction), listener, api, testSessionID, walkResponse, testSessionFld.getList()); 
 			}
 		}				
 		
@@ -721,143 +617,177 @@ public class IntegrityItemAction extends Notifier
     }
     
 	/**
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
+	 * @return
+	 */
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
+	{
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
+		{
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityItemAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityItemAction - Project User password = " + password.getEncryptedValue());
+		}
+		else
+		{
+			LOGGER.severe("IntegrityItemAction - Failed to initialize project specific connection settings!");
+			return desSettings;
+		}
+		
+		return ciSettings;
+	}
+	
+	/**
 	 * Executes the actual Integrity Update Item operation
 	 */
 	public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
 	{
 		boolean success = true;
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
+		AbstractProject<?,?> rootProject = build.getProject().getRootProject();
 		if( !(rootProject.getScm() instanceof IntegritySCM) )
 		{
 			listener.getLogger().println("Integrity Item update is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
 			return true;
 		}
 
-		APISession api = createAPISession();
+		APISession api = APISession.create(getProjectSettings(build));
 		if( null != api )
 		{
-			try
-			{	
-	        	try
-	        	{
-	        		// First lets find the build item or test session id
-	        		int intBuildItemID = 0;
-	        		int intTestSessionID = 0;
+        	try
+        	{
+        		// First lets find the build item or test session id
+        		int intBuildItemID = 0;
+        		int intTestSessionID = 0;
 
-	        		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
-	        		// Convert the string Item ID to an integer for comparison...
-	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
-	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
+        		String buildItemID = build.getEnvironment(listener).get("ItemID", "");
+        		// Convert the string Item ID to an integer for comparison...
+        		try { intBuildItemID = Integer.parseInt(buildItemID); }
+        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }
 
-	        		String testSessionID = build.getEnvironment(listener).get("SessionID", "");
-	        		// Convert the string Item ID to an integer for comparison...
-	        		try { intTestSessionID = Integer.parseInt(testSessionID); }
-	        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }
+        		String testSessionID = build.getEnvironment(listener).get("SessionID", "");
+        		// Convert the string Item ID to an integer for comparison...
+        		try { intTestSessionID = Integer.parseInt(testSessionID); }
+        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }
 
-	        		// Figure out if we need to query Integrity for the Build item
-	        		if( intBuildItemID <= 0 )
-	        		{
-	        			if( queryDefinition.length() > 0 )
-	        			{
-		        			// Let's query for the build item id
-			        		Command issues = new Command(Command.IM, "issues");
-			        		issues.addOption(new Option("fields", "ID"));
-			        		issues.addOption(new Option("queryDefinition", queryDefinition));
-			        		Response issuesResponse = api.runCommand(issues);
-			        		if( null != issuesResponse )
-			        		{
-			        			WorkItemIterator wit = issuesResponse.getWorkItems();
-			        			// Get the first item returned by the query definition
-			        			if( wit.hasNext() )
-			        			{
-			        				buildItemID = wit.next().getField("ID").getValueAsString();
-			    	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
-			    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }			        				
-			        			}
-			        			else
-			        			{
-			        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-			        				return false;
-			        			}
-			        		}
-			        		else
-			        		{
-			        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
-			        			return false;
-			        		}
-	        			}
+        		// Figure out if we need to query Integrity for the Build item
+        		if( intBuildItemID <= 0 )
+        		{
+        			if( queryDefinition.length() > 0 )
+        			{
+	        			// Let's query for the build item id
+		        		Command issues = new Command(Command.IM, "issues");
+		        		issues.addOption(new Option("fields", "ID"));
+		        		issues.addOption(new Option("queryDefinition", queryDefinition));
+		        		Response issuesResponse = api.runCommand(issues);
+		        		if( null != issuesResponse )
+		        		{
+		        			WorkItemIterator wit = issuesResponse.getWorkItems();
+		        			// Get the first item returned by the query definition
+		        			if( wit.hasNext() )
+		        			{
+		        				buildItemID = wit.next().getField("ID").getValueAsString();
+		    	        		try { intBuildItemID = Integer.parseInt(buildItemID); }
+		    	        		catch( NumberFormatException nfe ){ intBuildItemID = 0; }			        				
+		        			}
+		        			else
+		        			{
+		        				listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        				return false;
+		        			}
+		        		}
 		        		else
 		        		{
-		        			listener.getLogger().println("WARNING: No configuration information provided to locate an Integrity Build Item!");
-		        		}	        			
-	        		}
-	        		
-	        		// Figure out if we need to do anything with the Test Results of this build...
-	        		AbstractTestResultAction<?> testResult = build.getTestResultAction();
-	        		if( null != testResult && testResult.getTotalCount() > 0 )
-	        		{	        			
-		        		// Figure out if we need to interrogate the Build item for the Test Session item
-		        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
-		        		{
-		        			// Get the relationships for the Build item
-		        			Command walk = new Command(Command.IM, "relationships");
-		        			walk.addOption(new Option("fields", testSessionStateField));
-		        			walk.addOption(new Option("traverseFields", testSessionField));
-		        			walk.addSelection(buildItemID);
-		        			Response walkResponse = api.runCommand(walk);
-		        			if( null != walkResponse )
-		        			{
-		        				Field testSessionFld = walkResponse.getWorkItem(buildItemID).getField(testSessionField);
-		        				if( null != testSessionFld && null != testSessionFld.getList() )
-		        				{
-		        					@SuppressWarnings("unchecked")
-		        					List<Item> sessionList = testSessionFld.getList(); 
-		        					for( Item session : sessionList  )
-		        					{
-		        						// Look for the first Test Session in an Active state...
-		        						if( null != session.getField(testSessionStateField) && session.getField(testSessionStateField).getValueAsString().equals(testSessionActiveState) )
-		        						{
-		        							testSessionID = session.getId();
-		        							try { intTestSessionID = Integer.parseInt(testSessionID); }
-		        			        		catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
-		        							break;
-		        						}
-		        					}
-		        				}
-		        			}	        			
+		        			listener.getLogger().println("Cannot find an Integrity Build Item!  Response from executing custom query is null!");
+		        			return false;
 		        		}
-		        		
-		        		// Update the Test Session with the results from the JUnit tests, if we got a Test Session to work with...
-		        		if( intTestSessionID > 0 )
-		        		{
-		        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
-		        			success = collectTestResults(build.getAggregatedTestResultAction(), listener, api, testSessionID);
-		        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
-		        		}
-	        		}
-	        		
-	        		// Finally, lets update the status of the build, if appropriate
-	        		if( intBuildItemID > 0 )
+        			}
+	        		else
 	        		{
-	        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
-	        			success = editBuildItem(build, listener, api, buildItemID);
+	        			listener.getLogger().println("WARNING: No configuration information provided to locate an Integrity Build Item!");
+	        		}	        			
+        		}
+        		
+        		// Figure out if we need to do anything with the Test Results of this build...
+        		AbstractTestResultAction<?> testResult = build.getAction(AbstractTestResultAction.class);
+        		if( null != testResult && testResult.getTotalCount() > 0 )
+        		{	        			
+	        		// Figure out if we need to interrogate the Build item for the Test Session item
+	        		if( intTestSessionID <= 0 && testSessionField.length() > 0 && intBuildItemID > 0 )
+	        		{
+	        			// Get the relationships for the Build item
+	        			Command walk = new Command(Command.IM, "relationships");
+	        			walk.addOption(new Option("fields", testSessionStateField));
+	        			walk.addOption(new Option("traverseFields", testSessionField));
+	        			walk.addSelection(buildItemID);
+	        			Response walkResponse = api.runCommand(walk);
+	        			if( null != walkResponse )
+	        			{
+	        				Field testSessionFld = walkResponse.getWorkItem(buildItemID).getField(testSessionField);
+	        				if( null != testSessionFld && null != testSessionFld.getList() )
+	        				{
+	        					@SuppressWarnings("unchecked")
+	        					List<Item> sessionList = testSessionFld.getList(); 
+	        					for( Item session : sessionList  )
+	        					{
+	        						// Look for the first Test Session in an Active state...
+	        						Field stateField = null;
+	        						try
+	        						{
+	        							// This should work on a 10.5 and prior...
+	        							stateField = session.getField(testSessionStateField);
+	        						}
+	        						catch( NoSuchElementException nsee )
+	        						{
+	        							// 10.6 and beyond...
+	        							stateField = walkResponse.getWorkItem(session.getId()).getField(testSessionStateField);
+	        						}
+	        						
+        							if( null != stateField && testSessionActiveState.equals(stateField.getValueAsString()) )
+        							{
+        								testSessionID = session.getId();
+        								try { intTestSessionID = Integer.parseInt(testSessionID); }
+        								catch( NumberFormatException nfe ){ intTestSessionID = 0; }		        							
+        								break;
+        							}	        						
+	        					}
+	        				}
+	        			}	        			
 	        		}
 	        		
-	        	}
-	        	catch(APIException aex)
-	        	{
-	            	Logger.error("API Exception caught...");
-	            	ExceptionHandler eh = new ExceptionHandler(aex);
-	            	Logger.error(eh.getMessage());
-	            	Logger.debug(eh.getCommand() + " returned exit code " + eh.getExitCode());
-	            	throw new Exception(eh.getMessage());
-	        	}
-	        }
-	        catch (Throwable e) 
-	        {
-	        	e.printStackTrace(listener.fatalError(e.getMessage()));
-				Logger.error("Exception caught!  " + e);
-				return false;
+	        		// Update the Test Session with the results from the JUnit tests, if we got a Test Session to work with...
+	        		if( intTestSessionID > 0 )
+	        		{
+	        			listener.getLogger().println("Obtained Integrity Test Session Item '" + testSessionID + "' from build environment!");
+	        			success = collectTestResults(build.getAction(AggregatedTestResultAction.class), listener, api, testSessionID);
+	        			listener.getLogger().println("Updated Integrity Test Session Item '" + testSessionID + "' with results from automated test execution!");
+	        		}
+        		}
+        		
+        		// Finally, lets update the status of the build, if appropriate
+        		if( intBuildItemID > 0 )
+        		{
+        			listener.getLogger().println("Obtained Integrity Build Item '" + buildItemID + "' from build environment!");	        			
+        			success = editBuildItem(build, listener, api, buildItemID);
+        		}
+        		
+        	}
+        	catch(APIException aex)
+        	{
+            	LOGGER.severe("API Exception caught...");
+            	ExceptionHandler eh = new ExceptionHandler(aex);
+	        	aex.printStackTrace(listener.fatalError(aex.getMessage()));            	
+            	LOGGER.severe(eh.getMessage());
+            	LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+            	return false;
 	        }
         	finally
         	{
@@ -866,7 +796,7 @@ public class IntegrityItemAction extends Notifier
 		}
 		else
 		{
-			Logger.error("An API Session could not be established!  Cannot update Integrity Build Item!");
+			LOGGER.severe("An API Session could not be established!  Cannot update Integrity Build Item!");
 			listener.getLogger().println("An API Session could not be established!  Cannot update Integrity Build Item!");
 			return false;
 		}
@@ -880,7 +810,7 @@ public class IntegrityItemAction extends Notifier
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**
@@ -907,36 +837,25 @@ public class IntegrityItemAction extends Notifier
 	 */
     public static class IntegrityItemDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private String defaultQueryDefinition;
-    	private String defaultTestSuiteContainsField;
-    	private String defaultTestPassedVerdictName;
-    	private String defaultTestFailedVerdictName;
-    	private String defaultTestSkippedVerdictName;
+    	public static final String defaultQueryDefinition = "((field[Type] = \"Build Request\") and (field[State] = \"Approved\"))";
+    	public static final String defaultTestSuiteContainsField = "Contains";
+    	public static final String defaultTestPassedVerdictName = "Passed";
+    	public static final String defaultTestFailedVerdictName = "Failed";
+    	public static final String defaultTestSkippedVerdictName = "Skipped";
     			
     	public IntegrityItemDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityItemAction.class);
-    		// Initial variable initializations
-			defaultQueryDefinition = "((field[Type] = \"Build Request\") and (field[State] = \"Approved\"))";
-			defaultTestSuiteContainsField = "Contains";
-	    	defaultTestPassedVerdictName = "Passed";
-	    	defaultTestFailedVerdictName = "Failed";
-	    	defaultTestSkippedVerdictName = "Skipped";
-			
 			load();
-        	Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
+        	LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
 			IntegrityItemAction itemAction = new IntegrityItemAction();
-			itemAction.setHostName(formData.getString("hostName"));
-			itemAction.setPort(formData.getInt("port"));
-			itemAction.setUserName(formData.getString("userName"));
-			itemAction.setPassword(formData.getString("password"));
-			itemAction.setSecure(formData.getBoolean("secure"));
+			itemAction.setServerConfig(formData.getString("serverConfig"));
 			itemAction.setQueryDefinition(formData.getString("queryDefinition"));
 			itemAction.setStateField(formData.getString("stateField"));
 			itemAction.setSuccessValue(formData.getString("successValue"));
@@ -952,7 +871,7 @@ public class IntegrityItemAction extends Notifier
 			itemAction.setTestFailedVerdictName(formData.getString("testFailedVerdictName"));
 			itemAction.setTestSkippedVerdictName(formData.getString("testSkippedVerdictName"));
 			
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.newInstance() executed!");   
 			return itemAction;
 		}    	
     	
@@ -965,111 +884,70 @@ public class IntegrityItemAction extends Notifier
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			defaultQueryDefinition = Util.fixEmptyAndTrim(req.getParameter("mks.queryDefinition"));
-			defaultTestSuiteContainsField = Util.fixEmptyAndTrim(req.getParameter("mks.testSuiteContainsField"));
-	    	defaultTestPassedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testPassedVerdictName"));
-	    	defaultTestFailedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testFailedVerdictName"));
-	    	defaultTestSkippedVerdictName = Util.fixEmptyAndTrim(req.getParameter("mks.testSkippedVerdictName"));
-			
 			save();
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			Logger.debug("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
+			LOGGER.fine("IntegrityItemAction.IntegrityItemDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
-	    /**
-	     * By default, return the IntegrtySCM host name for the Integrity Server 
-	     * @return defaultHostName
-	     */
-	    public String getDefaultHostName()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultHostName();
-	    }
-	    
-	    /**
-	     * By default, return the IntegritySCM port for the Integrity Server
-	     * @return defaultPort
-	     */    
-	    public int getDefaultPort()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultPort();
-	    }
-
-	    /**
-	     * By default, return the IntegritySCM secure setting for the Integrity Server
-	     * @return defaultSecure
-	     */        
-	    public boolean getDefaultSecure()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultSecure();
-	    }
-
-	    /**
-	     * By default, return the IntegritySCM for the User connecting to the Integrity Server
-	     * @return defaultUserName
-	     */    
-	    public String getDefaultUserName()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultUserName();
-	    }
-	    
-	    /**
-	     * By default, return the IntegritySCM user's password connecting to the Integrity Server
-	     * @return defaultPassword
-	     */        
-	    public String getDefaultPassword()
-	    {
-	    	return IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.getDefaultPassword();
-	    }
-
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
+		{
+			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
+		}
+		
 	    /**
 	     * Returns the default query definition that will be used to find the 'build' item
 	     * @return defaultQueryDefinition
 	     */
-		public String getDefaultQueryDefinition()
+		public String getQueryDefinition()
 		{
-			return defaultQueryDefinition;
+			return IntegrityItemDescriptorImpl.defaultQueryDefinition;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Contains' field
 		 * @return
 		 */
-		public String getDefaultTestSuiteContainsField()
+		public String getTestSuiteContainsField()
 		{
-			return defaultTestSuiteContainsField;
+			return IntegrityItemDescriptorImpl.defaultTestSuiteContainsField;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Passed' verdict
 		 * @return
 		 */
-		public String getDefaultTestPassedVerdictName()
+		public String getTestPassedVerdictName()
 		{
-			return defaultTestPassedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestPassedVerdictName;
 		}
 
 		/**
 		 * Returns the default name for the Integrity 'Failed' verdict
 		 * @return
 		 */
-		public String getDefaultTestFailedVerdictName()
+		public String getTestFailedVerdictName()
 		{
-			return defaultTestFailedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestFailedVerdictName;
 		}
 		
 		/**
 		 * Returns the default name for the Integrity 'Skipped' verdict
 		 * @return
 		 */
-		public String getDefaultTestSkippedVerdictName()
+		public String getTestSkippedVerdictName()
 		{
-			return defaultTestSkippedVerdictName;
+			return IntegrityItemDescriptorImpl.defaultTestSkippedVerdictName;
 		}		
-    }	
+    }
 }

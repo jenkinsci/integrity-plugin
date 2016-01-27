@@ -1,11 +1,13 @@
 package hudson.scm;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.util.logging.Logger;
 
+import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.tasks.Publisher;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.model.BuildListener;
 import hudson.model.Result;
 import hudson.Extension;
@@ -13,50 +15,57 @@ import hudson.Launcher;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
+import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 
 import net.sf.json.JSONObject;
 
-public class IntegrityCheckinAction extends Notifier
+public class IntegrityCheckinAction extends Notifier implements Serializable
 {
+	private static final long serialVersionUID = 4647604916824363519L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
 	private String ciConfigPath;
 	private String ciWorkspaceDir;
 	private String includes;
 	private String excludes;
-	private final Log logger = LogFactory.getLog(getClass());
+	private String serverConfig;
+	private String configurationName;
 	
 	@Extension
 	public static final IntegrityCheckinDescriptorImpl CHECKIN_DESCRIPTOR = new IntegrityCheckinDescriptorImpl();
 
+	@DataBoundConstructor
+	public IntegrityCheckinAction(String ciConfigPath, String ciWorkspaceDir, String includes, String excludes, String serverConfig, String configurationName)
+	{
+		setCiConfigPath(ciConfigPath);
+		setCiWorkspaceDir(ciWorkspaceDir);
+		setIncludes(includes);
+		setExcludes(excludes);
+		setServerConfig(serverConfig);
+		setConfigurationName(configurationName);
+
+	}
+	
     /**
 	 * Returns the configuration path for the project to check-in artifacts after the build
 	 * @return
 	 */
-    public String getciConfigPath()
+    public String getCiConfigPath()
     {
-		if( ciConfigPath == null || ciConfigPath.length() == 0 )
-		{
-			ciConfigPath = CHECKIN_DESCRIPTOR.getDefaultciConfigPath();
-		}
-		
-    	return ciConfigPath;
+    	return this.ciConfigPath;
     }
    
     /**
 	 * Returns the workspace directory containing the check-in artifacts created as a result of the build
 	 * @return
 	 */
-    public String getciWorkspaceDir()
+    public String getCiWorkspaceDir()
     {
-		if( ciWorkspaceDir == null || ciWorkspaceDir.length() == 0 )
-		{
-			ciWorkspaceDir = CHECKIN_DESCRIPTOR.getDefaultciWorkspaceDir();
-		}
-		
-    	return ciWorkspaceDir;
+    	return this.ciWorkspaceDir;
     }   
 
     /**
@@ -65,12 +74,7 @@ public class IntegrityCheckinAction extends Notifier
      */
     public String getIncludes()
     {
-    	if( includes == null || includes.length() == 0 )
-    	{
-    		includes = CHECKIN_DESCRIPTOR.getDefaultIncludes();
-    	}
-    	
-    	return includes;
+    	return this.includes;
     }
     
     /**
@@ -79,19 +83,32 @@ public class IntegrityCheckinAction extends Notifier
      */
     public String getExcludes()
     {
-    	if( includes == null || includes.length() == 0 )
-    	{
-    		excludes = CHECKIN_DESCRIPTOR.getDefaultExcludes();
-    	}
-    	
-    	return excludes;
+    	return this.excludes;
     }
     
+    /**
+     * Returns the simple server configuration name
+     * @return
+     */
+	public String getServerConfig() 
+	{
+		return this.serverConfig;
+	}
+	
+	/**
+	 * Returns the build configuration name for this project
+	 * @return
+	 */
+	public String getConfigurationName() 
+	{
+		return this.configurationName;
+	}
+	
     /**
 	 * Sets the configuration path for the project to check-in artifacts after the build
 	 * @param ciConfigPath
 	 */
-    public void setciConfigPath(String ciConfigPath)
+    public void setCiConfigPath(String ciConfigPath)
     {
     	this.ciConfigPath = ciConfigPath;
     }
@@ -100,7 +117,7 @@ public class IntegrityCheckinAction extends Notifier
 	 * Sets the workspace directory containing the check-in artifacts created as a result of the build
 	 * @param ciWorkspaceDir
 	 */
-    public void setciWorkspaceDir(String ciWorkspaceDir)
+    public void setCiWorkspaceDir(String ciWorkspaceDir)
     {
     	this.ciWorkspaceDir = ciWorkspaceDir;
     }   
@@ -122,22 +139,54 @@ public class IntegrityCheckinAction extends Notifier
     {
     	this.excludes = excludes;
     }
-    
+	
+    /**
+     * Sets the simple server configuration name
+     * @param configurationName
+     */
+	public void setServerConfig(String serverConfig) 
+	{
+		this.serverConfig = serverConfig;		
+	}
+
+	
+    /**
+     * Sets the build configuration name for this project
+     * @param configurationName
+     */
+	public void setConfigurationName(String configurationName) 
+	{
+		this.configurationName = configurationName;		
+	}
+
 	/**
-	 * Obtains the root project for the build
-	 * @param abstractProject
+	 * Gets the project specific user/password for this build
+	 * @param thisBuild Jenkins AbstractBuild
 	 * @return
 	 */
-	private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
+	private IntegrityConfigurable getProjectSettings(AbstractBuild<?,?> thisBuild) 
 	{
-		if (abstractProject.getParent() instanceof Hudson)
+		IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+		IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(), 
+																		desSettings.getPort(), desSettings.getSecure(), "", "");		
+		AbstractProject<?,?> thisProject = thisBuild.getProject();
+		if( thisProject.getScm() instanceof IntegritySCM )
 		{
-			return abstractProject;
+			String userName = ((IntegritySCM)thisProject.getScm()).getUserName();
+			ciSettings.setUserName(userName);
+			LOGGER.fine("IntegrityCheckinAction - Project Userame = " + userName);
+			
+			Secret password = ((IntegritySCM)thisProject.getScm()).getSecretPassword();
+			ciSettings.setPassword(password.getEncryptedValue());
+			LOGGER.fine("IntegrityCheckinAction - Project User password = " + password.getEncryptedValue());
 		}
 		else
 		{
-			return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
+			LOGGER.severe("IntegrityCheckinAction - Failed to initialize project specific connection settings!");
+			return desSettings;
 		}
+		
+		return ciSettings;
 	}
 	
 	/**
@@ -147,22 +196,13 @@ public class IntegrityCheckinAction extends Notifier
 	{
 		if( ! Result.SUCCESS.equals(build.getResult()) )
 		{
-			logger.debug("Build failed!  Skipping Integrity Checkin step!");
+			LOGGER.fine("Build failed!  Skipping Integrity Checkin step!");
 			listener.getLogger().println("Build failed!  Skipping Integrity Checkin step!");
 			return true;
 		}
 
-		AbstractProject<?,?> rootProject = getRootProject(build.getProject());
-
-		if( !(rootProject.getScm() instanceof IntegritySCM) )
-		{
-			logger.debug("Integrity Check-in action is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			listener.getLogger().println("Integrity Check-in action is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-			return true;
-		}
-
 		// Create our Integrity check-in task
-        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener);
+        IntegrityCheckinTask ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes, excludes, build, listener, getProjectSettings(build));
         
         // Execute the check-in task and return the overall result
         return build.getWorkspace().act(ciTask);
@@ -170,11 +210,12 @@ public class IntegrityCheckinAction extends Notifier
 
 	/**
 	 * Toggles whether or not this needs to run after build is finalized
+	 * Returning false, so that a check-in failure will cause a failed build
 	 */
 	@Override
 	public boolean needsToRunAfterFinalized()
 	{
-		return true;
+		return false;
 	}
 
 	/**
@@ -201,33 +242,19 @@ public class IntegrityCheckinAction extends Notifier
 	 */
     public static class IntegrityCheckinDescriptorImpl extends BuildStepDescriptor<Publisher> 
     {
-    	private static Log desLogger = LogFactory.getLog(IntegrityCheckinDescriptorImpl.class);
-		private String defaultciConfigPath;
-		private String defaultciWorkspaceDir;
-		private String defaultIncludes;
-		private String defaultExcludes;
-    			
     	public IntegrityCheckinDescriptorImpl()
     	{
         	// Log the construction...
     		super(IntegrityCheckinAction.class);
-			this.defaultciConfigPath = "";
-			this.defaultciWorkspaceDir = "";
-			this.defaultIncludes = "";
-			this.defaultExcludes = "";
 			load();    		
-        	desLogger.debug("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl() constructed!");        	            
+        	LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl() constructed!");        	            
     	}
 
 		@Override
 		public Publisher newInstance(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			IntegrityCheckinAction ciAction = new IntegrityCheckinAction();
-			ciAction.setciConfigPath(formData.getString("ciConfigPath"));
-			ciAction.setciWorkspaceDir(formData.getString("ciWorkspaceDir"));
-			ciAction.setIncludes(formData.getString("includes"));
-			ciAction.setExcludes(formData.getString("excludes"));
-			desLogger.debug("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.newInstance() executed!");   
+			IntegrityCheckinAction ciAction = (IntegrityCheckinAction) super.newInstance(req, formData);
+			LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.newInstance() executed!");   
 			return ciAction;
 		}    	
     	
@@ -240,57 +267,25 @@ public class IntegrityCheckinAction extends Notifier
 		@Override
 		public boolean configure(StaplerRequest req, JSONObject formData) throws FormException
 		{
-			this.defaultciConfigPath = req.getParameter("ciConfigPath");
-			this.defaultciWorkspaceDir = req.getParameter("ciWorkspaceDir");
 			save();
-			desLogger.debug("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.configure() executed!");
+			LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.configure() executed!");
 			return super.configure(req, formData);
 		}
 
 		public boolean isApplicable(@SuppressWarnings("rawtypes") Class<? extends AbstractProject> jobType)
 		{
-			desLogger.debug("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.isApplicable executed!");
+			LOGGER.fine("IntegrityCheckinAction.IntegrityCheckinDescriptorImpl.isApplicable executed!");
 			return true;
 		}
 
-		public String getDefaultciConfigPath()
+		/**
+		 * Provides a list box for users to choose from a list of Integrity Server configurations
+		 * @param configuration Simple configuration name
+		 * @return
+		 */
+		public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
 		{
-			return defaultciConfigPath;
-		}
-
-		public String getDefaultciWorkspaceDir()
-		{
-			return defaultciWorkspaceDir;
-		}
-		
-		public String getDefaultIncludes()
-		{
-			return defaultIncludes;
+			return DescriptorImpl.INTEGRITY_DESCRIPTOR.doFillServerConfigItems(serverConfig);
 		}		
-
-		public String getDefaultExcludes()
-		{
-			return defaultExcludes;
-		}		
-		
-		public void setDefaultciConfigPath(String defaultciConfigPath)
-		{
-			this.defaultciConfigPath = defaultciConfigPath;
-		}
-
-		public void setDefaultciWorkspaceDir(String defaultciWorkspaceDir)
-		{
-			this.defaultciWorkspaceDir = defaultciWorkspaceDir;
-		}
-		
-		public void setDefaultIncludes(String defaultIncludes)
-		{
-			this.defaultIncludes = defaultIncludes;
-		}
-		
-		public void setDefaultExcludes(String defaultExcludes)
-		{
-			this.defaultExcludes = defaultExcludes;
-		}			
     }	
 }

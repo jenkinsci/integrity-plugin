@@ -1,7 +1,7 @@
 package hudson.scm;
 
-import java.io.File;
 import java.io.Serializable;
+import java.util.logging.Logger;
 
 /**
  * Contains the state of the current Integrity Configuration Management Project
@@ -9,15 +9,17 @@ import java.io.Serializable;
 public final class IntegrityRevisionState extends SCMRevisionState implements Serializable 
 {
 	private static final long serialVersionUID = 1838332506014398677L;
-	private final File projectDB;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	private final String projectCacheTable;
 
-	public IntegrityRevisionState(File projectDB) 
+	public IntegrityRevisionState(String jobName, String configurationName, String projectCacheTable) 
 	{
-		this.projectDB = projectDB;
+		LOGGER.fine("IntegrityRevisionState() invoked!");		
+		this.projectCacheTable = projectCacheTable;
 	}
 	
-	public File getProjectDB()
+	public String getProjectCache()
 	{
-		return projectDB;
+		return projectCacheTable;
 	}
 }

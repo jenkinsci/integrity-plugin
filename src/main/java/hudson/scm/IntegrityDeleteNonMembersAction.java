@@ -5,48 +5,35 @@ import hudson.Launcher;
 import hudson.model.BuildListener;
 import hudson.model.AbstractBuild;
 import hudson.model.AbstractProject;
-import hudson.model.Hudson;
 import hudson.tasks.BuildStepDescriptor;
 import hudson.tasks.BuildStepMonitor;
 import hudson.tasks.Notifier;
 import hudson.tasks.Publisher;
 
 import java.io.IOException;
+import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 import net.sf.json.JSONObject;
 
 import org.kohsuke.stapler.StaplerRequest;
 
-public class IntegrityDeleteNonMembersAction extends Notifier
+public class IntegrityDeleteNonMembersAction extends Notifier implements Serializable
 {
-
-    @Extension
+	private static final long serialVersionUID = 654691931521381720L;
+	private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+	
+	@Extension
     public static final IntegrityDeleteNonMembersDescriptorImpl DELETENONMEMBERS_DESCRIPTOR = new IntegrityDeleteNonMembersDescriptorImpl();
 
-
-    /**
-     * Obtains the root project for the build
-     * @param abstractProject
-     * @return
-     */
-    private AbstractProject<?,?> getRootProject(AbstractProject<?,?> abstractProject)
-    {
-        if (abstractProject.getParent() instanceof Hudson)
-        {
-            return abstractProject;
-        }
-        else
-        {
-            return getRootProject((AbstractProject<?,?>) abstractProject.getParent());
-        }
-    }
-    
     /**
      * Executes the actual Integrity Delete Non Members operation
      */
     public boolean perform(AbstractBuild<?, ?> build, Launcher launcher, BuildListener listener) throws InterruptedException, IOException
     {
-        AbstractProject<?, ?> rootProject = getRootProject(build.getProject());
+        AbstractProject<?, ?> rootProject = build.getProject().getRootProject();
 
         if (!(rootProject.getScm() instanceof IntegritySCM))
         {
@@ -55,10 +42,23 @@ public class IntegrityDeleteNonMembersAction extends Notifier
         }
 
         IntegritySCM scm = IntegritySCM.class.cast(rootProject.getScm());
-        IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(build, listener,  scm.getAlternateWorkspace(), scm.getIntegrityProject());
-        if (!build.getWorkspace().act(deleteNonMembers))
+        try
         {
-            return false;
+        	String resolvedAltWkspace = IntegrityCheckpointAction.evalGroovyExpression(build.getEnvironment(listener), scm.getAlternateWorkspace());
+        	IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace, 
+        															DerbyUtils.viewProject(scm.getIntegrityProject().getProjectCacheTable()),
+        															DerbyUtils.getDirList(scm.getIntegrityProject().getProjectCacheTable()));
+        	if (!build.getWorkspace().act(deleteNonMembers))
+        	{
+        		return false;
+        	}
+        }
+        catch (SQLException e)
+        {
+            listener.getLogger().println("A SQL Exception was caught!"); 
+            listener.getLogger().println(e.getMessage());
+            LOGGER.log(Level.SEVERE, "SQLException", e);
+            return false;       
         }
 
         return true;
@@ -81,7 +81,7 @@ public class IntegrityDeleteNonMembersAction extends Notifier
     @Override
     public boolean needsToRunAfterFinalized()
     {
-        return true;
+        return false;
     }
 
     /**

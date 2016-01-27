@@ -1,52 +1,48 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-  <f:section title="Integrity CM">
+  <f:section title="Integrity">
+  
+	<f:entry title="Integrity Server Configurations">
 	
-	<f:entry title="Default Integrity Server Hostname" field="hostName"
-		description="This default hostname will be re-used for all connections, unless overidden for specific actions">
-		<f:textbox name="mks.defaultHostName" value="${descriptor.defaultHostName}"
-	        	checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Hostname must be specified!'))}&amp;value='+encode(this.value)"/>
-	</f:entry>
-	    		    	  
-	<f:entry title="Default Integrity Server Port" field="port"
-		description="This default port will be re-used for all connections, unless overidden for specific actions">
-		<f:textbox name="mks.defaultPort" value="${descriptor.defaultPort}"
-			checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>        
-	</f:entry>
+		<f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
+			<table width="100%">
+				<f:invisibleEntry title="Configuration ID" field="configId">
+					<input class="setting-input" name="serverConfig.configId" type="hidden" value="${serverConfig.configId}" />         
+				</f:invisibleEntry>
+				
+				<f:entry title="Hostname" field="hostName">
+					<f:textbox clazz="required" checkMessage="'Hostname' is a required field!" name="serverConfig.hostName" value="${serverConfig.hostName}" />
+				</f:entry>
+				<f:entry title="Port" field="port">
+					<f:textbox clazz="required positive-number" checkMessage="'Port' value must be a positive number!" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
+				</f:entry>				
+				<f:entry title="Username" field="userName">
+					<f:textbox name="serverConfig.userName" value="${serverConfig.userName}" />
+				</f:entry>
+				<f:entry title="Password" field="password">
+					<f:password name="serverConfig.password" value="${serverConfig.password}" />
+				</f:entry>
+				<f:advanced>
+					<f:entry title="Use Secure Connection?" field="secure">
+						<f:checkbox name="serverConfig.secure" checked="${h.ifThenElse(serverConfig==null,false,serverConfig.secure)}"/>
+					</f:entry>
+					<f:entry title="Integration Point Hostname" field="ipHostName">
+						<f:textbox name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
+					</f:entry>
+					<f:entry title="Integration Point Port" field="ipPort">
+						<f:textbox clazz="number" name="serverConfig.ipPort" value="${h.ifThenElse(serverConfig==null,0,serverConfig.ipPort)}"/>
+					</f:entry>
+				</f:advanced>
+				<f:validateButton title="${%Test Connection}" progress="${%Connecting...}" method="testConnection" 
+					with="serverConfig.hostName,serverConfig.port,serverConfig.userName,serverConfig.password,serverConfig.secure,serverConfig.ipHostName,serverConfig.ipPort" />
+			</table>
+			<div align="right">
+				<f:repeatableDeleteButton/>
+			</div>
+		</f:repeatable>
 		
-	<f:entry title="Default Integrity Server Username" field="userName"
-		description="This default username will be re-used for all connections, unless overidden for specific actions">
-		<f:textbox name="mks.defaultUserName" value="${descriptor.defaultUserName}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Username must be specified!'))}&amp;value='+encode(this.value)"/>        
 	</f:entry>
-		
-	<f:entry title="Default Integrity Server Password" field="password"
-		description="This default password will be re-used for all connections, unless overidden for specific actions">
-		<f:password name="mks.defaultPassword" value="${descriptor.defaultPassword}"
-			checkUrl="'${rootURL}/fieldCheck?errorText=${h.jsStringEscape(h.encode('%Password must be specified!'))}&amp;value='+encode(this.value)"/>        
-	</f:entry>
-		
-	<f:advanced>
-		
-		<f:entry title="Default Integration Point Server Hostname" field="ipHostName"
-			description="Default Integration Point hostname used for CM related connections, unless overidden for specific actions">
-			<f:textbox name="mks.defaultIPHostName" value="${descriptor.defaultIPHostName}"/>
-		</f:entry>
-			
-		<f:entry title="Default Integration Point Server Port" field="ipPort"
-			description="Default Integration Point port used for CM related connections, unless overidden for specific actions">
-			<f:textbox name="mks.defaultIPPort" value="${descriptor.defaultIPPort}" 
-				checkUrl="'${rootURL}/scm/IntegritySCM/validPortCheck?value='+escape(this.value)"/>
-		</f:entry>
-	
-		<f:entry title="Use Secure Connections?" field="secure"
-			description="Default setting for secure connections, unless overidden for specific actions">
-			<f:checkbox name="mks.defaultSecure" checked="${descriptor.defaultSecure}"/>
-		</f:entry>
-			
-	</f:advanced>
 	
   </f:section>
 
 </j:jelly>
-

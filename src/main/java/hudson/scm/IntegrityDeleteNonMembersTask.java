@@ -6,105 +6,97 @@ import java.sql.SQLException;
 import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
+import java.util.logging.Level;
+import java.util.logging.Logger;
+
+import jenkins.security.Roles;
+
+import org.jenkinsci.remoting.RoleChecker;
+import org.jenkinsci.remoting.RoleSensitive;
 
 import hudson.FilePath;
 import hudson.FilePath.FileCallable;
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
-import hudson.model.BuildListener;
-import hudson.model.Hudson;
+import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean> 
 {
     private static final long serialVersionUID = 6452098989064436149L;
-    private final BuildListener listener;
-    private final AbstractBuild<?, ?> build;
+    private static final Logger LOGGER = Logger.getLogger("IntegritySCM");
+    private final TaskListener listener;
     private String alternateWorkspaceDir;
-    private final IntegrityCMProject siProject;
+    private final List<Hashtable<CM_PROJECT, Object>> projectMembersList; 
+    private final List<String> folderList;
     
-    public IntegrityDeleteNonMembersTask( AbstractBuild<?, ?> build,BuildListener listener,String alternateWorkspaceDir,IntegrityCMProject siProject)
+    public IntegrityDeleteNonMembersTask(TaskListener listener, String alternateWorkspaceDir, List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> folderList)
     {
-        this.build = build;
         this.listener = listener;
         this.alternateWorkspaceDir = alternateWorkspaceDir;
-        this.siProject = siProject;
+        this.projectMembersList = projectMembersList;
+        this.folderList = folderList;
     }
 
-    public Boolean invoke(File f, VirtualChannel channel) throws IOException, InterruptedException 
+    /**
+     * Indicates that this task can be run slaves.
+     * @param checker RoleChecker 
+     */
+	public void checkRoles(RoleChecker checker) throws SecurityException
+	{
+		checker.check((RoleSensitive) this, Roles.SLAVE);
+	}    
+	
+	/**
+	 * Invoke the delete non-members task
+	 */
+    public Boolean invoke(File workspaceFile, VirtualChannel channel) throws IOException, InterruptedException 
     { 
-        AbstractProject<?, ?> rootProject = getRootProject(build.getProject());
-
-        if (!(rootProject.getScm() instanceof IntegritySCM))
-        {
-            listener.getLogger().println("Integrity DeleteNonMembers is being executed for an invalid context!  Current SCM is " + rootProject.getScm() + "!");
-            return true;
-        }
-        
         try 
         {
-            deleteNonMembers(build, listener);
+            deleteNonMembers(workspaceFile);
         }
         catch (SQLException e)
         {
             listener.getLogger().println("A SQL Exception was caught!"); 
             listener.getLogger().println(e.getMessage());
-            Logger.fatal(e);
+            LOGGER.log(Level.SEVERE, "SQLException", e);
             return false;       
         }
+        
+        listener.getLogger().println("Delete Non-Members: Task is complete!");
         return true;
     }
     
     /**
-     * Obtains the root project for the build
-     * @param abstractProject
-     * @return
-     */
-    private AbstractProject<?, ?> getRootProject(AbstractProject<?, ?> abstractProject)
-    {
-        if (abstractProject.getParent() instanceof Hudson)
-        {
-            return abstractProject;
-        }
-        else
-        {
-            return getRootProject((AbstractProject<?, ?>) abstractProject.getParent());
-        }
-    }
-    
-    /**
      * Delete all members in the build workspace that are not under version control
-     * @param build
-     * @param listener
      * @throws SQLException
      * @throws IOException
      * @throws InterruptedException
      */
-    public void deleteNonMembers(AbstractBuild<?, ?> build,BuildListener listener) throws SQLException, IOException, InterruptedException
+    public void deleteNonMembers(File workspaceFile) throws SQLException, IOException, InterruptedException
     {
-        List<Hashtable<CM_PROJECT, Object>> projectMembersList = siProject.viewProject();
-        FilePath workspace = build.getWorkspace();
-        
-        if( null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0 )
-        {
-            workspace = new FilePath(new File(alternateWorkspaceDir));
-        }
-    
+		// Figure out the build workspace for this job...
+		File checkOutDir = (null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0) ? new File(alternateWorkspaceDir) : workspaceFile;
+
+		// Convert the file object to a FilePath
+		FilePath workspace = new FilePath(checkOutDir.isAbsolute() ? checkOutDir : new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkOutDir.getPath()));
+
+		// Log the location of where the Delete Non-Members will operate
+		listener.getLogger().println("Delete Non-Members: Checkout directory is " + workspace);
+
         // Get all Integrity project members of the current build
         List<FilePath> projectMembers = new ArrayList<FilePath>();
         for (Hashtable<CM_PROJECT, Object> memberInfo : projectMembersList)
         {
             File targetFile = new File(workspace + memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
-            Logger.debug("Project Member: " + targetFile.getAbsolutePath());
+            LOGGER.fine("Project Member: " + targetFile.getAbsolutePath());
             projectMembers.add(new FilePath(targetFile));
         }
         
         // Get all Integrity projects of the current build
-        List<String> folderList = siProject.getDirList();
-        for( String folder:folderList )
+        for( String folder : folderList )
         {
             File targetFile = new File(workspace + folder);
-            Logger.debug("Project Folder: " + targetFile.getAbsolutePath());
+            LOGGER.fine("Project Folder: " + targetFile.getAbsolutePath());
             projectMembers.add(new FilePath(targetFile));
         }
         
@@ -121,12 +113,12 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
      * @throws IOException
      * @throws InterruptedException
      */
-    private void deleteNonMembers(FilePath workspaceFolder ,List<FilePath> projectMembers,BuildListener listener ) throws IOException, InterruptedException
+    private void deleteNonMembers(FilePath workspaceFolder, List<FilePath> projectMembers, TaskListener listener) throws IOException, InterruptedException
     {
         List<FilePath> workspaceMembers = workspaceFolder.list();
-        for( FilePath workspaceMember:workspaceMembers )
+        for( FilePath workspaceMember : workspaceMembers )
         {
-            Logger.debug("Workspace Member: " + workspaceMember);
+            LOGGER.fine("Workspace Member: " + workspaceMember);
             if( workspaceMember.exists() && !projectMembers.contains(workspaceMember) )
             {     
                 if( workspaceMember.isDirectory() )
@@ -144,9 +136,9 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
             }
             else
             {
-                if(workspaceMember.isDirectory())
+                if( workspaceMember.isDirectory() )
                 {
-                    deleteNonMembers(workspaceMember,projectMembers,listener);
+                    deleteNonMembers(workspaceMember, projectMembers, listener);
                 }
             }
         }
