@@ -15,6 +15,10 @@
 	<f:entry title="Clean Workspace?" field="cleanCopy" help="/plugin/integrity-plugin/help-cleanCopy.html">
 		<f:checkbox name="cleanCopy" checked="${scm.cleanCopy}"/>
 	</f:entry>
+	
+	<f:entry title="Use Change Package Mode" field="CPBasedMode" help="/plugin/integrity-plugin/help-CPBasedMode.html">
+		<f:checkbox name="CPBasedMode" checked="${scm.CPBasedMode}"/>
+	</f:entry>
 
     <f:advanced>
         
