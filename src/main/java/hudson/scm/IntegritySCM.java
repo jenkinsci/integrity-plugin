@@ -961,7 +961,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     		int minorVer = Integer.parseInt(versions[1]);
     		String strVerMsg = "Integrity server version: " + version;
     		LOGGER.fine(strVerMsg);
-    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 9))
+    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
    			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
     	}
         api.terminate();
