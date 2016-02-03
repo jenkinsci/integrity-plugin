@@ -22,7 +22,7 @@ public class EditResultsCommand extends BasicAPICommand
     protected EditResultsCommand(final IntegrityConfigurable serverConfig)
     {
 	super(serverConfig);
-	cmd = new Command(Command.IM, EDIT_RESULT_COMMAND);
+	cmd = new Command(Command.TM, EDIT_RESULT_COMMAND);
 	
 	// Initialize defaults
 	cmd.addOption(new APIOption(IAPIOption.FORCE_CREATE));

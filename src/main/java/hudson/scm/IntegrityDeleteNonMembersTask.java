@@ -1,6 +1,5 @@
 /*******************************************************************************
- * Contributors:
- *     PTC 2016
+ * Contributors: PTC 2016
  *******************************************************************************/
 package hudson.scm;
 
@@ -13,8 +12,6 @@ import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-import jenkins.security.Roles;
-
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
@@ -22,6 +19,7 @@ import hudson.FilePath;
 import hudson.FilePath.FileCallable;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import jenkins.security.Roles;
 
 public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
 {
@@ -136,13 +134,18 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
       {
         if (workspaceMember.isDirectory())
         {
-          // It's possible that this is a folder in a project so we can't delete this folder (it can
-          // still have registered members somewhere beneath)
-          // TODO: We need a way to determine folders that aren't part of the project so that we can
-          // delete unused folders
-          // listener.getLogger().println("Deleting folder " + workspaceMember + " because the
-          // folder does not exits in the Integrity project");
-          // workspaceMember.deleteRecursive();
+          for (FilePath innerWorkspaceMember : workspaceMember.list())
+          {
+            if (innerWorkspaceMember.exists())
+            {
+              if (innerWorkspaceMember.isDirectory())
+                deleteNonMembers(innerWorkspaceMember, projectMembers, listener);
+              else if (!projectMembers.contains(innerWorkspaceMember))
+              {
+                innerWorkspaceMember.delete();
+              }
+            }
+          }
         } else
         {
           listener.getLogger().println("Deleting file " + workspaceMember
