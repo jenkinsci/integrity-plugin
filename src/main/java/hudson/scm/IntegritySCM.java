@@ -515,8 +515,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
         listener.getLogger()
             .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
-        // Delete non-members in this workspace, if appropriate...
-        if (deleteNonMembers)
+        // Delete non-members in this workspace. Do this for CP mode runs always.
+        if (deleteNonMembers || CPBasedMode)
         {
           IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(
               listener, resolvedAltWkspace, projectMembersList, dirList);
@@ -961,7 +961,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     		int minorVer = Integer.parseInt(versions[1]);
     		String strVerMsg = "Integrity server version: " + version;
     		LOGGER.fine(strVerMsg);
-    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 9))
+    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
    			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
     	}
         api.terminate();
