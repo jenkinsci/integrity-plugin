@@ -350,10 +350,13 @@ public class IntegrityCMProject implements Serializable
       item.appendChild(user);
     }
 
-    // Create and append the <cpid> element
-    Element cpid = xmlDoc.createElement("cpid");
-    cpid.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.CPID).toString()));
-    item.appendChild(cpid);
+    if (memberInfo.containsKey(CM_PROJECT.CPID))
+    {
+      // Create and append the <cpid> element
+      Element cpid = xmlDoc.createElement("cpid");
+      cpid.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.CPID).toString()));
+      item.appendChild(cpid);
+    }
     // Create and append the <rev> element
     Element revision = xmlDoc.createElement("rev");
     revision.appendChild(xmlDoc.createTextNode(memberInfo.get(CM_PROJECT.REVISION).toString()));
@@ -387,11 +390,14 @@ public class IntegrityCMProject implements Serializable
               memberInfo.get(CM_PROJECT.REVISION).toString(), oldRev)
           : ""));
       item.appendChild(differences);
-      // Add the <viewCP> element
-      Element viewCP = xmlDoc.createElement("viewCP");
-      viewCP.appendChild(xmlDoc.createCDATASection(
-          IntegrityCMMember.getViewCP(memberInfo.get(CM_PROJECT.CPID).toString())));
-      item.appendChild(viewCP);
+      if (memberInfo.containsKey(CM_PROJECT.CPID))
+      {
+        // Add the <viewCP> element
+        Element viewCP = xmlDoc.createElement("viewCP");
+        viewCP.appendChild(xmlDoc.createCDATASection(
+            IntegrityCMMember.getViewCP(memberInfo.get(CM_PROJECT.CPID).toString())));
+        item.appendChild(viewCP);
+      }
     } catch (UnsupportedEncodingException uee)
     {
       LOGGER.warning(
