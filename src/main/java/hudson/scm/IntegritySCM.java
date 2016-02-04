@@ -515,8 +515,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
         listener.getLogger()
             .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
-        // Delete non-members in this workspace. Do this for CP mode runs always.
-        if (deleteNonMembers || CPBasedMode)
+        // Delete non-members in this workspace.
+        if (deleteNonMembers)
         {
           IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(
               listener, resolvedAltWkspace, projectMembersList, dirList);
