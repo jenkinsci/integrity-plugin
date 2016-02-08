@@ -10,7 +10,7 @@
   <artifactId>integrity-plugin</artifactId>
   <name>PTC Integrity CM - Jenkins Plugin</name>
   <description>Integrates Jenkins with PTC Integrity</description>
-  <version>2.0.2-SNAPSHOT</version>
+  <version>2.0.1-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>
 
