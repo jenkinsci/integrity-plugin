@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -413,12 +414,17 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             listener.getLogger().println("Checkout thread " + future.toString() + " was cancelled");
             canceledMembers++;
             iter.remove();
-          } else if (future.isDone())
+          } else
           {
             // Look for the result of this thread's execution...
             try
             {
-              future.get();
+              future.get(2, TimeUnit.MINUTES);
+            } catch(TimeoutException e) {
+            	LOGGER.severe("Timeout Exception caught...");
+                listener.getLogger().println("An Timeout Exception was caught!");
+                listener.getLogger().println("Failed to checkout contents of file!");
+                return false;
             } catch (ExecutionException e)
             {
               listener.getLogger().println(e.getMessage());
