@@ -61,6 +61,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   private int dropCount;
   private int fetchCount;
   private int checkoutThreadPoolSize;
+  private int checkoutThreadTimeout;
 
   /**
    * Hudson supports building on distributed machines, and the SCM plugin must be able to be
@@ -78,13 +79,14 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
    * @param fetchChangedWorkspaceFiles Toggles whether or not to calculate checksums, so if changed
    *        then it will be overwritten
    * @param checkoutThreadPoolSize Number of parallel threads for the checkout
+   * @param checkoutThreadTimeout Timeout in minutes per checkout thread
    * @param listener The Hudson task listener
    * @param integrityConfig Integrity Configuration Object
    */
   public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList,
       List<String> dirList, String alternateWorkspaceDir, String lineTerminator,
       boolean restoreTimestamp, boolean cleanCopy, boolean fetchChangedWorkspaceFiles,
-      int checkoutThreadPoolSize, TaskListener listener, IntegrityConfigurable integrityConfig)
+      int checkoutThreadPoolSize, int checkoutThreadTimeout, TaskListener listener, IntegrityConfigurable integrityConfig)
   {
     this.projectMembersList = projectMembersList;
     this.dirList = dirList;
@@ -100,6 +102,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     this.dropCount = 0;
     this.fetchCount = 0;
     this.checkoutThreadPoolSize = checkoutThreadPoolSize;
+    this.checkoutThreadTimeout = checkoutThreadTimeout;
     this.checksumHash = new ConcurrentHashMap<String, String>();
     LOGGER.fine("Integrity Checkout Task Created!");
   }
@@ -416,14 +419,14 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             iter.remove();
           } else
           {
-            // Look for the result of this thread's execution...
+            // Look for the result of this thread's execution within project-specific checkout thread timeout
             try
             {
-              future.get(2, TimeUnit.MINUTES);
+              future.get(checkoutThreadTimeout, TimeUnit.MINUTES);
             } catch(TimeoutException e) {
-            	LOGGER.severe("Timeout Exception caught...");
-                listener.getLogger().println("An Timeout Exception was caught!");
-                listener.getLogger().println("Failed to checkout contents of file!");
+            	LOGGER.log(Level.SEVERE, "Timeout Exception caught :: ", e);
+                listener.getLogger().println("A Timeout Exception was caught. Failed to checkout contents of file!");
+                listener.getLogger().println(e.getMessage());
                 return false;
             } catch (ExecutionException e)
             {

@@ -174,6 +174,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     this.fetchChangedWorkspaceFiles = true;
     this.deleteNonMembers = true;
     this.checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
+    this.checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
     this.configurationName = configurationName;
 
     // Initialize the Integrity URL
@@ -490,7 +491,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList,
           resolvedAltWkspace, lineTerminator, restoreTimestamp,
           ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
-          fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, coSettings);
+          fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
 
       // Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
       if (workspace.act(coTask))
@@ -846,6 +847,16 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
       return UUID.randomUUID().toString();
     }
+    
+    /**
+     * Returns the default checkout thread timeout for a specific project
+     * 
+     * @return
+     */
+    public int getCheckoutThreadTimeout()
+    {
+      return DEFAULT_CHECKOUT_THREAD_TIMEOUT;
+    }
 
     /**
      * Returns the list of Integrity Server connections.
@@ -991,6 +1002,34 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         if (intValue < 1 || intValue > 10)
         {
           return FormValidation.error("Thread pool size must be between 1 an 10");
+        }
+      } catch (NumberFormatException nfe)
+      {
+        return FormValidation.error("Value must be numeric!");
+      }
+
+      // Validation was successful if we got here, so we'll return all good!
+      return FormValidation.ok();
+    }
+    
+    /**
+     * Validates that the thread timeout is numeric and within a valid range
+     * 
+     * @param value Integer value for Thread Timeout
+     * @return
+     */
+    public FormValidation doValidCheckoutThreadTimeoutCheck(@QueryParameter String value)
+    {
+      // The field checkoutThreadTimeout will be validated through the checkUrl.
+      // When the user has entered some information and moves the focus away from field,
+      // Jenkins will call DescriptorImpl.validCheckoutThreadTimeoutCheck to validate that data
+      // entered.
+      try
+      {
+        int intValue = Integer.parseInt(value);
+        if (intValue < 1 || intValue > 90)
+        {
+          return FormValidation.error("Checkout Thread timeout must be between 1 minute and 90 minutes");
         }
       } catch (NumberFormatException nfe)
       {

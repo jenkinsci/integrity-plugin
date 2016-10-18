@@ -80,6 +80,11 @@
         	<f:textbox name="checkoutThreadPoolSize" value="${h.ifThenElse(scm.checkoutThreadPoolSize==null,descriptor.checkoutThreadPoolSize,scm.checkoutThreadPoolSize)}" 
         		checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadPoolSizeCheck?value='+escape(this.value)"/>
     	</f:entry>
+    	
+    	 <f:entry title="Checkout Thread Timeout" field="checkoutThreadTimeout" help="/plugin/integrity-plugin/help-checkoutThreadTimeout.html"> 		    	
+        	<f:textbox name="checkoutThreadTimeout" value="${h.ifThenElse(scm.checkoutThreadTimeout==null,descriptor.checkoutThreadTimeout,scm.checkoutThreadTimeout)}" 
+        		checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadTimeoutCheck?value='+escape(this.value)" default="10"/>
+    	</f:entry>
                 
     </f:advanced>
 
