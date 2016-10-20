@@ -267,8 +267,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         IntegrityCheckpointAction.evalGroovyExpression(environment, configPath);
 
     // Get the project information for this project
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND,
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, getProjectSettings());
     command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
 
     Response infoRes = command.execute();
@@ -343,8 +342,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     IntegrityCMProject siProject = getIntegrityProject();
 
     // Lets parse this project
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND,
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, getProjectSettings());
 
     command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
     MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME,
@@ -396,12 +394,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     // Lets start with creating an authenticated Integrity API Session for various parts of this
     // operation...
-    IntegrityConfigurable desSettings =
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-    IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID",
-        desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(),
-        desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
-
+    IntegrityConfigurable coSettings = getProjectSettings();
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
@@ -448,12 +441,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
             if (lastSuccjob != null)
             {
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
-              projectCPIDs = siProject.projectCPDiff(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
-                  lastSuccBuildDate);
+              projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
 
-              IntegrityCMMember.viewCP(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+              IntegrityCMMember.viewCP(coSettings, projectCPIDs,
                   job.getFullName().replace("/", "_"), membersInCP);
             }
           }
@@ -515,7 +505,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
         listener.getLogger()
             .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
-        // Delete non-members in this workspace.
+        // Delete non-members in this workspace, if appropriate.
         if (deleteNonMembers)
         {
           IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(
@@ -586,7 +576,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(
           "Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
       Response res =
-          siProject.checkpoint(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
+          siProject.checkpoint(this.getProjectSettings(),
               IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener),
                   checkpointLabel));
       LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());
@@ -596,10 +586,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           + siProject.getConfigurationPath() + ", new revision is " + chkpt);
       // Update the siProject to use the new checkpoint as the basis for this build
       IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND,
-          DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
-      
-      command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getProjectName()));
-      command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, chkpt));
+    		  getProjectSettings());
+      command.addOption(new APIOption(IAPIOption.PROJECT,
+          siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
 
       Response infoRes = command.execute();
       siProject.initializeProject(infoRes.getWorkItems().next());
@@ -652,13 +641,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
             Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
             if (lastSuccjob != null)
             {
+              IntegrityConfigurable coSettings = this.getProjectSettings();
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
               projectCPIDs = getIntegrityProject().projectCPDiff(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
-                  lastSuccBuildDate);
+        	             this.getProjectSettings(), lastSuccBuildDate);
 
-              IntegrityCMMember.viewCP(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+              IntegrityCMMember.viewCP(coSettings, projectCPIDs,
                   job.getFullName().replace("/", ""), membersInCP);
               changeCount = membersInCP.size();
             }

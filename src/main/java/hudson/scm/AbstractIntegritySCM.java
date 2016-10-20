@@ -14,6 +14,8 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.browsers.IntegrityWebUI;
@@ -556,5 +558,25 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   {
     return DescriptorImpl.INTEGRITY_DESCRIPTOR;
   }
-
+  
+    /**
+     * Gets the project specific user/password for this build
+     */
+    public IntegrityConfigurable getProjectSettings()
+    {
+	IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR
+		.getConfiguration(serverConfig);
+	String strUserName = null == userName
+		? desSettings.getUserName()
+		: userName;
+	String strPassword = null == password ? desSettings
+		.getPasswordInPlainText() : password.getPlainText();
+	IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID",
+		desSettings.getIpHostName(), desSettings.getIpPort(),
+		desSettings.getHostName(), desSettings.getPort(),
+		desSettings.getSecure(), strUserName, strPassword);
+	LOGGER.fine("Project Userame = " + strUserName);
+	LOGGER.fine("Project User password = " + strPassword);
+	return ciSettings;
+    }
 }
