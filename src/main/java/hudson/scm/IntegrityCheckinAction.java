@@ -183,33 +183,15 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
    * @param thisBuild Jenkins AbstractBuild
    * @return
    */
-  private IntegrityConfigurable getProjectSettings(AbstractBuild<?, ?> thisBuild)
-  {
-    IntegrityConfigurable desSettings =
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-    IntegrityConfigurable ciSettings =
-        new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(),
-            desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "");
-    AbstractProject<?, ?> thisProject = thisBuild.getProject();
-    if (thisProject.getScm() instanceof IntegritySCM)
+    private IntegrityConfigurable getProjectSettings(
+	    AbstractBuild<?, ?> thisBuild)
     {
-      String userName = ((IntegritySCM) thisProject.getScm()).getUserName();
-      ciSettings.setUserName(userName);
-      LOGGER.fine("IntegrityCheckinAction - Project Userame = " + userName);
-
-      Secret password = ((IntegritySCM) thisProject.getScm()).getSecretPassword();
-      ciSettings.setPassword(password.getEncryptedValue());
-      LOGGER
-          .fine("IntegrityCheckinAction - Project User password = " + password.getEncryptedValue());
-    } else
-    {
-      LOGGER.severe(
-          "IntegrityCheckinAction - Failed to initialize project specific connection settings!");
-      return desSettings;
+	AbstractProject<?, ?> thisProject = thisBuild.getProject();
+	if (!(thisProject.getScm() instanceof IntegritySCM)) {
+	    LOGGER.severe("IntegrityCheckinAction - Failed to initialize project specific connection settings!");
+	}
+	return ((IntegritySCM) thisProject.getScm()).getProjectSettings();
     }
-
-    return ciSettings;
-  }
 
   /**
    * Executes the actual Integrity Checkpoint operation
