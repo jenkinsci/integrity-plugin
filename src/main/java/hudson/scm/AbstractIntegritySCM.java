@@ -561,7 +561,6 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
     return DescriptorImpl.INTEGRITY_DESCRIPTOR;
   }
 
-
  /**
   * Returns the timeout for checkout threads
   * @return checkoutThreadTimeout
@@ -579,11 +578,11 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	this.checkoutThreadTimeout = checkoutThreadTimeout;
   }
   
-  /**
-   * Gets the project specific user/password for this build
-   */
+ /**
+  * Gets the project specific user/password for this build
+  */
   public IntegrityConfigurable getProjectSettings()
-  {
+ {
 	IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR
 		.getConfiguration(serverConfig);
 	String strUserName = null == userName
@@ -598,5 +597,5 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	LOGGER.fine("Project Userame = " + strUserName);
 	LOGGER.fine("Project User password = " + strPassword);
 	return ciSettings;
-  }
+ }
 }
