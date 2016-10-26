@@ -1,3 +1,5 @@
 version: {build}
 build_script:
 - cmd: mvn clean package -B -Dmaven.test.skip=true
+artifacts:
+- path: target\integrity-plugin.hpi
