@@ -14,6 +14,8 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.browsers.IntegrityWebUI;
@@ -35,7 +37,8 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   public static final String FS = System.getProperty("file.separator");
   public static final int MIN_PORT_VALUE = 1;
   public static final int MAX_PORT_VALUE = 65535;
-  public static final int DEFAULT_THREAD_POOL_SIZE = 5;
+  protected static final int DEFAULT_THREAD_POOL_SIZE = 5;
+  protected static final int DEFAULT_CHECKOUT_THREAD_TIMEOUT = 10;  // Timeout checkout threads after 10 minutes per thread.
   public static final String DEFAULT_DATE_FORMAT = "MMM dd, yyyy h:mm:ss a";
   public static final SimpleDateFormat SDF = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
   protected final String ciServerURL =
@@ -60,6 +63,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected boolean fetchChangedWorkspaceFiles = false;
   protected boolean deleteNonMembers = false;
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
+  protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
 
   public AbstractIntegritySCM()
   {
@@ -557,4 +561,41 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
     return DescriptorImpl.INTEGRITY_DESCRIPTOR;
   }
 
+ /**
+  * Returns the timeout for checkout threads
+  * @return checkoutThreadTimeout
+ */
+  public int getCheckoutThreadTimeout() {
+	return checkoutThreadTimeout;
+  }
+
+ /**
+  * Sets the timeout for checkout threads
+  * @param checkoutThreadTimeout
+ */
+  @DataBoundSetter
+  public void setCheckoutThreadTimeout(int checkoutThreadTimeout) {
+	this.checkoutThreadTimeout = checkoutThreadTimeout;
+  }
+  
+ /**
+  * Gets the project specific user/password for this build
+  */
+  public IntegrityConfigurable getProjectSettings()
+ {
+	IntegrityConfigurable desSettings = DescriptorImpl.INTEGRITY_DESCRIPTOR
+		.getConfiguration(serverConfig);
+	String strUserName = null == userName
+		? desSettings.getUserName()
+		: userName;
+	String strPassword = null == password ? desSettings
+		.getPasswordInPlainText() : password.getPlainText();
+	IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID",
+		desSettings.getIpHostName(), desSettings.getIpPort(),
+		desSettings.getHostName(), desSettings.getPort(),
+		desSettings.getSecure(), strUserName, strPassword);
+	LOGGER.fine("Project Userame = " + strUserName);
+	LOGGER.fine("Project User password = " + strPassword);
+	return ciSettings;
+ }
 }

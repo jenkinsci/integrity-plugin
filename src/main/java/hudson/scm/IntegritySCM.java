@@ -174,6 +174,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     this.fetchChangedWorkspaceFiles = true;
     this.deleteNonMembers = true;
     this.checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
+    this.checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
     this.configurationName = configurationName;
 
     // Initialize the Integrity URL
@@ -267,8 +268,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         IntegrityCheckpointAction.evalGroovyExpression(environment, configPath);
 
     // Get the project information for this project
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND,
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, getProjectSettings());
     command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
 
     Response infoRes = command.execute();
@@ -343,8 +343,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     IntegrityCMProject siProject = getIntegrityProject();
 
     // Lets parse this project
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND,
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, getProjectSettings());
 
     command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
     MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME,
@@ -396,12 +395,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     // Lets start with creating an authenticated Integrity API Session for various parts of this
     // operation...
-    IntegrityConfigurable desSettings =
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
-    IntegrityConfigurable coSettings = new IntegrityConfigurable("TEMP_ID",
-        desSettings.getIpHostName(), desSettings.getIpPort(), desSettings.getHostName(),
-        desSettings.getPort(), desSettings.getSecure(), userName, password.getPlainText());
-
+    IntegrityConfigurable coSettings = getProjectSettings();
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
@@ -448,12 +442,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
             if (lastSuccjob != null)
             {
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
-              projectCPIDs = siProject.projectCPDiff(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
-                  lastSuccBuildDate);
+              projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
 
-              IntegrityCMMember.viewCP(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+              IntegrityCMMember.viewCP(coSettings, projectCPIDs,
                   job.getFullName().replace("/", "_"), membersInCP);
             }
           }
@@ -490,7 +481,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList,
           resolvedAltWkspace, lineTerminator, restoreTimestamp,
           ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
-          fetchChangedWorkspaceFiles, checkoutThreadPoolSize, listener, coSettings);
+          fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
 
       // Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
       if (workspace.act(coTask))
@@ -515,7 +506,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
         listener.getLogger()
             .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
-        // Delete non-members in this workspace.
+        // Delete non-members in this workspace, if appropriate.
         if (deleteNonMembers)
         {
           IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(
@@ -586,7 +577,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(
           "Preparing to execute pre-build si checkpoint for " + siProject.getConfigurationPath());
       Response res =
-          siProject.checkpoint(DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
+          siProject.checkpoint(this.getProjectSettings(),
               IntegrityCheckpointAction.evalGroovyExpression(run.getEnvironment(listener),
                   checkpointLabel));
       LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());
@@ -596,7 +587,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           + siProject.getConfigurationPath() + ", new revision is " + chkpt);
       // Update the siProject to use the new checkpoint as the basis for this build
       IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND,
-          DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig));
+    		  getProjectSettings());
       command.addOption(new APIOption(IAPIOption.PROJECT,
           siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
 
@@ -651,13 +642,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
             Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
             if (lastSuccjob != null)
             {
+              IntegrityConfigurable coSettings = this.getProjectSettings();
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
               projectCPIDs = getIntegrityProject().projectCPDiff(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig),
-                  lastSuccBuildDate);
+        	             this.getProjectSettings(), lastSuccBuildDate);
 
-              IntegrityCMMember.viewCP(
-                  DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig), projectCPIDs,
+              IntegrityCMMember.viewCP(coSettings, projectCPIDs,
                   job.getFullName().replace("/", ""), membersInCP);
               changeCount = membersInCP.size();
             }
@@ -845,6 +835,16 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
       return UUID.randomUUID().toString();
     }
+    
+    /**
+     * Returns the default checkout thread timeout for a specific project
+     * 
+     * @return
+     */
+    public int getCheckoutThreadTimeout()
+    {
+      return DEFAULT_CHECKOUT_THREAD_TIMEOUT;
+    }
 
     /**
      * Returns the list of Integrity Server connections.
@@ -990,6 +990,34 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         if (intValue < 1 || intValue > 10)
         {
           return FormValidation.error("Thread pool size must be between 1 an 10");
+        }
+      } catch (NumberFormatException nfe)
+      {
+        return FormValidation.error("Value must be numeric!");
+      }
+
+      // Validation was successful if we got here, so we'll return all good!
+      return FormValidation.ok();
+    }
+    
+    /**
+     * Validates that the thread timeout is numeric and within a valid range
+     * 
+     * @param value Integer value for Thread Timeout
+     * @return
+     */
+    public FormValidation doValidCheckoutThreadTimeoutCheck(@QueryParameter String value)
+    {
+      // The field checkoutThreadTimeout will be validated through the checkUrl.
+      // When the user has entered some information and moves the focus away from field,
+      // Jenkins will call DescriptorImpl.validCheckoutThreadTimeoutCheck to validate that data
+      // entered.
+      try
+      {
+        int intValue = Integer.parseInt(value);
+        if (intValue < 1 || intValue > 90)
+        {
+          return FormValidation.error("Checkout Thread timeout must be between 1 minute and 90 minutes");
         }
       } catch (NumberFormatException nfe)
       {

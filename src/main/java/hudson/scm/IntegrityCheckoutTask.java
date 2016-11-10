@@ -20,6 +20,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -60,6 +61,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   private int dropCount;
   private int fetchCount;
   private int checkoutThreadPoolSize;
+  private int checkoutThreadTimeout;
 
   /**
    * Hudson supports building on distributed machines, and the SCM plugin must be able to be
@@ -77,13 +79,14 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
    * @param fetchChangedWorkspaceFiles Toggles whether or not to calculate checksums, so if changed
    *        then it will be overwritten
    * @param checkoutThreadPoolSize Number of parallel threads for the checkout
+   * @param checkoutThreadTimeout Timeout in minutes per checkout thread
    * @param listener The Hudson task listener
    * @param integrityConfig Integrity Configuration Object
    */
   public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList,
       List<String> dirList, String alternateWorkspaceDir, String lineTerminator,
       boolean restoreTimestamp, boolean cleanCopy, boolean fetchChangedWorkspaceFiles,
-      int checkoutThreadPoolSize, TaskListener listener, IntegrityConfigurable integrityConfig)
+      int checkoutThreadPoolSize, int checkoutThreadTimeout, TaskListener listener, IntegrityConfigurable integrityConfig)
   {
     this.projectMembersList = projectMembersList;
     this.dirList = dirList;
@@ -99,6 +102,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     this.dropCount = 0;
     this.fetchCount = 0;
     this.checkoutThreadPoolSize = checkoutThreadPoolSize;
+    this.checkoutThreadTimeout = checkoutThreadTimeout;
     this.checksumHash = new ConcurrentHashMap<String, String>();
     LOGGER.fine("Integrity Checkout Task Created!");
   }
@@ -413,12 +417,17 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             listener.getLogger().println("Checkout thread " + future.toString() + " was cancelled");
             canceledMembers++;
             iter.remove();
-          } else if (future.isDone())
+          } else
           {
-            // Look for the result of this thread's execution...
+            // Look for the result of this thread's execution within project-specific checkout thread timeout
             try
             {
-              future.get();
+              future.get(checkoutThreadTimeout, TimeUnit.MINUTES);
+            } catch(TimeoutException e) {
+            	LOGGER.log(Level.SEVERE, "Timeout Exception caught :: ", e);
+                listener.getLogger().println("A Timeout Exception was caught. Failed to checkout contents of file!");
+                listener.getLogger().println(e.getMessage());
+                return false;
             } catch (ExecutionException e)
             {
               listener.getLogger().println(e.getMessage());

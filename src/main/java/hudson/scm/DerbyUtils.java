@@ -11,7 +11,6 @@ import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
-import java.sql.Statement;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
@@ -219,13 +218,13 @@ public class DerbyUtils
   {
     boolean success = false;
     Connection db = null;
-    Statement stmt = null;
+    PreparedStatement stmt = null;
     try
     {
       LOGGER.fine("Preparing to execute " + sql);
       db = dataSource.getPooledConnection().getConnection();
-      stmt = db.createStatement();
-      success = stmt.execute(sql);
+      stmt = db.prepareStatement(sql);
+      success = stmt.execute();
       LOGGER.fine("Executed...!");
     } catch (SQLException sqlex)
     {
@@ -930,8 +929,8 @@ public class DerbyUtils
     int changeCount = 0;
 
     Connection db = null;
-    Statement baselineSelect = null;
-    Statement pjSelect = null;
+    PreparedStatement baselineSelect = null;
+    PreparedStatement pjSelect = null;
     ResultSet baselineRS = null;
     ResultSet rs = null;
     PreparedStatement select = null;
@@ -1085,11 +1084,11 @@ public class DerbyUtils
       } else // File Mode comparison
       {
         // Create the select statement for the previous baseline
-        baselineSelect = db.createStatement();
         String baselineSelectSql =
             DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
-        LOGGER.fine("Attempting to execute query " + baselineSelectSql);
-        baselineRS = baselineSelect.executeQuery(baselineSelectSql);
+        LOGGER.log(Level.FINE, "Attempting to execute query ", baselineSelectSql);
+        baselineSelect = db.prepareStatement(baselineSelectSql);
+        baselineRS = baselineSelect.executeQuery();
 
         // Create a hashtable to hold the old baseline for easy comparison
         Hashtable<String, Hashtable<CM_PROJECT, Object>> baselinePJ =
@@ -1123,12 +1122,11 @@ public class DerbyUtils
         }
 
         // Create the select statement for the current project
-        pjSelect =
-            db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
         String pjSelectSql = DerbyUtils.DELTA_SELECT.replaceFirst("CM_PROJECT", projectCacheTable);
-        LOGGER.fine("Attempting to execute query " + pjSelectSql);
-        rs = pjSelect.executeQuery(pjSelectSql);
-
+        LOGGER.log(Level.FINE, "Attempting to execute query ", pjSelectSql);
+        pjSelect = db.prepareStatement(pjSelectSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+        rs = pjSelect.executeQuery();
+        
         // Now we will compare the adds and updates between the current project and the baseline
         for (int i = 1; i <= DerbyUtils.getRowCount(rs); i++)
         {
@@ -1296,18 +1294,15 @@ public class DerbyUtils
       String projectCacheTable) throws SQLException, IOException
   {
     Connection db = null;
-    Statement authSelect = null;
+    PreparedStatement authSelect = null;
     ResultSet rs = null;
     try
     {
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
-      // Create the select statement for the current project
-      authSelect =
-          db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      rs = authSelect
-          .executeQuery(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      rs = authSelect.executeQuery();
       while (rs.next())
       {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -1354,7 +1349,7 @@ public class DerbyUtils
       ConcurrentHashMap<String, String> checksumHash) throws SQLException, IOException
   {
     Connection db = null;
-    Statement checksumSelect = null;
+    PreparedStatement checksumSelect = null;
     ResultSet rs = null;
     try
     {
@@ -1362,10 +1357,8 @@ public class DerbyUtils
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
       // Create the select statement for the current project
-      checksumSelect =
-          db.createStatement(ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      rs = checksumSelect
-          .executeQuery(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable));
+      checksumSelect = db.prepareStatement(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      rs = checksumSelect.executeQuery();
       while (rs.next())
       {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -1418,7 +1411,7 @@ public class DerbyUtils
 
     // Initialize our db connection
     Connection db = null;
-    Statement stmt = null;
+    PreparedStatement stmt = null;
     ResultSet rs = null;
 
     try
@@ -1426,9 +1419,8 @@ public class DerbyUtils
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
-      stmt = db.createStatement();
-      rs = stmt
-          .executeQuery(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      stmt = db.prepareStatement(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      rs = stmt.executeQuery();
       while (rs.next())
       {
         projectMembersList.add(DerbyUtils.getRowData(rs));
@@ -1470,7 +1462,7 @@ public class DerbyUtils
 
     // Initialize our db connection
     Connection db = null;
-    Statement stmt = null;
+    PreparedStatement stmt = null;
     ResultSet rs = null;
 
     try
@@ -1478,9 +1470,8 @@ public class DerbyUtils
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
-      stmt = db.createStatement();
-      rs = stmt.executeQuery(
-          DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      stmt = db.prepareStatement(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      rs = stmt.executeQuery();
       while (rs.next())
       {
         subprojectsList.add(DerbyUtils.getRowData(rs));
@@ -1520,7 +1511,7 @@ public class DerbyUtils
 
     // Initialize our db connection
     Connection db = null;
-    Statement stmt = null;
+    PreparedStatement stmt = null;
     ResultSet rs = null;
 
     try
@@ -1528,8 +1519,8 @@ public class DerbyUtils
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
-      stmt = db.createStatement();
-      rs = stmt.executeQuery(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      stmt = db.prepareStatement(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
+      rs = stmt.executeQuery();
       while (rs.next())
       {
         Hashtable<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
@@ -1573,7 +1564,7 @@ public class DerbyUtils
     // Initialize our db connection
     Connection db = null;
     PreparedStatement stmt = null;
-    Statement cachedCPSelect = null;
+    PreparedStatement cachedCPSelect = null;
     ResultSet cachedCPRS = null;
 
     try
@@ -1603,11 +1594,9 @@ public class DerbyUtils
       {
         // Retrieve the list of CPs from the Derby DB
         cachedCPIds = new HashSet<String>();
-        cachedCPSelect = db.createStatement();
-        String cachedCPSelectSql = DerbyUtils.CP_SELECT.replaceFirst("CM_PROJECT_CP", cpCacheTable);
-        LOGGER.log(Level.FINE, "Attempting to execute query " + cachedCPSelectSql);
-        cachedCPRS = cachedCPSelect.executeQuery(cachedCPSelectSql);
-
+        cachedCPSelect = db.prepareStatement(DerbyUtils.CP_SELECT.replaceFirst("CM_PROJECT_CP", cpCacheTable));
+        cachedCPRS = cachedCPSelect.executeQuery();
+        
         while (cachedCPRS.next())
         {
           cachedCPIds.add(cachedCPRS.getString(1));
