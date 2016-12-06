@@ -23,8 +23,8 @@
   </developers>
 	
   <scm>
-	<connection>scm:git:htps://github.com/jenkinsci/integrity-plugin.git</connection>
-	<developerConnection>scm:git:https://github.com/jenkinsci/integrity-plugin.git </developerConnection>
+	<connection>scm:git:ssh://github.com/jenkinsci/integrity-plugin.git</connection>
+	<developerConnection>scm:git:ssh://git@github.com/jenkinsci/integrity-plugin.git </developerConnection>
 	<url>https://github.com/jenkinsci/integrity-plugin</url>
     <tag>HEAD</tag>
   </scm>
