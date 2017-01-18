@@ -588,8 +588,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       // Update the siProject to use the new checkpoint as the basis for this build
       IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND,
     		  getProjectSettings());
-      command.addOption(new APIOption(IAPIOption.PROJECT,
-          siProject.getConfigurationPath() + "#forceJump=#b=" + chkpt));
+      command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getProjectName()));
+      command.addOption(new APIOption(IAPIOption.PROJECT_REVISION, chkpt));
 
       Response infoRes = command.execute();
       siProject.initializeProject(infoRes.getWorkItems().next());
