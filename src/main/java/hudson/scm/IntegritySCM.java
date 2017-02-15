@@ -712,6 +712,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       return PollingResult.BUILD_NOW;
     }
   }
+  
+	@Override
+	public String getKey() {
+		/* TODO */
+		return super.getKey();
+	}
 
   /**
    * The relationship of Descriptor and SCM (the describable) is akin to class and object. This
