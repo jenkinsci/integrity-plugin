@@ -14,8 +14,6 @@ import java.util.logging.Logger;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
-import hudson.model.AbstractBuild;
-import hudson.model.AbstractProject;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.browsers.IntegrityWebUI;
