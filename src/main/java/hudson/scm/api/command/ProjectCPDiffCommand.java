@@ -4,15 +4,14 @@
  *******************************************************************************/
 package hudson.scm.api.command;
 
+import com.mks.api.Command;
+import com.mks.api.MultiValue;
+
 import hudson.scm.IntegrityConfigurable;
-import hudson.scm.IntegritySCM;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
-
-import com.mks.api.Command;
-import com.mks.api.MultiValue;
 
 public class ProjectCPDiffCommand extends BasicAPICommand {
 	

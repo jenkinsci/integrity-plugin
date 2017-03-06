@@ -46,7 +46,6 @@ import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
 import hudson.util.ListBoxModel;
-import hudson.util.Secret;
 import net.sf.json.JSONObject;
 
 public class IntegrityItemAction extends Notifier implements Serializable
