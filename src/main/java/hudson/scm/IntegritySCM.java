@@ -399,8 +399,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
-    PrintWriter writer =
-        new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"));
+    
     try
     {
       // Register the project cache for this build
@@ -493,19 +492,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         {
           DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates());
         }
+        
         // Write out the change log file, which will be used by the parser to report the updates
-        listener.getLogger().println("Writing build change log...");
-        if (CPBasedMode)
-        {
-          writer.println(
-              siProject.getChangeLogforCPMode(String.valueOf(run.getNumber()), membersInCP));
-        } else
-        {
-          writer
-              .println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
-        }
-        listener.getLogger()
-            .println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
+        writeChangeLog(run, listener, changeLogFile, membersInCP, siProject, projectMembersList);
+        
         // Delete non-members in this workspace, if appropriate.
         if (deleteNonMembers)
         {
@@ -544,17 +534,48 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger()
           .println("Execution Exception while parsing Derby Project Members : " + e.getMessage());
       throw new AbortException("Execution Exception while parsing Derby Project Members");
-    } finally
-    {
-      if (writer != null)
-      {
-        writer.close();
-      }
     }
 
     // Log the completion...
     LOGGER.fine("Completed execution of checkout() routine...!");
   }
+
+	/**
+	 * Write the changelog for a run.
+	 * 
+	 * @param run
+	 * @param listener
+	 * @param changeLogFile
+	 * @param membersInCP
+	 * @param siProject
+	 * @param projectMembersList
+	 * @throws IOException 
+	 */
+	private void writeChangeLog(Run<?, ?> run, TaskListener listener, File changeLogFile,
+			Map<CPInfo, List<CPMember>> membersInCP, IntegrityCMProject siProject,
+			List<Hashtable<CM_PROJECT, Object>> projectMembersList) throws IOException {
+		PrintWriter writer = null;
+		try {
+			listener.getLogger().println("Writing build change log...");
+			if (changeLogFile != null) {
+				writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"));
+				if (CPBasedMode) {
+					writer.println(siProject.getChangeLogforCPMode(String.valueOf(run.getNumber()), membersInCP));
+				} else {
+					writer.println(siProject.getChangeLog(String.valueOf(run.getNumber()), projectMembersList));
+				}
+				listener.getLogger().println("Change log successfully generated: " + changeLogFile.getAbsolutePath());
+			}
+			/** This works if changeLogFile is non null. Implement a disable changelogfile feature if required later.**/
+			// else {
+			//	createEmptyChangeLog(changeLogFile, listener, "changelog");
+			//}
+		} finally {
+			if (writer != null) {
+				writer.close();
+			}
+		}
+	}
 
   /**
    * @param run
@@ -713,11 +734,13 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     }
   }
   
-	@Override
-	public String getKey() {
-		/* TODO */
-		return super.getKey();
-	}
+  private String getSource(EnvVars env) {
+      return env.expand(configPath);
+  }
+
+  @Override public String getKey() {
+      return "integrity " + getSource(new EnvVars());
+  }
 
   /**
    * The relationship of Descriptor and SCM (the describable) is akin to class and object. This
