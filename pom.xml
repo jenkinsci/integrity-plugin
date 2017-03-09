@@ -29,6 +29,12 @@
     <tag>HEAD</tag>
   </scm>
   
+  <properties>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+    <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
+	<findbugs.failOnError>false</findbugs.failOnError>
+  </properties>
+  
   <dependencies>
    	<dependency>
   		<groupId>org.apache.commons</groupId>
@@ -76,12 +82,14 @@
 		<artifactId>commons-pool2</artifactId>
 		<version>2.4.2</version>
 	</dependency>
+	<dependency>
+      <groupId>com.google.code.findbugs</groupId>
+      <artifactId>annotations</artifactId>
+      <version>3.0.0</version>
+      <scope>provided</scope>
+	</dependency>
   </dependencies>
   
-  <properties>
-    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-  </properties>
-
   <distributionManagement>
     <repository>
       <id>maven.jenkins-ci.org</id>
@@ -112,7 +120,25 @@
       	<configuration>
         	<additionalparam>-Xdoclint:none</additionalparam>
       	</configuration>
-    </plugin>
+      </plugin>
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>findbugs-maven-plugin</artifactId>
+        <version>${findbugs-maven-plugin.version}</version>
+        <configuration>
+          <xmlOutput>true</xmlOutput>
+          <failOnError>${findbugs.failOnError}</failOnError>
+        </configuration>
+        <executions>
+          <execution>
+            <id>run-findbugs</id>
+            <phase>verify</phase> 
+            <goals>
+              <goal>check</goal> 
+            </goals>
+          </execution>
+        </executions>
+	  </plugin>
     </plugins>
   </build>
   
