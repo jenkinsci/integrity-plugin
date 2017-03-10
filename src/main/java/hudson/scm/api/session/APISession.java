@@ -111,6 +111,7 @@ public class APISession implements ISession
     }
     // Create the Session
     session = ip.createSession(userName, password);
+    session.setAutoReconnect(true);
     session.setTimeout(300000); // 5 Minutes
     // No need to ping here as the ping validation is handled by the ISessionPool class
     // ping();
@@ -266,6 +267,10 @@ public class APISession implements ISession
       {
         if (null != session)
         {
+          // disconnect any users explicitly
+          Command  cmd = new Command(Command.IM, "disconnect");
+          runCommand(cmd); 
+        	
           // force the termination of an running command
           session.release(true);
           sessionKilled = true;

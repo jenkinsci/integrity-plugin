@@ -25,6 +25,7 @@ import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -690,8 +691,12 @@ public class IntegrityCMProject implements Serializable
 
     for (Future<Void> f : futures)
     {
-      // Wait for all threads to finish
-      f.get();
+    	try {
+			// Wait for threads for finish processing, giving 5 minutes atmost for each thread.
+			f.get(5, TimeUnit.MINUTES);
+		} catch (TimeoutException e) {
+			LOGGER.log(Level.SEVERE, "Timeout Exception caught while parsing Derby objects:: ", e);
+		}
     }
 
     LOGGER.log(Level.INFO, "Parsing project " + this.getConfigurationPath() + " complete!");
