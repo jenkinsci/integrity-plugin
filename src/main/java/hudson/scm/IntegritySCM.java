@@ -409,8 +409,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
               job.getName(), configurationName, run.getNumber());
 
       // Next, load up the information for this Integrity Project's configuration
-      // listener.getLogger().println("Preparing to execute si projectinfo for " +
-      // resolvedConfigPath);
       listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
       initializeCMProject(run.getEnvironment(listener), projectCacheTable);
       IntegrityCMProject siProject = getIntegrityProject();

@@ -137,159 +137,6 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   }
 
   /**
-   * Nested class to manage the open file handle count for the entire checkout process
-   */
-  private static class ThreadLocalOpenFileHandler extends ThreadLocal<Integer>
-  {
-    /**
-     * Returns the initial value for the open file handle count
-     */
-    @Override
-    protected Integer initialValue()
-    {
-      LOGGER.fine("Trying to retrieve initial value for open file handler");
-      return new Integer(1);
-    }
-  }
-
-  /**
-   * Nested class to manage the APISessions for the checkout thread pool
-   */
-  private static class ThreadLocalAPISession extends ThreadLocal<ISession>
-  {
-    IntegrityConfigurable integrityConfig;
-    // Using a thread safe Vector instead of a List
-    private Vector<ISession> sessions = new Vector<ISession>();
-
-    /**
-     * Initialize our constructor with the all the information needed to create an APISession
-     * 
-     * @param ipHost Integration Point host name
-     * @param ipPortNum Integration Point port
-     * @param host Integrity Server host name
-     * @param portNum Integrity Server port
-     * @param user Integrity Server user id
-     * @param paswd Integrity Server user's password
-     * @param secure Flag to determine whether or not secure sockets are in use
-     */
-    public ThreadLocalAPISession(IntegrityConfigurable integrityConfig)
-    {
-      this.integrityConfig = integrityConfig;
-    }
-
-    /**
-     * Terminates all the active APISessions started by the thread pool
-     */
-    @Override
-    public void remove()
-    {
-      for (ISession session : sessions)
-      {
-        try
-        {
-          LOGGER.fine("Terminating threaded API Sessions...");
-          session.terminate();
-        } catch (Exception ex)
-        {
-          LOGGER.fine("Error while shuting down thread API session: " + ex.getMessage());
-        }
-      }
-      super.remove();
-    }
-
-    /**
-     * Returns an initial APISession for this thread
-     */
-    @Override
-    protected ISession initialValue()
-    {
-      ISession api = APISession.create(integrityConfig);
-      if (null != api)
-      {
-        //api.ping();
-        sessions.add(api);
-        return api;
-      } else
-      {
-        return null;
-      }
-    }
-  }
-
-  /**
-   * Nested class that performs the actual checkout operation
-   */
-  private final class CheckOutTask implements Callable<Void>
-  {
-    private final ThreadLocalAPISession apiSession;
-    private final ThreadLocalOpenFileHandler openFileHandler;
-    private final String configPath;
-    private final String memberID;
-    private final String memberName;
-    private final String memberRev;
-    private final Timestamp memberTimestamp;
-    private final File targetFile;
-    private final boolean calculateChecksum;
-
-    public CheckOutTask(ThreadLocalAPISession apiSession,
-        ThreadLocalOpenFileHandler openFileHandler, String memberName, String configPath,
-        String memberID, String memberRev, Timestamp memberTimestamp, File targetFile,
-        boolean calculateChecksum)
-    {
-      this.apiSession = apiSession;
-      this.openFileHandler = openFileHandler;
-      this.configPath = configPath;
-      this.memberID = memberID;
-      this.memberName = memberName;
-      this.memberRev = memberRev;
-      this.memberTimestamp = memberTimestamp;
-      this.targetFile = targetFile;
-      this.calculateChecksum = calculateChecksum;
-    }
-
-    public Void call() throws Exception
-    {
-      ISession api = apiSession.get();
-      if (null != api)
-      {
-        // Check to see if we need to release the APISession to clear some file handles
-        LOGGER.fine("API open file handles: " + openFileHandler.get());
-        if (openFileHandler.get() >= CHECKOUT_TRESHOLD)
-        {
-          LOGGER.fine("Checkout threshold reached for session " + api.toString()
-              + ", refreshing API session");
-          api.refreshAPISession();
-          openFileHandler.set(1);
-        }
-        LOGGER.fine("Checkout on API thread: " + api.toString());
-        try
-        {
-          IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp,
-              targetFile, restoreTimestamp, lineTerminator);
-        } catch (APIException aex)
-        {
-          LOGGER.severe("API Exception caught...");
-          ExceptionHandler eh = new ExceptionHandler(aex);
-          LOGGER.severe(eh.getMessage());
-          LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-          throw new Exception(eh.getMessage());
-        }
-
-        openFileHandler.set(openFileHandler.get() + 1);
-        if (calculateChecksum)
-        {
-          checksumHash.put(memberName, IntegrityCMMember.getMD5Checksum(targetFile));
-        }
-      } else
-      {
-        throw new Exception("Failed to create APISession!");
-      }
-      return null;
-    }
-
-  }
-
-  /**
    * Indicates that this task can be run slaves.
    * 
    * @param checker RoleChecker
@@ -463,7 +310,6 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         Thread.sleep(2000);
       }
       executor.shutdown();
-      executor.awaitTermination(2, TimeUnit.MINUTES);
 
       // Lets advice the user that we've checked out all the members
       if (cleanCopy)
@@ -492,5 +338,158 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 
     // If we got here, everything is good on the checkout...
     return true;
+  }
+  
+  /**
+   * Nested class to manage the APISessions for the checkout thread pool
+   */
+  private static class ThreadLocalAPISession extends ThreadLocal<ISession>
+  {
+    IntegrityConfigurable integrityConfig;
+    // Using a thread safe Vector instead of a List
+    private Vector<ISession> sessions = new Vector<ISession>();
+
+    /**
+     * Initialize our constructor with the all the information needed to create an APISession
+     * 
+     * @param ipHost Integration Point host name
+     * @param ipPortNum Integration Point port
+     * @param host Integrity Server host name
+     * @param portNum Integrity Server port
+     * @param user Integrity Server user id
+     * @param paswd Integrity Server user's password
+     * @param secure Flag to determine whether or not secure sockets are in use
+     */
+    public ThreadLocalAPISession(IntegrityConfigurable integrityConfig)
+    {
+      this.integrityConfig = integrityConfig;
+    }
+
+    /**
+     * Terminates all the active APISessions started by the thread pool
+     */
+    @Override
+    public void remove()
+    {
+      for (ISession session : sessions)
+      {
+        try
+        {
+          LOGGER.fine("Terminating threaded API Sessions...");
+          session.terminate();
+        } catch (Exception ex)
+        {
+          LOGGER.fine("Error while shuting down thread API session: " + ex.getMessage());
+        }
+      }
+      super.remove();
+    }
+
+    /**
+     * Returns an initial APISession for this thread
+     */
+    @Override
+    protected ISession initialValue()
+    {
+      ISession api = APISession.create(integrityConfig);
+      if (null != api)
+      {
+        //api.ping();
+        sessions.add(api);
+        return api;
+      } else
+      {
+        return null;
+      }
+    }
+  }
+  
+  /**
+   * Nested class to manage the open file handle count for the entire checkout process
+   */
+  private static class ThreadLocalOpenFileHandler extends ThreadLocal<Integer>
+  {
+    /**
+     * Returns the initial value for the open file handle count
+     */
+    @Override
+    protected Integer initialValue()
+    {
+      LOGGER.fine("Trying to retrieve initial value for open file handler");
+      return new Integer(1);
+    }
+  }
+
+  /**
+   * Nested class that performs the actual checkout operation
+   */
+  private final class CheckOutTask implements Callable<Void>
+  {
+    private final ThreadLocalAPISession apiSession;
+    private final ThreadLocalOpenFileHandler openFileHandler;
+    private final String configPath;
+    private final String memberID;
+    private final String memberName;
+    private final String memberRev;
+    private final Timestamp memberTimestamp;
+    private final File targetFile;
+    private final boolean calculateChecksum;
+
+    public CheckOutTask(ThreadLocalAPISession apiSession,
+        ThreadLocalOpenFileHandler openFileHandler, String memberName, String configPath,
+        String memberID, String memberRev, Timestamp memberTimestamp, File targetFile,
+        boolean calculateChecksum)
+    {
+      this.apiSession = apiSession;
+      this.openFileHandler = openFileHandler;
+      this.configPath = configPath;
+      this.memberID = memberID;
+      this.memberName = memberName;
+      this.memberRev = memberRev;
+      this.memberTimestamp = memberTimestamp;
+      this.targetFile = targetFile;
+      this.calculateChecksum = calculateChecksum;
+    }
+
+    public Void call() throws Exception
+    {
+      ISession api = apiSession.get();
+      if (null != api)
+      {
+        // Check to see if we need to release the APISession to clear some file handles
+        LOGGER.fine("API open file handles: " + openFileHandler.get());
+        if (openFileHandler.get() >= CHECKOUT_TRESHOLD)
+        {
+          LOGGER.fine("Checkout threshold reached for session " + api.toString()
+              + ", refreshing API session");
+          api.refreshAPISession();
+          openFileHandler.set(1);
+        }
+        LOGGER.fine("Checkout on API thread: " + api.toString());
+        try
+        {
+          IntegrityCMMember.checkout(api, configPath, memberID, memberRev, memberTimestamp,
+              targetFile, restoreTimestamp, lineTerminator);
+        } catch (APIException aex)
+        {
+          LOGGER.severe("API Exception caught...");
+          ExceptionHandler eh = new ExceptionHandler(aex);
+          LOGGER.severe(eh.getMessage());
+          LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+          throw new Exception(eh.getMessage());
+        }
+
+        openFileHandler.set(openFileHandler.get() + 1);
+        if (calculateChecksum)
+        {
+          checksumHash.put(memberName, IntegrityCMMember.getMD5Checksum(targetFile));
+        }
+      } else
+      {
+        throw new Exception("Failed to create APISession!");
+      }
+      return null;
+    }
+
   }
 }
