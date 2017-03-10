@@ -36,9 +36,9 @@ public class ISessionPool
   private KeyedObjectPool<IntegrityConfigurable, ISession> pool;
   // Max APIsessions in the pool, per IntegrityConfigurable. Note that this has to be higher than
   // the checkout thread count to prevent CO threads from blocking
-  private int maxTotalPerKey = 15;
+  private int maxTotalPerKey = 30;
   // Max idle APIsession objects in the pool, per IntegrityConfigurable
-  private int maxIdlePerKey = 2;
+  private int maxIdlePerKey = 5;
   // 3 mins before idle Sessions are checked for eviction
   private long minEvictableIdleTimeMillis = 600000;
   private GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -64,10 +64,12 @@ public class ISessionPool
 
   private void startPool()
   {
-    // config.setMaxTotalPerKey(maxTotalPerKey);
-    // config.setMaxIdlePerKey(maxIdlePerKey);
+    config.setMaxTotalPerKey(maxTotalPerKey);
+    config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
     config.setTestOnCreate(true);
+    config.setTestWhileIdle(true);
+    config.setMaxWaitMillis(1000);
     // config.setTestOnReturn(true);
     config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
     config.setEvictionPolicyClassName("hudson.scm.api.session.SessionPoolEvictionPolicy");
