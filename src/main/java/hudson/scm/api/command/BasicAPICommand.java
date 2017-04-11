@@ -160,8 +160,6 @@ public abstract class BasicAPICommand implements IAPICommand
       {
         LOGGER.log(Level.SEVERE,
             "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        if (api != null)
-          api = null;
       }
       api = null;
       LOGGER.log(Level.SEVERE,
@@ -186,8 +184,6 @@ public abstract class BasicAPICommand implements IAPICommand
       {
         LOGGER.log(Level.SEVERE,
             "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        if (api != null)
-          api = null;
       }
       api = null;
       LOGGER.log(Level.SEVERE,
