@@ -111,7 +111,6 @@ public class APISession implements ISession
     }
     // Create the Session
     session = ip.createSession(userName, password);
-    session.setAutoReconnect(true);
     session.setTimeout(300000); // 5 Minutes
     // No need to ping here as the ping validation is handled by the ISessionPool class
     // ping();
