@@ -68,7 +68,7 @@ public class ISessionPool
     config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
     config.setTestOnCreate(true);
-    //config.setTestWhileIdle(true);
+    config.setTestWhileIdle(true);
     config.setMaxWaitMillis(1000);
     // config.setTestOnReturn(true);
     config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
