@@ -30,10 +30,20 @@ import javax.sql.ConnectionPoolDataSource;
 import org.apache.commons.io.IOUtils;
 import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource;
 
+import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
+
+import hudson.AbortException;
 import hudson.scm.IntegrityCMMember.CPInfo;
 import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.APIUtils;
+import hudson.scm.api.ExceptionHandler;
+import hudson.scm.api.command.CommandFactory;
+import hudson.scm.api.command.IAPICommand;
+import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
+import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 
 /**
@@ -1153,7 +1163,7 @@ public class DerbyUtils
               if (!skipAuthorInfo)
               {
                 rs.updateString(CM_PROJECT.AUTHOR.toString(),
-                    IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId,
+                    getAuthorFromRevisionInfo(serverConfigId,
                         rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
                         rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
                         rowHash.get(CM_PROJECT.REVISION).toString()));
@@ -1190,7 +1200,7 @@ public class DerbyUtils
             if (!skipAuthorInfo)
             {
               rs.updateString(CM_PROJECT.AUTHOR.toString(),
-                  IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId,
+                  getAuthorFromRevisionInfo(serverConfigId,
                       rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
                       rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
                       rowHash.get(CM_PROJECT.REVISION).toString()));
@@ -1307,7 +1317,7 @@ public class DerbyUtils
       {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
-            IntegrityCMMember.getAuthorFromRevisionInfo(serverConfigId,
+            getAuthorFromRevisionInfo(serverConfigId,
                 rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
                 rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
                 rowHash.get(CM_PROJECT.REVISION).toString()));
@@ -1621,4 +1631,45 @@ public class DerbyUtils
     }
     return cachedCPIds;
   }
+  
+  /**
+   * Performs a revision info on this Integrity Source File
+   * 
+   * @param configPath Full project configuration path
+   * @param memberID Member ID for this file
+   * @param memberRev Member Revision for this file
+   * @return User responsible for making this change
+   * @throws AbortException
+   * @throws APICommandException
+   */
+  public static synchronized String getAuthorFromRevisionInfo(String serverConfigId, String configPath,
+      String memberID, String memberRev) throws AbortException
+  {
+    String author = "unknown";
+
+    // Construct the revision-info command
+    IAPICommand command = CommandFactory.createCommand(IAPICommand.REVISION_INFO_COMMAND,
+        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
+    command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
+    command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
+    command.addSelection(memberID);
+
+    Response response;
+    try
+    {
+      response = command.execute();
+      author = APIUtils.getAuthorInfo(response, memberID);
+
+    } catch (APIException aex)
+    {
+      ExceptionHandler eh = new ExceptionHandler(aex);
+      LOGGER.severe("API Exception caught...");
+      LOGGER.severe(eh.getMessage());
+      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      aex.printStackTrace();
+    }
+
+    return author;
+  }
+  
 }

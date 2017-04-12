@@ -180,46 +180,6 @@ public final class IntegrityCMMember
   }
 
   /**
-   * Performs a revision info on this Integrity Source File
-   * 
-   * @param configPath Full project configuration path
-   * @param memberID Member ID for this file
-   * @param memberRev Member Revision for this file
-   * @return User responsible for making this change
-   * @throws AbortException
-   * @throws APICommandException
-   */
-  public static String getAuthorFromRevisionInfo(String serverConfigId, String configPath,
-      String memberID, String memberRev) throws AbortException
-  {
-    String author = "unknown";
-
-    // Construct the revision-info command
-    IAPICommand command = CommandFactory.createCommand(IAPICommand.REVISION_INFO_COMMAND,
-        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfigId));
-    command.addOption(new APIOption(IAPIOption.PROJECT, configPath));
-    command.addOption(new APIOption(IAPIOption.REVISION, memberRev));
-    command.addSelection(memberID);
-
-    Response response;
-    try
-    {
-      response = command.execute();
-      author = APIUtils.getAuthorInfo(response, memberID);
-
-    } catch (APIException aex)
-    {
-      ExceptionHandler eh = new ExceptionHandler(aex);
-      LOGGER.severe("API Exception caught...");
-      LOGGER.severe(eh.getMessage());
-      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      aex.printStackTrace();
-    }
-
-    return author;
-  }
-
-  /**
    * Returns the MD5 checksum hash for a file
    * 
    * @param targetFile File object representing the target file

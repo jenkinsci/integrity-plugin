@@ -38,7 +38,7 @@ public class ISessionPool
   // the checkout thread count to prevent CO threads from blocking
   private int maxTotalPerKey = 30;
   // Max idle APIsession objects in the pool, per IntegrityConfigurable
-  private int maxIdlePerKey = 5;
+  private int maxIdlePerKey = 3;
   // 3 mins before idle Sessions are checked for eviction
   private long minEvictableIdleTimeMillis = 600000;
   private GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -68,7 +68,7 @@ public class ISessionPool
     config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
     config.setTestOnCreate(true);
-    config.setTestWhileIdle(true);
+    //config.setTestWhileIdle(true);
     config.setMaxWaitMillis(1000);
     // config.setTestOnReturn(true);
     config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
