@@ -68,7 +68,12 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
       listener.getLogger().println(e.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", e);
       return false;
-    }
+    } catch (Exception e) {
+      listener.getLogger().println("An Exception was caught!");
+      listener.getLogger().println(e.getMessage());
+      LOGGER.log(Level.SEVERE, "Exception", e);
+      return false;
+	}
 
     return true;
   }
