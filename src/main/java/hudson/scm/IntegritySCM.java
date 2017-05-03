@@ -256,12 +256,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @param run
    * @param listener
    * @return response Integrity API Response
-   * @throws InterruptedException
-   * @throws IOException
-   * @throws APIException
+   * @throws Exception 
    */
   private Response initializeCMProject(EnvVars environment, String projectCacheTable)
-      throws APIException, IOException, InterruptedException
+      throws Exception
   {
     // Re-evaluate the config path to resolve any groovy expressions...
     String resolvedConfigPath =
@@ -532,7 +530,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger()
           .println("Execution Exception while parsing Derby Project Members : " + e.getMessage());
       throw new AbortException("Execution Exception while parsing Derby Project Members");
-    }
+    } catch (Exception e) {
+      LOGGER.log(Level.SEVERE, "Exception occured during checkout!", e);
+      listener.getLogger()
+          .println("Exception occured during checkout! : " + e.getMessage());
+      throw new AbortException("Exception occured during checkout! "+ e.getMessage());
+	}
 
     // Log the completion...
     LOGGER.fine("Completed execution of checkout() routine...!");
@@ -579,15 +582,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @param run
    * @param listener
    * @param siProject
-   * @throws APIException
-   * @throws AbortException
-   * @throws IOException
    * @throws InterruptedException
-   * @throws InterruptedException
+   * @throws Exception 
    */
   private void checkPointBeforeBuild(Run<?, ?> run, TaskListener listener,
-      IntegrityCMProject siProject) throws AbortException, IOException, InterruptedException,
-          com.mks.api.response.InterruptedException, APIException
+      IntegrityCMProject siProject) throws Exception
   {
     // Make sure we don't have a build project configuration
     if (!siProject.isBuild())
@@ -717,7 +716,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listener.getLogger().println(
               "Execution Exception while parsing Derby Project Members : " + e.getMessage());
           return PollingResult.NO_CHANGES;
-        }
+        } catch (Exception e) {
+          LOGGER.log(Level.SEVERE, "Exception Occured: ", e);
+          listener.getLogger().println(
+              "Exception Occured : " + e.getMessage());
+          return PollingResult.NO_CHANGES;
+		}
       } else
       {
         // We've got no previous builds, build now!
