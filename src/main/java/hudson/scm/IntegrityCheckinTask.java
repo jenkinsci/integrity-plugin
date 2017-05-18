@@ -45,12 +45,11 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
    * @param ciExcludes Ant-style excludes filter for check-in files
    * @param build Hudson abstract build object
    * @param listener The Hudson build listener
-   * @throws InterruptedException
-   * @throws IOException
+   * @throws Exception 
    */
   public IntegrityCheckinTask(String ciConfigPath, String ciWorkspaceDir, String ciIncludes,
       String ciExcludes, AbstractBuild<?, ?> build, BuildListener listener,
-      IntegrityConfigurable integrityConfig) throws IOException, InterruptedException
+      IntegrityConfigurable integrityConfig) throws Exception
   {
 
     this.itemID = build.getEnvironment(listener).get("ItemID", "");
