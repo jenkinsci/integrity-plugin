@@ -63,7 +63,13 @@
       <groupId>org.jenkins-ci.plugins</groupId>
       <artifactId>junit</artifactId>
       <version>1.9</version>
-    </dependency>   	
+        <exclusions>
+            <exclusion>
+                <artifactId>hamcrest-core</artifactId>
+                <groupId>org.hamcrest</groupId>
+            </exclusion>
+        </exclusions>
+    </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
       <artifactId>workflow-scm-step</artifactId>
@@ -82,12 +88,6 @@
   		<version>4.13.5479</version>
   		<scope>compile</scope>
    	</dependency>
-   	<dependency>
-		<groupId>org.mockito</groupId>
-		<artifactId>mockito-all</artifactId>
-		<version>1.10.19</version>
-		<scope>test</scope>
-	</dependency>
 	<dependency>
 		<groupId>org.apache.commons</groupId>
 		<artifactId>commons-pool2</artifactId>
@@ -102,7 +102,7 @@
 	<dependency>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>script-security</artifactId>
-		<version>1.27</version>
+		<version>1.28</version>
 	</dependency>
   </dependencies>
   

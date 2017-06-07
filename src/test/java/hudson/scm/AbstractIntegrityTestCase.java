@@ -70,7 +70,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
 			e.printStackTrace();
 		}     
     }
-    
+
     protected void tearDown() throws Exception{
     	try{
         super.after();}
@@ -78,7 +78,7 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
             e.printStackTrace();
         }
     }
-    
+
     protected void commit(final String fileName,final String fileContent, final String User1, final String message)
             throws IntegrityException, InterruptedException {
         testRepo.commit(fileName, fileContent,User1, message);
@@ -164,5 +164,5 @@ public abstract class AbstractIntegrityTestCase extends JenkinsRule{
     	FakeAPISession api = FakeAPISession.create(configObj);
 		IntegrityCMMember.unlockMembers(configObj, configPath);
 	}
-   
+
 }

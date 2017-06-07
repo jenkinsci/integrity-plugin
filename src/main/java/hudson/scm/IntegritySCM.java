@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
 
+import hudson.scm.localclient.IntegrityCreateSandboxTask;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -258,7 +259,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @return response Integrity API Response
    * @throws Exception 
    */
-  private Response initializeCMProject(EnvVars environment, String projectCacheTable)
+  public Response initializeCMProject(EnvVars environment, String projectCacheTable)
       throws Exception
   {
     // Re-evaluate the config path to resolve any groovy expressions...
@@ -385,6 +386,101 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Log the invocation...
     LOGGER.fine("Start execution of checkout() routine...!");
 
+    if(isLocalClient){
+      listener.getLogger().println("Checkout started using local client for :" + configPath);
+      checkoutUsingLocalClient(run, launcher, workspace, listener, changeLogFile, baseline);
+    }
+    else{
+      listener.getLogger().println("Checkout started using remote client for :" + configPath);
+      checkoutUsingRemoteClient(run, launcher, workspace, listener, changeLogFile, baseline);
+    }
+    // Log the completion...
+    LOGGER.fine("Completed execution of checkout() routine...!");
+  }
+
+  /**
+   * Run checkout using a local Client
+   * @param run
+   * @param launcher
+   * @param workspace
+   * @param listener
+   * @param changeLogFile
+   * @param baseline
+   */
+  private void checkoutUsingLocalClient(Run<?, ?> run, Launcher launcher,
+                  FilePath workspace, TaskListener listener, File changeLogFile,
+                  SCMRevisionState baseline) throws AbortException
+  {
+    IntegrityConfigurable coSettings = getProjectSettings();
+
+    try {
+
+      Job<?, ?> job = run.getParent();
+      String projectCacheTable =
+                      DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
+                                      job.getName(), configurationName, run.getNumber());
+
+      // Next, load up the information for this Integrity Project's configuration
+      IntegrityCMProject siProject = getIntegrityCMProject(run, listener,
+                      projectCacheTable);
+
+      if (checkpointBeforeBuild)
+      {
+        checkPointBeforeBuild(run, listener, siProject);
+      }
+
+      String resolvedAltWkspace = IntegrityCheckpointAction
+                      .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
+
+      IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(run.getParent(), coSettings, siProject, alternateWorkspace, cleanCopy);
+      if (workspace.act(createSandboxTask))
+      {
+          // Sandbox was created successfully or was preexisting!
+
+      } else
+      {
+        // Checkout failed! Returning false...
+        throw new AbortException("Failed to synchronize workspace!");
+      }
+
+
+    } catch (APIException aex) {
+      LOGGER.severe("API Exception caught...");
+      listener.getLogger().println("An API Exception was caught!");
+      ExceptionHandler eh = new ExceptionHandler(aex);
+      LOGGER.severe(eh.getMessage());
+      listener.getLogger().println(eh.getMessage());
+      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      throw new AbortException("Caught Integrity APIException!");
+    } catch (SQLException sqlex) {
+      LOGGER.severe("SQL Exception caught...");
+      listener.getLogger().println("A SQL Exception was caught!");
+      listener.getLogger().println(sqlex.getMessage());
+      LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+      throw new AbortException("Caught Derby SQLException!");
+    } catch (Exception e) {
+      LOGGER.log(Level.SEVERE, "Exception occured during checkout!", e);
+      listener.getLogger()
+                      .println("Exception occured during checkout! : " + e.getMessage());
+      throw new AbortException("Exception occured during checkout! "+ e.getMessage());
+    }
+  }
+
+  /**
+   * Run checkout using a remote integration point
+   * @param run
+   * @param launcher
+   * @param workspace
+   * @param listener
+   * @param changeLogFile
+   * @param baseline
+   * @throws AbortException
+   */
+  private void checkoutUsingRemoteClient(Run<?, ?> run, Launcher launcher,
+                  FilePath workspace, TaskListener listener, File changeLogFile,
+                  SCMRevisionState baseline) throws AbortException
+  {
     // Provide links to the Change and Build logs for easy access from Integrity
     listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
     listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
@@ -397,19 +493,18 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
-    
+
     try
     {
       // Register the project cache for this build
       Job<?, ?> job = run.getParent();
       String projectCacheTable =
-          DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
-              job.getName(), configurationName, run.getNumber());
+                      DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
+                                      job.getName(), configurationName, run.getNumber());
 
       // Next, load up the information for this Integrity Project's configuration
-      listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-      initializeCMProject(run.getEnvironment(listener), projectCacheTable);
-      IntegrityCMProject siProject = getIntegrityProject();
+      IntegrityCMProject siProject = getIntegrityCMProject(run, listener,
+                      projectCacheTable);
 
       // Check to see we need to checkpoint before the build
       if (checkpointBeforeBuild)
@@ -418,7 +513,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       }
 
       listener.getLogger()
-          .println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+                      .println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
       initializeCMProjectMembers();
 
       // Now, we need to find the project state from the previous build.
@@ -440,14 +535,14 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
               projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
 
               IntegrityCMMember.viewCP(coSettings, projectCPIDs,
-                  job.getFullName().replace("/", "_"), membersInCP);
+                              job.getFullName().replace("/", "_"), membersInCP);
             }
           }
 
           // Compare the current project with the old revision state
           LOGGER.fine("Found previous project state " + prevProjectCache);
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
-              skipAuthorInfo, CPBasedMode);
+                          skipAuthorInfo, CPBasedMode);
         }
       } else
       {
@@ -465,18 +560,18 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       // itself
       // Now, lets figure out how to populate the workspace...
       List<Hashtable<CM_PROJECT, Object>> projectMembersList =
-          DerbyUtils.viewProject(projectCacheTable);
+                      DerbyUtils.viewProject(projectCacheTable);
       List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
       String resolvedAltWkspace = IntegrityCheckpointAction
-          .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
+                      .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
       // If we we were not able to establish the previous project state, then always do full
       // checkout. cleanCopy = true
       // Otherwise, update the workspace in accordance with the user's cleanCopy option
 
       IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList,
-          resolvedAltWkspace, lineTerminator, restoreTimestamp,
-          ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
-          fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
+                      resolvedAltWkspace, lineTerminator, restoreTimestamp,
+                      ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
+                      fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
 
       // Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
       if (workspace.act(coTask))
@@ -488,15 +583,15 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         {
           DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates());
         }
-        
+
         // Write out the change log file, which will be used by the parser to report the updates
         writeChangeLog(run, listener, changeLogFile, membersInCP, siProject, projectMembersList);
-        
+
         // Delete non-members in this workspace, if appropriate.
         if (deleteNonMembers)
         {
           IntegrityDeleteNonMembersTask deleteNonMembers = new IntegrityDeleteNonMembersTask(
-              listener, resolvedAltWkspace, projectMembersList, dirList);
+                          listener, resolvedAltWkspace, projectMembersList, dirList);
           if (!workspace.act(deleteNonMembers))
           {
             throw new AbortException("Failed to delete non-members!");
@@ -528,20 +623,35 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
       LOGGER.log(Level.SEVERE, "Execution Exception while parsing Derby Project Members", e);
       listener.getLogger()
-          .println("Execution Exception while parsing Derby Project Members : " + e.getMessage());
+                      .println("Execution Exception while parsing Derby Project Members : " + e.getMessage());
       throw new AbortException("Execution Exception while parsing Derby Project Members");
     } catch (Exception e) {
       LOGGER.log(Level.SEVERE, "Exception occured during checkout!", e);
       listener.getLogger()
-          .println("Exception occured during checkout! : " + e.getMessage());
+                      .println("Exception occured during checkout! : " + e.getMessage());
       throw new AbortException("Exception occured during checkout! "+ e.getMessage());
-	}
+    }
 
-    // Log the completion...
-    LOGGER.fine("Completed execution of checkout() routine...!");
   }
 
-	/**
+  /**
+   *  Initialize the project to be used with Local /Remote Client connections
+   * @param run
+   * @param listener
+   * @param projectCacheTable
+   * @return
+   * @throws Exception
+   */
+  private IntegrityCMProject getIntegrityCMProject(Run<?, ?> run,
+                  TaskListener listener, String projectCacheTable)
+                  throws Exception
+  {
+    listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
+    initializeCMProject(run.getEnvironment(listener), projectCacheTable);
+    return getIntegrityProject();
+  }
+
+  /**
 	 * Write the changelog for a run.
 	 * 
 	 * @param run
@@ -552,7 +662,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	 * @param projectMembersList
 	 * @throws IOException 
 	 */
-	private void writeChangeLog(Run<?, ?> run, TaskListener listener, File changeLogFile,
+  private void writeChangeLog(Run<?, ?> run, TaskListener listener, File changeLogFile,
 			Map<CPInfo, List<CPMember>> membersInCP, IntegrityCMProject siProject,
 			List<Hashtable<CM_PROJECT, Object>> projectMembersList) throws IOException {
 		PrintWriter writer = null;

@@ -62,6 +62,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected boolean deleteNonMembers = false;
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
   protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
+  protected boolean isLocalClient = false;
 
   public AbstractIntegritySCM()
   {
@@ -596,4 +597,15 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	LOGGER.fine("Project User password = " + strPassword);
 	return ciSettings;
  }
+
+  public boolean isLocalClient()
+  {
+    return isLocalClient;
+  }
+
+  @DataBoundSetter
+  public void setLocalClient(boolean localClient)
+  {
+    isLocalClient = localClient;
+  }
 }

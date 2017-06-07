@@ -3,68 +3,146 @@
  *     PTC 2016
  *******************************************************************************/
 package hudson.scm;
+import hudson.model.Cause;
+import org.junit.Rule;
 import org.junit.Test;
 
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
+import org.jvnet.hudson.test.JenkinsRule;
 
+import java.util.ArrayList;
+import java.util.List;
 
-public class IntegritySCMTest extends AbstractIntegrityTestCase
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
+
+/**
+ *  These integration tests necessitate a local client installation with sample data installed
+ */
+public class IntegritySCMTest
 {
-	
-	@Test
-	public void testProjectUnlockMembers() throws Exception
-	{
-		testUnlockMembers();
-	}
-	
-	@Test
-	public void testProjectSetup() throws Exception
-	{
-		FreeStyleProject project = setupIntegrityProject();
-        
-     // create initial commit and then run the build against it:
-        final String commitFile1 = "commitFile1";
-        final String fielcontent = "commitFile1";
-        commit(commitFile1,fielcontent, name1, "Commit number 1");
-	}
-	
-	@Test
-	public void testPostBuildCheckin() throws Exception
-	{
-		FreeStyleProject project = setupIntegrityProject();
-     // create initial commit and then run the build against it:
-        final String commitFile1 = "commitFile1";
-        final String fielcontent = "Testing post build Check in action.";
-        commit(commitFile1,fielcontent, name1, "Commit number 1");
-        
-        FreeStyleBuild build = build(project, Result.SUCCESS, commitFile1);
-        setupPostBuildCheckIn(build);
-	}
-	
-	@Test
-	public void testPostBuildWithItemIDFieldQuery() throws Exception
-	{
-		FreeStyleProject project = setupIntegrityProject();
-     // create initial commit and then run the build against it:
-        final String commitFile1 = "commitFile1";
-        final String fielcontent = "Testing post build with ItemID(Integrity-Workflow Item) as field query.";
-        commit(commitFile1,fielcontent, name1, "Commit number 1");
-        FreeStyleBuild build = build(project, Result.SUCCESS, commitFile1);
-        setupPostBuildBuildItem(build, true);
-	}
-	
-	@Test
-	public void testPostBuildWithParameterizedItemID() throws Exception
-	{
-		FreeStyleProject project = setupIntegrityProject();
-     // create initial commit and then run the build against it:
-        final String commitFile1 = "commitFile1";
-        final String fielcontent = "Testing post build with parameterized ItemID(Integrity-Workflow Item).";
-        commit(commitFile1,fielcontent, name1, "Commit number 1");
-        FreeStyleBuild build = build(project, Result.SUCCESS, commitFile1);
-        setupPostBuildBuildItem(build, false);
-	}	
-	
+    @Rule
+    public JenkinsRule jenkinsRule = new JenkinsRule();
+
+    String successConfigPath="#/DummyProject";
+    String failureConfigPath="#/test";
+
+    @Test
+    public void testBuildFailure() throws Exception
+    {
+        String error = "MKS125212: The project file /test/project.pj is not registered as a top level project with the current server";
+	FreeStyleProject project = setupIntegrityProjectWithRemoteClient(failureConfigPath);
+	FreeStyleBuild build = build(project);
+	jenkinsRule.assertBuildStatus(Result.FAILURE, build);
+	String buildLog = build.getLog();
+	assertNotNull(buildLog);
+	assertTrue(buildLog.contains(error));
+	jenkinsRule.assertBuildStatus(Result.FAILURE, build);
+    }
+
+    @Test
+    public void testBuildSuccessWithRemoteClient() throws Exception
+    {
+        String successprojectinfo = "Preparing to execute si projectinfo for #/DummyProject";
+	String successviewproject = "Preparing to execute si viewproject for #/DummyProject";
+	String successbuildchangelog = "Writing build change log";
+	String successchangelog = "Change log successfully generated";
+	String successinitdeletenonmembers = "Delete Non-Members: Checkout directory is";
+	String successcompletedelete = "Delete Non-Members: Task is complete";
+
+	FreeStyleProject project = setupIntegrityProjectWithRemoteClient(successConfigPath);
+	FreeStyleBuild build = build(project);
+	jenkinsRule.assertBuildStatus(Result.SUCCESS, build);
+	String buildLog = build.getLog();
+	assertNotNull(buildLog);
+	assertTrue(buildLog.contains(successprojectinfo));
+	assertTrue(buildLog.contains(successviewproject));
+	assertTrue(buildLog.contains(successbuildchangelog));
+	assertTrue(buildLog.contains(successchangelog));
+	assertTrue(buildLog.contains(successinitdeletenonmembers));
+	assertTrue(buildLog.contains(successcompletedelete));
+    }
+
+    @Test
+    public void testBuildSuccessWithLocalClient() throws Exception
+    {
+	FreeStyleProject project = setupIntegrityProjectWithLocalClient(successConfigPath);
+	FreeStyleBuild build = build(project);
+	jenkinsRule.assertBuildStatus(Result.SUCCESS, build);
+	String buildLog = build.getLog();
+	assertNotNull(buildLog);
+    }
+
+    /**
+     *
+     * @param configPath
+     * @param isLocalClient
+     * @return
+     * @throws Exception
+     */
+    protected FreeStyleProject setupProject(String configPath,
+		    boolean isLocalClient) throws Exception
+    {
+	IntegritySCM scm = new IntegritySCM("test", configPath, "test");
+	FreeStyleProject project = jenkinsRule.createFreeStyleProject();
+	scm.setLocalClient(isLocalClient);
+	project.setScm(scm);
+	project.save();
+	return project;
+    }
+
+    /**
+     *
+     * @param configPath
+     * @return
+     * @throws Exception
+     */
+    protected FreeStyleProject setupIntegrityProjectWithRemoteClient(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	FreeStyleProject project = setupProject(configPath, false);
+	return project;
+    }
+
+    /**
+     *
+     * @param configPath
+     * @return
+     * @throws Exception
+     */
+    protected FreeStyleProject setupIntegrityProjectWithLocalClient(String configPath)
+		    throws Exception
+    {
+	setupIntegrityConfigurable();
+	FreeStyleProject project = setupProject(configPath, true);
+	return project;
+    }
+
+    /**
+     *
+     */
+    protected void setupIntegrityConfigurable()
+    {
+	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
+			7001, "localhost",7001, false,
+			"Administrator", "password");
+	List<IntegrityConfigurable> configurations = new ArrayList<IntegrityConfigurable>();
+	configurations.add(integrityConfigurable);
+	IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.setConfigurations(configurations);
+    }
+
+    /**
+     *
+     * @param project
+     * @return
+     * @throws Exception
+     */
+    protected FreeStyleBuild build(final FreeStyleProject project) throws Exception {
+	final FreeStyleBuild build = project.scheduleBuild2(0, new Cause.UserIdCause()).get();
+	System.out.println(build.getLog(200));
+	return build;
+    }
 }
