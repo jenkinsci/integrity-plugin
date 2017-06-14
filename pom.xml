@@ -104,6 +104,11 @@
 		<artifactId>script-security</artifactId>
 		<version>1.28</version>
 	</dependency>
+      <dependency>
+          <groupId>org.jenkins-ci.main</groupId>
+          <artifactId>jenkins-test-harness</artifactId>
+          <version>2.22</version>
+      </dependency>
   </dependencies>
   
   <distributionManagement>
@@ -155,6 +160,14 @@
           </execution>
         </executions>
 	  </plugin>
+        <plugin>
+            <groupId>org.apache.maven.plugins</groupId>
+            <artifactId>maven-compiler-plugin</artifactId>
+            <configuration>
+                <source>1.7</source>
+                <target>1.7</target>
+            </configuration>
+        </plugin>
     </plugins>
   </build>
   

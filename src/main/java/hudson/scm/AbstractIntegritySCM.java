@@ -62,7 +62,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected boolean deleteNonMembers = false;
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
   protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
-  protected boolean isLocalClient = false;
+  protected boolean localClient;
 
   public AbstractIntegritySCM()
   {
@@ -598,14 +598,14 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	return ciSettings;
  }
 
-  public boolean isLocalClient()
+  public boolean getLocalClient()
   {
-    return isLocalClient;
+    return this.localClient;
   }
 
   @DataBoundSetter
   public void setLocalClient(boolean localClient)
   {
-    isLocalClient = localClient;
+    this.localClient = localClient;
   }
 }

@@ -4,6 +4,7 @@
  *******************************************************************************/
 package hudson.scm;
 import hudson.model.Cause;
+import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -12,8 +13,13 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import org.jvnet.hudson.test.JenkinsRule;
 
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Properties;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -79,15 +85,17 @@ public class IntegritySCMTest
      *
      * @param configPath
      * @param isLocalClient
+     * @param cleanCopy
      * @return
      * @throws Exception
      */
     protected FreeStyleProject setupProject(String configPath,
-		    boolean isLocalClient) throws Exception
+		    boolean isLocalClient, boolean cleanCopy) throws Exception
     {
 	IntegritySCM scm = new IntegritySCM("test", configPath, "test");
 	FreeStyleProject project = jenkinsRule.createFreeStyleProject();
 	scm.setLocalClient(isLocalClient);
+	scm.setCleanCopy(cleanCopy);
 	project.setScm(scm);
 	project.save();
 	return project;
@@ -103,7 +111,7 @@ public class IntegritySCMTest
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
-	FreeStyleProject project = setupProject(configPath, false);
+	FreeStyleProject project = setupProject(configPath, false, false);
 	return project;
     }
 
@@ -117,9 +125,23 @@ public class IntegritySCMTest
 		    throws Exception
     {
 	setupIntegrityConfigurable();
-	FreeStyleProject project = setupProject(configPath, true);
+	FreeStyleProject project = setupProject(configPath, true, false);
 	return project;
     }
+
+    /**
+     *
+     * @param configPath
+     * @return
+     */
+    protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopy(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	FreeStyleProject project = setupProject(configPath, true, true);
+	return project;
+    }
+
 
     /**
      *

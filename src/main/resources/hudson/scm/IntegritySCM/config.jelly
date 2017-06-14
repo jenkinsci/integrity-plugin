@@ -12,6 +12,10 @@
 		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'Integrity Project' is a required field!" />        
 	</f:entry>
 
+	<f:entry title="Use Local Client?" field="localClient" help="/plugin/integrity-plugin/help-isLocalClient.html">
+		<f:checkbox name="localClient" checked="${scm.localClient}"/>
+	</f:entry>
+
 	<f:entry title="Clean Workspace?" field="cleanCopy" help="/plugin/integrity-plugin/help-cleanCopy.html">
 		<f:checkbox name="cleanCopy" checked="${scm.cleanCopy}"/>
 	</f:entry>
