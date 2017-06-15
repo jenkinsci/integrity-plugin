@@ -4,7 +4,6 @@
  *******************************************************************************/
 package hudson.scm;
 import hudson.model.Cause;
-import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -13,13 +12,8 @@ import hudson.model.FreeStyleProject;
 import hudson.model.Result;
 import org.jvnet.hudson.test.JenkinsRule;
 
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.FileReader;
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Properties;
 
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
@@ -32,14 +26,15 @@ public class IntegritySCMTest
     @Rule
     public JenkinsRule jenkinsRule = new JenkinsRule();
 
-    String successConfigPath="#/DummyProject";
-    String failureConfigPath="#/test";
+    protected String successConfigPath="#/JenkinsBulkProject1";
+    //protected String successConfigPath="#/DummyProject";
+    protected String failureConfigPath="#/THISSHOULDFAIL";
 
     @Test
     public void testBuildFailure() throws Exception
     {
-        String error = "MKS125212: The project file /test/project.pj is not registered as a top level project with the current server";
-	FreeStyleProject project = setupIntegrityProjectWithRemoteClient(failureConfigPath);
+        String error = "MKS125212: The project file /THISSHOULDFAIL/project.pj is not registered as a top level project with the current server";
+	FreeStyleProject project = setupIntegrityProjectWithRemoteClientWithCheckpointOff(failureConfigPath);
 	FreeStyleBuild build = build(project);
 	jenkinsRule.assertBuildStatus(Result.FAILURE, build);
 	String buildLog = build.getLog();
@@ -51,14 +46,14 @@ public class IntegritySCMTest
     @Test
     public void testBuildSuccessWithRemoteClient() throws Exception
     {
-        String successprojectinfo = "Preparing to execute si projectinfo for #/DummyProject";
-	String successviewproject = "Preparing to execute si viewproject for #/DummyProject";
+        String successprojectinfo = "Preparing to execute si projectinfo for "+ successConfigPath;
+	String successviewproject = "Preparing to execute si viewproject for "+ successConfigPath;
 	String successbuildchangelog = "Writing build change log";
 	String successchangelog = "Change log successfully generated";
 	String successinitdeletenonmembers = "Delete Non-Members: Checkout directory is";
 	String successcompletedelete = "Delete Non-Members: Task is complete";
 
-	FreeStyleProject project = setupIntegrityProjectWithRemoteClient(successConfigPath);
+	FreeStyleProject project = setupIntegrityProjectWithRemoteClientWithCheckpointOff(successConfigPath);
 	FreeStyleBuild build = build(project);
 	jenkinsRule.assertBuildStatus(Result.SUCCESS, build);
 	String buildLog = build.getLog();
@@ -74,78 +69,50 @@ public class IntegritySCMTest
     @Test
     public void testBuildSuccessWithLocalClient() throws Exception
     {
-	FreeStyleProject project = setupIntegrityProjectWithLocalClient(successConfigPath);
+	FreeStyleProject project = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
 	FreeStyleBuild build = build(project);
 	jenkinsRule.assertBuildStatus(Result.SUCCESS, build);
 	String buildLog = build.getLog();
 	assertNotNull(buildLog);
     }
 
-    /**
-     *
-     * @param configPath
-     * @param isLocalClient
-     * @param cleanCopy
-     * @return
-     * @throws Exception
-     */
     protected FreeStyleProject setupProject(String configPath,
-		    boolean isLocalClient, boolean cleanCopy) throws Exception
+		    boolean isLocalClient, boolean cleanCopy, boolean checkpointBeforebuild) throws Exception
     {
 	IntegritySCM scm = new IntegritySCM("test", configPath, "test");
 	FreeStyleProject project = jenkinsRule.createFreeStyleProject();
 	scm.setLocalClient(isLocalClient);
 	scm.setCleanCopy(cleanCopy);
+	scm.setCheckpointBeforeBuild(checkpointBeforebuild);
 	project.setScm(scm);
 	project.save();
 	return project;
     }
 
-    /**
-     *
-     * @param configPath
-     * @return
-     * @throws Exception
-     */
-    protected FreeStyleProject setupIntegrityProjectWithRemoteClient(
+    protected FreeStyleProject setupIntegrityProjectWithRemoteClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
-	FreeStyleProject project = setupProject(configPath, false, false);
+	FreeStyleProject project = setupProject(configPath, false, false, false);
 	return project;
     }
 
-    /**
-     *
-     * @param configPath
-     * @return
-     * @throws Exception
-     */
-    protected FreeStyleProject setupIntegrityProjectWithLocalClient(String configPath)
+    protected FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
 		    throws Exception
     {
 	setupIntegrityConfigurable();
-	FreeStyleProject project = setupProject(configPath, true, false);
+	FreeStyleProject project = setupProject(configPath, true, false, false);
 	return project;
     }
 
-    /**
-     *
-     * @param configPath
-     * @return
-     */
-    protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopy(
+    protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
-	FreeStyleProject project = setupProject(configPath, true, true);
+	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
     }
 
-
-    /**
-     *
-     */
     protected void setupIntegrityConfigurable()
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
@@ -156,12 +123,6 @@ public class IntegritySCMTest
 	IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.setConfigurations(configurations);
     }
 
-    /**
-     *
-     * @param project
-     * @return
-     * @throws Exception
-     */
     protected FreeStyleBuild build(final FreeStyleProject project) throws Exception {
 	final FreeStyleBuild build = project.scheduleBuild2(0, new Cause.UserIdCause()).get();
 	System.out.println(build.getLog(200));

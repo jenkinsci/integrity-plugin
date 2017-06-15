@@ -505,7 +505,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   @Override
   public boolean requiresWorkspaceForPolling()
   {
-    return false;
+    return localClient;
   }
 
   /**

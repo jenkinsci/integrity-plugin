@@ -1,4 +1,4 @@
-package hudson.scm;
+package hudson.scm.localclient;
 
 import com.mks.api.Command;
 import com.mks.api.Option;
@@ -6,6 +6,8 @@ import com.mks.api.response.Response;
 import hudson.model.FreeStyleBuild;
 import hudson.model.FreeStyleProject;
 import hudson.model.Result;
+import hudson.scm.IntegrityConfigurable;
+import hudson.scm.IntegritySCMTest;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 import org.apache.commons.io.FileUtils;
@@ -33,16 +35,15 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
 
-    private FreeStyleProject localClientProject;
-    private FreeStyleProject localClientProjectCleanCopy;
-    private ISession session;
-    private String configPath;
-    private File myFile;
-    private File testFile;
-    private String fileName;
-    private Command cmd;
-    private Response response;
-    private FreeStyleBuild build;
+    protected FreeStyleProject localClientProject;
+    protected FreeStyleProject localClientProjectCleanCopy;
+    protected ISession session;
+    protected File myFile;
+    protected File testFile;
+    protected String fileName;
+    protected Command cmd;
+    protected Response response;
+    protected FreeStyleBuild build;
 
     @Before
     public void setup() throws Exception
@@ -50,10 +51,16 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
                         7001, "localhost",7001, false,
                         "Administrator", "password");
-        configPath="#/DummyProject";
-        localClientProject = setupIntegrityProjectWithLocalClient(configPath);
-        localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopy(configPath);
+        localClientProject = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
+        localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
         session = APISession.createLocalIntegrationPoint(integrityConfigurable);
+
+        /*assert session != null;
+        cmd = new Command(Command.AA, "addaclentry");
+        cmd.addOption(new Option("acl", "mks:si"));
+        cmd.addSelection("g=everyone:BypassChangePackageMandatory");
+        response = session.runCommand(cmd);
+        assertEquals(response.getExitCode(),0);*/
     }
 
     @Test
@@ -117,10 +124,11 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     {
         assert session != null;
         cmd = new Command(Command.SI, "projectadd");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         fileName = Math.random()+".txt";
         testFile = testFolder.newFile(fileName);
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);
@@ -141,10 +149,11 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     {
         assert session != null;
         cmd = new Command(Command.SI, "projectadd");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         fileName = Math.random()+".txt";
         testFile = testFolder.newFile(fileName);
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);
@@ -166,10 +175,11 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         String testData = "hello world";
         assert session != null;
         cmd = new Command(Command.SI, "projectadd");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         fileName = Math.random()+".txt";
         testFile = testFolder.newFile(fileName);
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);
@@ -183,8 +193,9 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         }
 
         cmd = new Command(Command.SI, "projectco");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         cmd.addOption(new Option("targetFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
 
         response = session.runCommand(cmd);
@@ -192,9 +203,10 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         FileUtils.writeStringToFile(testFile, testData);
 
         cmd = new Command(Command.SI, "projectci");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
         cmd.addOption(new Option("description", "checkin"));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
 
         response = session.runCommand(cmd);
@@ -221,10 +233,11 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         String testData = "hello world";
         assert session != null;
         cmd = new Command(Command.SI, "projectadd");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         fileName = Math.random()+".txt";
         testFile = testFolder.newFile(fileName);
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);
@@ -238,8 +251,9 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         }
 
         cmd = new Command(Command.SI, "projectco");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         cmd.addOption(new Option("targetFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
 
         response = session.runCommand(cmd);
@@ -247,9 +261,10 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         FileUtils.writeStringToFile(testFile, testData);
 
         cmd = new Command(Command.SI, "projectci");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
         cmd.addOption(new Option("description", "checkin"));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
 
         response = session.runCommand(cmd);
@@ -275,10 +290,11 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     {
         assert session != null;
         cmd = new Command(Command.SI, "projectadd");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
         fileName = Math.random()+".txt";
         testFile = testFolder.newFile(fileName);
         cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);
@@ -292,7 +308,8 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
 
         assert session != null;
         cmd = new Command(Command.SI, "drop");
-        cmd.addOption(new Option("project", configPath));
+        cmd.addOption(new Option("project", successConfigPath));
+        cmd.addOption(new Option("cpid", ":bypass"));
         cmd.addSelection(fileName);
         response = session.runCommand(cmd);
         assertEquals(response.getExitCode(),0);

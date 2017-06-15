@@ -27,23 +27,26 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
     private static final Logger LOGGER = Logger.getLogger(IntegrityCreateSandboxTask.class.getSimpleName());
     private final SandboxUtils sandboxUtil;
     private final TaskListener listener;
+    private final String lineTerminator;
 
     /**
      * @param integrityConfigurable
      * @param siProject
      * @param alternateWorkspace
      * @param listener
+     * @param lineTerminator
      */
     public IntegrityCreateSandboxTask(
 		    IntegrityConfigurable integrityConfigurable,
 		    IntegrityCMProject siProject,
 		    String alternateWorkspace,
-		    TaskListener listener)
+		    TaskListener listener, String lineTerminator)
     {
 	this.integrityConfigurable = integrityConfigurable;
 	this.siProject = siProject;
 	this.alternateWorkspaceDir = alternateWorkspace;
 	this.listener = listener;
+	this.lineTerminator = lineTerminator;
 	this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
     }
 
@@ -54,14 +57,13 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
 	FilePath workspace = sandboxUtil.getFilePath(workspaceFile, alternateWorkspaceDir);
 	try {
 	    listener.getLogger()
-			    .println("[LocalClient] Executing CreateSandboxTask :"+ workspaceFile);
-	    int responseCode = sandboxUtil.createSandbox(siProject, workspace);
+			    .println("[LocalClient] Executing IntegrityCreateSandboxTask :"+ workspaceFile);
+	    return sandboxUtil.createSandbox(siProject, workspace, lineTerminator)==0?true:false;
 	} catch (APIException e) {
 	    listener.getLogger()
 			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getExceptionId());
 	    return false;
 	}
-	return true;
     }
 
     @Override

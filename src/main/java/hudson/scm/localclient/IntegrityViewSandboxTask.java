@@ -4,6 +4,7 @@ import com.mks.api.response.APIException;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import hudson.scm.IntegrityCMProject;
 import hudson.scm.IntegrityConfigurable;
 import jenkins.security.Roles;
 import org.jenkinsci.remoting.RoleChecker;
@@ -13,40 +14,36 @@ import java.io.File;
 import java.io.IOException;
 
 /**
- * Created by asen on 08-06-2017.
+ * Created by asen on 15-06-2017.
  */
-public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean>
+public class IntegrityViewSandboxTask implements FilePath.FileCallable<Boolean>
 {
     private final String alternateWorkspaceDir;
+    private final TaskListener listener;
     private final IntegrityConfigurable integrityConfigurable;
     private final SandboxUtils sandboxUtil;
-    private final TaskListener listener;
-    private final boolean cleanCopy;
 
-    public IntegrityResyncSandboxTask(IntegrityConfigurable coSettings,
-                    boolean cleanCopy, String alternateWorkspace,
-                    TaskListener listener)
+    public IntegrityViewSandboxTask(IntegrityConfigurable coSettings,
+                    TaskListener listener,
+                    String alternateWorkspace)
     {
         this.integrityConfigurable = coSettings;
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
-        this.cleanCopy = cleanCopy;
         this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
     }
 
     @Override
     public Boolean invoke(File workspaceFile, VirtualChannel virtualChannel)
-		    throws IOException, InterruptedException
+                    throws IOException, InterruptedException
     {
         FilePath workspace = sandboxUtil.getFilePath(workspaceFile, alternateWorkspaceDir);
 
         try {
-            listener.getLogger()
-                            .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(workspace, cleanCopy)==0?true:false;
+            return sandboxUtil.viewSandboxChanges(workspace);
         } catch (APIException e) {
             listener.getLogger()
-                            .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());
+                            .println("[LocalClient] IntegrityViewSandboxTask invoke Exception :"+ e.getLocalizedMessage());
             return false;
         }
     }
@@ -54,6 +51,6 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
     @Override
     public void checkRoles(RoleChecker roleChecker) throws SecurityException
     {
-	roleChecker.check((RoleSensitive) this, Roles.SLAVE);
+        roleChecker.check((RoleSensitive) this, Roles.SLAVE);
     }
 }

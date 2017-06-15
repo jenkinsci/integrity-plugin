@@ -27,6 +27,7 @@ import javax.sql.ConnectionPoolDataSource;
 
 import hudson.scm.localclient.IntegrityCreateSandboxTask;
 import hudson.scm.localclient.IntegrityResyncSandboxTask;
+import hudson.scm.localclient.IntegrityViewSandboxTask;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -66,6 +67,9 @@ import hudson.util.ListBoxModel;
 import hudson.util.Secret;
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
+
+import static hudson.scm.PollingResult.BUILD_NOW;
+import static hudson.scm.PollingResult.NO_CHANGES;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and PTC Integrity
@@ -230,6 +234,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   public SCMRevisionState calcRevisionsFromBuild(Run<?, ?> run, FilePath workspace,
       Launcher launcher, TaskListener listener) throws IOException, InterruptedException
   {
+    if(localClient){
+      return SCMRevisionState.NONE;
+    }
     // Log the call for debug purposes
     LOGGER.fine("calcRevisionsFromBuild() invoked...!");
     // Get the project cache table name for this build
@@ -412,14 +419,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     try {
 
-      Job<?, ?> job = run.getParent();
-      String projectCacheTable =
-                      DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
-                                      job.getName(), configurationName, run.getNumber());
-
-      // Next, load up the information for this Integrity Project's configuration
-      IntegrityCMProject siProject = getIntegrityCMProject(run, listener,
-                      projectCacheTable);
+      IntegrityCMProject siProject = getIntegrityCMProject(run, listener);
 
       if (checkpointBeforeBuild)
       {
@@ -430,18 +430,22 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
 
       IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(
-                      coSettings, siProject, alternateWorkspace, listener);
+                      coSettings, siProject, alternateWorkspace, listener, lineTerminator);
       if (workspace.act(createSandboxTask))
       {
         listener.getLogger()
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(coSettings, cleanCopy, alternateWorkspace, listener);
-        workspace.act(resyncSandboxTask);
-
+        if (workspace.act(resyncSandboxTask)){
+          listener.getLogger()
+                          .println("[LocalClient] Resync SandBox Success!");
+        }
+        else{
+          throw new AbortException("Failed to resync workspace!");
+        }
       } else
       {
-        // Checkout failed! Returning false...
-        throw new AbortException("Failed to synchronize workspace!");
+        throw new AbortException("Failed to create sandbox!");
       }
 
 
@@ -504,8 +508,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                                       job.getName(), configurationName, run.getNumber());
 
       // Next, load up the information for this Integrity Project's configuration
-      IntegrityCMProject siProject = getIntegrityCMProject(run, listener,
-                      projectCacheTable);
+      IntegrityCMProject siProject = getIntegrityCMProject(run, listener);
 
       // Check to see we need to checkpoint before the build
       if (checkpointBeforeBuild)
@@ -644,9 +647,14 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @throws Exception
    */
   private IntegrityCMProject getIntegrityCMProject(Run<?, ?> run,
-                  TaskListener listener, String projectCacheTable)
+                  TaskListener listener)
                   throws Exception
   {
+    Job<?, ?> job = run.getParent();
+    String projectCacheTable =
+                    DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
+                                    job.getName(), configurationName, run.getNumber());
+
     listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
     initializeCMProject(run.getEnvironment(listener), projectCacheTable);
     return getIntegrityProject();
@@ -741,109 +749,145 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Log the call for now...
     LOGGER.fine("compareRemoteRevisionWith() invoked...!");
 
-    int changeCount = 0;
-      // Lets get the baseline from our last build
-      if (null != baseline && baseline instanceof IntegrityRevisionState) {
-        IntegrityRevisionState irs = (IntegrityRevisionState) baseline;
-        String prevProjectCache = irs.getProjectCache();
-        if (null != prevProjectCache && prevProjectCache.length() > 0) {
-          // Compare the current project with the old revision state
-          LOGGER.fine("Found previous project state " + prevProjectCache);
-          // Next, load up the information for the current Integrity Project
-          // Lets start with creating an authenticated Integrity API Session for various parts of this
-          // operation...
-          try {
-            // Get the project cache table name
-            String projectCacheTable = DerbyUtils.registerProjectCache(
-                            ((DescriptorImpl) this.getDescriptor())
-                                            .getDataSource(), job.getName(),
-                            configurationName, 0);
-            initializeCMProject(job.getCharacteristicEnvVars(),
-                            projectCacheTable);
-            Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
-            if (CPBasedMode) {
-              Set<String> projectCPIDs = new HashSet<String>();
-              Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
-              if (lastSuccjob != null) {
-                IntegrityConfigurable coSettings = this.getProjectSettings();
-                Date lastSuccBuildDate = new Date(
-                                lastSuccjob.getStartTimeInMillis());
-                projectCPIDs = getIntegrityProject().projectCPDiff(
-                                this.getProjectSettings(), lastSuccBuildDate);
-                IntegrityCMMember.viewCP(coSettings, projectCPIDs,
-                                job.getFullName().replace("/", ""),
-                                membersInCP);
-                changeCount = membersInCP.size();
-              }
-            } else {
-              initializeCMProjectMembers();
-              // Compare this project with the old project for file mode
-              changeCount = DerbyUtils
-                              .compareBaseline(serverConfig, prevProjectCache,
-                                              projectCacheTable, membersInCP,
-                                              skipAuthorInfo, false);
-            }
-            // Finally decide whether or not we need to build again
-            if (changeCount > 0) {
-              if (CPBasedMode)
-                listener.getLogger()
-                                .println("Detected total " + changeCount +
-                                                " closed change packages.");
-              else
-                listener.getLogger()
-                                .println("Project contains changes a total of " +
-                                                changeCount + " changes!");
-              return PollingResult.SIGNIFICANT;
-            } else {
-              listener.getLogger()
-                              .println("No new changes detected in project!");
-              return PollingResult.NO_CHANGES;
-            }
-          } catch (APIException aex) {
-            LOGGER.severe("API Exception caught...");
-            listener.getLogger().println("An API Exception was caught!");
-            ExceptionHandler eh = new ExceptionHandler(aex);
-            LOGGER.severe(eh.getMessage());
-            listener.getLogger().println(eh.getMessage());
-            LOGGER.fine(eh.getCommand() + " returned exit code " +
-                            eh.getExitCode());
-            listener.getLogger()
-                            .println(eh.getCommand() + " returned exit code " +
-                                            eh.getExitCode());
-            aex.printStackTrace();
-            return PollingResult.NO_CHANGES;
-          } catch (SQLException sqlex) {
-            LOGGER.severe("SQL Exception caught...");
-            listener.getLogger().println("A SQL Exception was caught!");
-            listener.getLogger().println(sqlex.getMessage());
-            LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-            return PollingResult.NO_CHANGES;
-          } catch (ExecutionException e) {
-            LOGGER.log(Level.SEVERE,
-                            "Execution Exception while parsing Derby Project Members",
-                            e);
-            listener.getLogger().println(
-                            "Execution Exception while parsing Derby Project Members : " +
-                                            e.getMessage());
-            return PollingResult.NO_CHANGES;
-          } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Exception Occured: ", e);
-            listener.getLogger().println(
-                            "Exception Occured : " + e.getMessage());
-            return PollingResult.NO_CHANGES;
-          }
-        } else {
-          // We've got no previous builds, build now!
-          LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
-          return PollingResult.BUILD_NOW;
-        }
-      } else {
-        // We've got no previous builds, build now!
-        LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
-        return PollingResult.BUILD_NOW;
-      }
+    if(localClient){
+      return getPollingResultForLocalClient(job, launcher, workspace, listener, baseline);
+    }
+    else {
+      return getPollingResultForRemoteClient(job, listener, baseline);
+    }
   }
-  
+
+  private PollingResult getPollingResultForLocalClient(Job<?, ?> job, Launcher launcher,
+                  FilePath workspace, TaskListener listener,
+                  SCMRevisionState baseline)
+                  throws IOException, InterruptedException
+  {
+    listener.getLogger().println("[Local Client Poll] Polling for Changes");
+    final Run lastBuild = job.getLastBuild();
+    final IntegrityConfigurable coSettings = getProjectSettings();
+    if (lastBuild == null) {
+      // If we've never been built before, well, gotta build!
+      listener.getLogger().println("[Local Client Poll] No previous build, so forcing an initial build.");
+      return BUILD_NOW;
+    }
+    // Execute viewsandbox and compare with workspace sandbox
+    IntegrityViewSandboxTask viewSandboxTask = new IntegrityViewSandboxTask(coSettings, listener, alternateWorkspace);
+    if(workspace.act(viewSandboxTask)){
+      listener.getLogger().println("[Local Client Poll] Polling results returned changes. Build Now returned");
+      return BUILD_NOW;
+    }
+    else{
+      listener.getLogger().println("[Local Client Poll] Polling failed while trying to view sandbox. No changes returned");
+      return NO_CHANGES;
+    }
+  }
+
+  private PollingResult getPollingResultForRemoteClient(Job<?, ?> job,
+                  TaskListener listener, SCMRevisionState baseline)
+  {
+    int changeCount = 0;
+    // Lets get the baseline from our last build
+    if (null != baseline && baseline instanceof IntegrityRevisionState) {
+      IntegrityRevisionState irs = (IntegrityRevisionState) baseline;
+      String prevProjectCache = irs.getProjectCache();
+      if (null != prevProjectCache && prevProjectCache.length() > 0) {
+	// Compare the current project with the old revision state
+	LOGGER.fine("Found previous project state " + prevProjectCache);
+	// Next, load up the information for the current Integrity Project
+	// Lets start with creating an authenticated Integrity API Session for various parts of this
+	// operation...
+	try {
+	  // Get the project cache table name
+	  String projectCacheTable = DerbyUtils.registerProjectCache(
+			  ((DescriptorImpl) this.getDescriptor())
+					  .getDataSource(), job.getName(),
+			  configurationName, 0);
+	  initializeCMProject(job.getCharacteristicEnvVars(),
+			  projectCacheTable);
+	  Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
+	  if (CPBasedMode) {
+	    Set<String> projectCPIDs = new HashSet<String>();
+	    Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
+	    if (lastSuccjob != null) {
+	      IntegrityConfigurable coSettings = this.getProjectSettings();
+	      Date lastSuccBuildDate = new Date(
+			      lastSuccjob.getStartTimeInMillis());
+	      projectCPIDs = getIntegrityProject().projectCPDiff(
+			      this.getProjectSettings(), lastSuccBuildDate);
+	      IntegrityCMMember.viewCP(coSettings, projectCPIDs,
+			      job.getFullName().replace("/", ""),
+			      membersInCP);
+	      changeCount = membersInCP.size();
+	    }
+	  } else {
+	    initializeCMProjectMembers();
+	    // Compare this project with the old project for file mode
+	    changeCount = DerbyUtils
+			    .compareBaseline(serverConfig, prevProjectCache,
+					    projectCacheTable, membersInCP,
+					    skipAuthorInfo, false);
+	  }
+	  // Finally decide whether or not we need to build again
+	  if (changeCount > 0) {
+	    if (CPBasedMode)
+	      listener.getLogger()
+			      .println("Detected total " + changeCount +
+					      " closed change packages.");
+	    else
+	      listener.getLogger()
+			      .println("Project contains changes a total of " +
+					      changeCount + " changes!");
+	    return PollingResult.SIGNIFICANT;
+	  } else {
+	    listener.getLogger()
+			    .println("No new changes detected in project!");
+	    return PollingResult.NO_CHANGES;
+	  }
+	} catch (APIException aex) {
+	  LOGGER.severe("API Exception caught...");
+	  listener.getLogger().println("An API Exception was caught!");
+	  ExceptionHandler eh = new ExceptionHandler(aex);
+	  LOGGER.severe(eh.getMessage());
+	  listener.getLogger().println(eh.getMessage());
+	  LOGGER.fine(eh.getCommand() + " returned exit code " +
+			  eh.getExitCode());
+	  listener.getLogger()
+			  .println(eh.getCommand() + " returned exit code " +
+					  eh.getExitCode());
+	  aex.printStackTrace();
+	  return PollingResult.NO_CHANGES;
+	} catch (SQLException sqlex) {
+	  LOGGER.severe("SQL Exception caught...");
+	  listener.getLogger().println("A SQL Exception was caught!");
+	  listener.getLogger().println(sqlex.getMessage());
+	  LOGGER.log(Level.SEVERE, "SQLException", sqlex);
+	  return PollingResult.NO_CHANGES;
+	} catch (ExecutionException e) {
+	  LOGGER.log(Level.SEVERE,
+			  "Execution Exception while parsing Derby Project Members",
+			  e);
+	  listener.getLogger().println(
+			  "Execution Exception while parsing Derby Project Members : " +
+					  e.getMessage());
+	  return PollingResult.NO_CHANGES;
+	} catch (Exception e) {
+	  LOGGER.log(Level.SEVERE, "Exception Occured: ", e);
+	  listener.getLogger().println(
+			  "Exception Occured : " + e.getMessage());
+	  return PollingResult.NO_CHANGES;
+	}
+      } else {
+	// We've got no previous builds, build now!
+	LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+	return BUILD_NOW;
+      }
+    } else {
+      // We've got no previous builds, build now!
+      LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+      return BUILD_NOW;
+    }
+  }
+
   private String getSource(EnvVars env) {
       return env.expand(configPath);
   }

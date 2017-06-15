@@ -15,12 +15,13 @@ import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 
 import java.io.File;
+import java.io.Serializable;
 import java.util.logging.Logger;
 
 /**
  * Created by asen on 07-06-2017.
  */
-public class SandboxUtils
+public class SandboxUtils implements Serializable
 {
     private final IntegrityConfigurable integrityConfigurable;
     private static final Logger LOGGER = Logger.getLogger(SandboxUtils.class.getSimpleName());
@@ -38,29 +39,53 @@ public class SandboxUtils
 	return APISession.createLocalIntegrationPoint(integrityConfigurable);
     }
 
+    private String getQualifiedWorkspaceName(FilePath workspace)
+    {
+	StringBuilder sbr = new StringBuilder(workspace.getRemote());
+	//sbr.append("\\project.pj");
+	return sbr.toString();
+    }
+
+    FilePath getFilePath(File workspaceFile, String alternateWorkspaceDir)
+    {
+	// Figure out where we should be checking out this project
+	File checkOutDir = (null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0)
+			? new File(alternateWorkspaceDir) : workspaceFile;
+	// Convert the file object to a hudson FilePath (helps us with workspace.deleteContents())
+	return new FilePath(checkOutDir.isAbsolute() ? checkOutDir
+			: new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkOutDir.getPath()));
+    }
+
     /**
      *
      * @throws APIException
      * @param siProject
      * @param workspace
+     * @param lineTerminator
      */
     protected int createSandbox(IntegrityCMProject siProject,
-		    FilePath workspace) throws APIException
+		    FilePath workspace, String lineTerminator) throws APIException
     {
 	ISession session = getAPISession();
 	session.ping();
-	if(verifySandbox(siProject, workspace))
-	    return createSandbox(session, siProject, workspace);
-	return -1;
+	if(verifySandbox(siProject, workspace)) {
+	    return createSandbox(session, siProject, workspace, lineTerminator);
+	}
+	else{
+	    // Sandbox already exists
+	    return 0;
+	}
     }
 
     private int createSandbox(ISession session,
-		    IntegrityCMProject siProject, FilePath workspace) throws APIException
+		    IntegrityCMProject siProject, FilePath workspace,
+		    String lineTerminator) throws APIException
     {
 	listener.getLogger()
 			.println("[LocalClient] Executing CreateSandbox :"+ getQualifiedWorkspaceName(workspace));
 	Command cmd = new Command(Command.SI, "createsandbox");
-	cmd.addOption(new Option("project", siProject.getProjectName()));
+	cmd.addOption(new Option(IAPIOption.PROJECT, siProject.getProjectName()));
+	cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR, lineTerminator));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace));
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
@@ -119,10 +144,12 @@ public class SandboxUtils
 		    sandboxExists = true;
 		}
 	    }
-	    //No existing match found! Drop the existing workspace sandbox if there are no matches
-	    if(sandboxExists)
-	    	dropSandbox(siProject, workspace);
 	}
+
+	//No existing match found! Drop the existing workspace sandbox if there are no matches
+	if(sandboxExists)
+	    return dropSandbox(siProject, workspace)==0?true:false;
+
 	listener.getLogger()
 			.println("[LocalClient] Sandbox not found in :"+ getQualifiedWorkspaceName(workspace) +
 					" for Project Config :" + siProject.getProjectName());
@@ -194,28 +221,39 @@ public class SandboxUtils
 	if(cleanCopy) {
 	    cmd.addOption(new APIOption("overwriteUnchanged"));
 	}
-	cmd.addOption(new Option("sandbox", getQualifiedWorkspaceName(workspace).concat("\\project.pj")));
+	cmd.addOption(new Option(IAPIOption.SANDBOX, getQualifiedWorkspaceName(workspace).concat("\\project.pj")));
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
 			.println("[LocalClient] ResyncSandbox Response:"+ response.getExitCode());
 	return response.getExitCode();
     }
 
-    private String getQualifiedWorkspaceName(FilePath workspace)
+    /**
+     * View the sadnbox for any changes during Polling
+     * @param workspace
+     */
+    public boolean viewSandboxChanges(FilePath workspace) throws APIException
     {
-	StringBuilder sbr = new StringBuilder(workspace.getRemote());
-	//sbr.append("\\project.pj");
-	return sbr.toString();
+	ISession session = getAPISession();
+	session.ping();
+	return viewSandboxChanges(session, workspace);
     }
 
-    FilePath getFilePath(File workspaceFile, String alternateWorkspaceDir)
+    private boolean viewSandboxChanges(ISession session, FilePath workspace)
+		    throws APIException
     {
-	// Figure out where we should be checking out this project
-	File checkOutDir = (null != alternateWorkspaceDir && alternateWorkspaceDir.length() > 0)
-			? new File(alternateWorkspaceDir) : workspaceFile;
-	// Convert the file object to a hudson FilePath (helps us with workspace.deleteContents())
-	return new FilePath(checkOutDir.isAbsolute() ? checkOutDir
-			: new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkOutDir.getPath()));
-    }
+	listener.getLogger()
+			.println("[LocalClient] Executing ViewSandBox : "+ getQualifiedWorkspaceName(workspace));
+	Command cmd = new Command(Command.SI, "viewsandbox");
+	cmd.addOption(new APIOption(IAPIOption.RECURSE));
+	//cmd.addOption(new APIOption("filterSubs"));
+	cmd.addOption(new Option("filter", "changed:all"));
+	cmd.addOption(new Option(IAPIOption.SANDBOX, getQualifiedWorkspaceName(workspace).concat("\\project.pj")));
 
+	Response response = session.runCommand(cmd);
+	listener.getLogger()
+			.println("[LocalClient] ViewSandBox Response : "+ response.getExitCode());
+	// If there are workitems, there are changes in the project!
+	return response.getWorkItems().hasNext();
+    }
 }
