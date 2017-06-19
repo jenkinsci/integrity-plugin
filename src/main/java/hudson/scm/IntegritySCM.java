@@ -435,14 +435,14 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       {
         listener.getLogger()
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
+        listener.getLogger()
+                        .println("[LocalClient] Starting Resync Task :"+ cleanCopy);
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(coSettings, cleanCopy, alternateWorkspace, listener);
-        if (workspace.act(resyncSandboxTask)){
+        if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
-        }
-        else{
-          throw new AbortException("Failed to resync workspace!");
-        }
+        } else
+            throw new AbortException("Failed to resync workspace!");
       } else
       {
         throw new AbortException("Failed to create sandbox!");
@@ -777,7 +777,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       return BUILD_NOW;
     }
     else{
-      listener.getLogger().println("[Local Client Poll] Polling failed while trying to view sandbox. No changes returned");
+      listener.getLogger().println("[Local Client Poll] Polling results returned no changes. No Changes returned");
       return NO_CHANGES;
     }
   }

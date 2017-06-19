@@ -43,7 +43,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try {
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(workspace, cleanCopy)==0?true:false;
+            return sandboxUtil.resyncSandbox(workspace, cleanCopy);
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());
@@ -54,6 +54,6 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
     @Override
     public void checkRoles(RoleChecker roleChecker) throws SecurityException
     {
-	roleChecker.check((RoleSensitive) this, Roles.SLAVE);
+	roleChecker.check(this, Roles.SLAVE);
     }
 }

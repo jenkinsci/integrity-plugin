@@ -18,6 +18,8 @@ import java.io.File;
 import java.io.Serializable;
 import java.util.logging.Logger;
 
+import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
+
 /**
  * Created by asen on 07-06-2017.
  */
@@ -36,7 +38,7 @@ public class SandboxUtils implements Serializable
 
     private ISession getAPISession()
     {
-	return APISession.createLocalIntegrationPoint(integrityConfigurable);
+	return createLocalIntegrationPoint(integrityConfigurable);
     }
 
     private String getQualifiedWorkspaceName(FilePath workspace)
@@ -63,17 +65,17 @@ public class SandboxUtils implements Serializable
      * @param workspace
      * @param lineTerminator
      */
-    protected int createSandbox(IntegrityCMProject siProject,
+    protected boolean createSandbox(IntegrityCMProject siProject,
 		    FilePath workspace, String lineTerminator) throws APIException
     {
 	ISession session = getAPISession();
 	session.ping();
 	if(verifySandbox(siProject, workspace)) {
-	    return createSandbox(session, siProject, workspace, lineTerminator);
+	    return createSandbox(session, siProject, workspace, lineTerminator)==0;
 	}
 	else{
-	    // Sandbox already exists
-	    return 0;
+	    /* Sandbox already exists */
+	    return true;
 	}
     }
 
@@ -86,11 +88,17 @@ public class SandboxUtils implements Serializable
 	Command cmd = new Command(Command.SI, "createsandbox");
 	cmd.addOption(new Option(IAPIOption.PROJECT, siProject.getProjectName()));
 	cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR, lineTerminator));
+	cmd.addOption(new APIOption("populate"));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace));
 	Response response = session.runCommand(cmd);
-	listener.getLogger()
-			.println("[LocalClient] CreateSandbox response:"+ response.getExitCode());
-	return response.getExitCode();
+	if(response != null) {
+	    listener.getLogger()
+			    .println("[LocalClient] CreateSandbox response:" +
+					    response.getExitCode());
+	    return response.getExitCode();
+	}
+	else
+	    return -1;
     }
 
     /**
@@ -148,7 +156,7 @@ public class SandboxUtils implements Serializable
 
 	//No existing match found! Drop the existing workspace sandbox if there are no matches
 	if(sandboxExists)
-	    return dropSandbox(siProject, workspace)==0?true:false;
+	    return dropSandbox(siProject, workspace) == 0;
 
 	listener.getLogger()
 			.println("[LocalClient] Sandbox not found in :"+ getQualifiedWorkspaceName(workspace) +
@@ -177,7 +185,7 @@ public class SandboxUtils implements Serializable
 	cmd.addOption(new Option("delete", "all"));
 	cmd.addSelection(workspace.getName());
 	Response response = session.runCommand(cmd);
-	if(response != null && response.getExitCode() == 0){
+	if((response != null) && (response.getExitCode() == 0)){
 	    WorkItem item = APIUtils.getWorkItem(response);
 	    System.out.println(item);
 	    Field projectName = item.getField("Working-\n" +
@@ -185,10 +193,13 @@ public class SandboxUtils implements Serializable
 	    Field sandboxName = item.getField("Sandbox-\n" +
 			    "Directory-\n" +
 			    "Deleted");
+	    listener.getLogger()
+			    .println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
+	    return response.getExitCode();
 	}
-	listener.getLogger()
-			.println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
-	return response.getExitCode();
+	else
+	    return -1;
+
     }
 
     /**
@@ -199,11 +210,11 @@ public class SandboxUtils implements Serializable
      * @return
      * @throws APIException
      */
-    public int resyncSandbox(FilePath workspace, boolean cleanCopy) throws APIException
+    public boolean resyncSandbox(FilePath workspace, boolean cleanCopy) throws APIException
     {
 	ISession session = getAPISession();
 	session.ping();
-	return resyncSandbox(session, workspace, cleanCopy);
+	return resyncSandbox(session, workspace, cleanCopy)==0;
     }
 
     private int resyncSandbox(ISession session, FilePath workspace,
@@ -223,9 +234,14 @@ public class SandboxUtils implements Serializable
 	}
 	cmd.addOption(new Option(IAPIOption.SANDBOX, getQualifiedWorkspaceName(workspace).concat("\\project.pj")));
 	Response response = session.runCommand(cmd);
-	listener.getLogger()
-			.println("[LocalClient] ResyncSandbox Response:"+ response.getExitCode());
-	return response.getExitCode();
+	if(response != null) {
+	    listener.getLogger()
+			    .println("[LocalClient] ResyncSandbox Response:" +
+					    response.getExitCode());
+	    return response.getExitCode();
+	}
+	else
+	    return -1;
     }
 
     /**
@@ -244,16 +260,28 @@ public class SandboxUtils implements Serializable
     {
 	listener.getLogger()
 			.println("[LocalClient] Executing ViewSandBox : "+ getQualifiedWorkspaceName(workspace));
+	boolean isMember = false;
 	Command cmd = new Command(Command.SI, "viewsandbox");
 	cmd.addOption(new APIOption(IAPIOption.RECURSE));
-	//cmd.addOption(new APIOption("filterSubs"));
+	// The filterSubs option doesn't work via Java API!! 1094136 on MKS1
+	cmd.addOption(new APIOption("filterSubs"));
 	cmd.addOption(new Option("filter", "changed:all"));
 	cmd.addOption(new Option(IAPIOption.SANDBOX, getQualifiedWorkspaceName(workspace).concat("\\project.pj")));
 
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
 			.println("[LocalClient] ViewSandBox Response : "+ response.getExitCode());
-	// If there are workitems, there are changes in the project!
-	return response.getWorkItems().hasNext();
+
+	// Have to deal with this ugliness as --filtersubs not working
+	WorkItemIterator witerator = response.getWorkItems();
+	while(witerator.hasNext()){
+	    WorkItem wit = witerator.next();
+	    String type = wit.getField("type").getValueAsString();
+	    if(!type.equals("subsandbox")) {
+	        isMember = true;
+	        break;
+	    }
+	}
+	return isMember;
     }
 }

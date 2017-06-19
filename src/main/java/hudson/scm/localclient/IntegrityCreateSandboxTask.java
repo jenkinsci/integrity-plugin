@@ -58,7 +58,8 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
 	try {
 	    listener.getLogger()
 			    .println("[LocalClient] Executing IntegrityCreateSandboxTask :"+ workspaceFile);
-	    return sandboxUtil.createSandbox(siProject, workspace, lineTerminator)==0?true:false;
+	    return sandboxUtil.createSandbox(siProject, workspace,
+			    lineTerminator);
 	} catch (APIException e) {
 	    listener.getLogger()
 			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getExceptionId());
@@ -69,6 +70,6 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
     @Override
     public void checkRoles(RoleChecker roleChecker) throws SecurityException
     {
-	roleChecker.check((RoleSensitive) this, Roles.SLAVE);
+	roleChecker.check(this, Roles.SLAVE);
     }
 }
