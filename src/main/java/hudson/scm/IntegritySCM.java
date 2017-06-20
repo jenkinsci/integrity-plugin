@@ -437,38 +437,38 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task :"+ cleanCopy);
-        IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(coSettings, cleanCopy, alternateWorkspace, listener);
+        IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(run, coSettings, cleanCopy, changeLogFile, alternateWorkspace, listener);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
         } else
-            throw new AbortException("Failed to resync workspace!");
+            throw new AbortException("[Local Client] Failed to resync workspace!");
       } else
       {
-        throw new AbortException("Failed to create sandbox!");
+        throw new AbortException("[Local Client] Failed to create sandbox!");
       }
 
 
     } catch (APIException aex) {
-      LOGGER.severe("API Exception caught...");
-      listener.getLogger().println("An API Exception was caught!");
+      LOGGER.severe("[Local Client] API Exception caught...");
+      listener.getLogger().println("[Local Client] An API Exception was caught!");
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
       listener.getLogger().println(eh.getMessage());
       LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
       listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      throw new AbortException("Caught Integrity APIException!");
+      throw new AbortException("[Local Client] Caught Integrity APIException!");
     } catch (SQLException sqlex) {
-      LOGGER.severe("SQL Exception caught...");
-      listener.getLogger().println("A SQL Exception was caught!");
+      LOGGER.severe("[Local Client] SQL Exception caught...");
+      listener.getLogger().println("[Local Client] A SQL Exception was caught!");
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
       throw new AbortException("Caught Derby SQLException!");
     } catch (Exception e) {
-      LOGGER.log(Level.SEVERE, "Exception occured during checkout!", e);
+      LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);
       listener.getLogger()
-                      .println("Exception occured during checkout! : " + e.getMessage());
-      throw new AbortException("Exception occured during checkout! "+ e.getMessage());
+                      .println("[Local Client] Exception occured during checkout! : " + e.getMessage());
+      throw new AbortException("[Local Client] Exception occured during checkout! "+ e.getMessage());
     }
   }
 

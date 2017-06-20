@@ -1,6 +1,7 @@
 package hudson.scm.localclient;
 
 import hudson.model.Result;
+import hudson.model.User;
 import hudson.scm.IntegritySCMTest;
 import org.apache.commons.io.FileUtils;
 import org.junit.Test;
@@ -9,6 +10,7 @@ import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
 import java.util.Scanner;
+import java.util.Set;
 
 import static org.junit.Assert.*;
 
@@ -20,9 +22,6 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
 {
 
     @Test
-    /**
-     *  Test createSandbox
-     */
     public void testSandboxWithMultipleBuilds() throws Exception
     {
         // Test multiple builds within same sandbox
@@ -33,14 +32,36 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     }
 
     @Test
+    public void testCleanSandboxWithMultipleBuilds() throws Exception
+    {
+        // Test multiple builds within same sandbox
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+    }
+
+    @Test
     public void testSandboxWithConcurrentBuilds() throws Exception
     {
         // Test multiple builds within same sandbox concurrently
         localClientProject.setConcurrentBuild(true);
+        jenkinsRule.createOnlineSlave().setNodeName("remote");
         build = build(localClientProject, Result.SUCCESS);
         build = build(localClientProject, Result.SUCCESS);
         build = build(localClientProject, Result.SUCCESS);
         build = build(localClientProject, Result.SUCCESS);
+    }
+
+    @Test
+    public void testCleanSandboxWithConcurrentBuilds() throws Exception
+    {
+        // Test multiple builds within same sandbox concurrently
+        localClientProject.setConcurrentBuild(true);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        build = build(localClientProjectCleanCopy, Result.SUCCESS);
     }
 
     @Test
@@ -52,36 +73,31 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxCreateSuccessResync() throws Exception
     {
+
         build = build(localClientProject, Result.SUCCESS);
     }
 
     @Test
     public void testSandboxCreateSuccessResyncWithNewFile() throws Exception
     {
-        addTestFileInSource();
+        // Create the sandbox
+        build = build(localClientProject, Result.SUCCESS);
+        // Add a random file into Integrity Source project directly
+        addTestFileInSource(null);
+        //  Check polling detects the file
+        assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         // Run the build
         build = build(localClientProject, Result.SUCCESS);
 
-        // TODO : assert this once change log is implemented!
-        //final Set<User> culprits = build.getCulprits();
-        //assertEquals("The build should have only one culprit", 1, culprits.size());
+        // Check the changelog for changeset count
+        final Set<User> culprits = build.getCulprits();
+        assertEquals("The build should have only one culprit", 1, culprits.size());
 
         // Assert the file has gotten resynced into workspace
-        assertTrue(new File(
+        assertTrue("File Exists in workspace!",new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
+        // Polling once more. No more changes should be detected
         assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
-    }
-
-    @Test
-    public void testSandboxCreateSuccessResyncWithNewFileAndCleanCopy()
-                    throws Exception
-    {
-        addTestFileInSource();
-        build = build(localClientProjectCleanCopy, Result.SUCCESS);
-
-        assertTrue(new File(
-                        String.valueOf(build.getWorkspace().child(fileName))).isFile());
-        assertFalse("scm polling should not detect any more changes after build", localClientProjectCleanCopy.poll(listener).hasChanges());
     }
 
     @Test
@@ -90,12 +106,12 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     {
         String testData = "hello world";
         // Add a random file into Integrity Source project directly
-        addTestFileInSource();
+        addTestFileInSource(null);
 
-        assertTrue("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
+        assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         build = build(localClientProject, Result.SUCCESS);
 
-        assertTrue(new File(
+        assertTrue("File Exists in workspace!", new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
         //Assert the file in workspace/sandbox contents are null
         try(BufferedReader br = new BufferedReader(new FileReader(
@@ -104,13 +120,13 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         }
 
         // Check out the random file (not in workspace/sandbox)
-        checkoutFileFromSource();
+        checkoutFileFromSource(null);
         // Write test data into the checked out file
         FileUtils.writeStringToFile(testFile, testData);
         // Checkin the file directly to the Integrity Source project
-        checkinFileIntoSource();
+        checkinFileIntoSource(null);
 
-        assertTrue("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
+        assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
 
         build = build(localClientProject, Result.SUCCESS);
 
@@ -129,9 +145,9 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
                     throws Exception
     {
         String testData = "hello world";
-        addTestFileInSource();
+        addTestFileInSource(null);
 
-        assertTrue("scm polling should not detect any more changes after build", localClientProjectCleanCopy.poll(listener).hasChanges());
+        assertTrue("scm polling should detect a change after build", localClientProjectCleanCopy.poll(listener).hasChanges());
         build = build(localClientProjectCleanCopy, Result.SUCCESS);
         assertFalse("scm polling should not detect any more changes after build", localClientProjectCleanCopy.poll(listener).hasChanges());
 
@@ -140,9 +156,9 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
             assertEquals(br.readLine(), null);
         }
 
-        checkoutFileFromSource();
+        checkoutFileFromSource(null);
         FileUtils.writeStringToFile(testFile, testData);
-        checkinFileIntoSource();
+        checkinFileIntoSource(null);
 
         build = build(localClientProjectCleanCopy, Result.SUCCESS);
         assertFalse("scm polling should not detect any more changes after build", localClientProjectCleanCopy.poll(listener).hasChanges());
@@ -159,14 +175,14 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     public void testSandboxCreateSuccessResyncWithDeletedFile()
                     throws Exception
     {
-        addTestFileInSource();
-        assertTrue("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
+        addTestFileInSource(null);
+        assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         build = build(localClientProject, Result.SUCCESS);
         // Assert file exists in workspace
         assertTrue(new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
-        dropTestFileFromSource();
-        assertTrue("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
+        dropTestFileFromSource(null);
+        assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         build = build(localClientProject, Result.SUCCESS);
         assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
         // Assert that after build, file doesn't exist in in workspace

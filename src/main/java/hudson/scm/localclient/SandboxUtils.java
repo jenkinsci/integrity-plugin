@@ -4,6 +4,7 @@ import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.*;
 import hudson.FilePath;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.IntegrityCMProject;
 import hudson.scm.IntegrityConfigurable;
@@ -11,11 +12,10 @@ import hudson.scm.IntegritySCM;
 import hudson.scm.api.APIUtils;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
-import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 
-import java.io.File;
-import java.io.Serializable;
+import java.io.*;
+import java.util.Objects;
 import java.util.logging.Logger;
 
 import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
@@ -89,6 +89,8 @@ public class SandboxUtils implements Serializable
 	cmd.addOption(new Option(IAPIOption.PROJECT, siProject.getProjectName()));
 	cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR, lineTerminator));
 	cmd.addOption(new APIOption("populate"));
+	if(siProject.isVariant())
+	    cmd.addOption(new Option(IAPIOption.DEVPATH, siProject.getVariantName()));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace));
 	Response response = session.runCommand(cmd);
 	if(response != null) {
@@ -122,28 +124,32 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Executing Sandbox Verification ");
         boolean sandboxExists = false;
 	Command cmd = new Command(Command.SI, "sandboxes");
-
 	listener.getLogger()
 			.println("[LocalClient] Executing si sandboxes ");
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
 			.println("[LocalClient] si sandboxes response:"+ response.getExitCode());
 	listener.getLogger()
-			.println("[LocalClient] Checking for Sandbox in :"+ getQualifiedWorkspaceName(workspace) +
-			", Project Config :" + siProject.getProjectName());
+			.println("[LocalClient] Searching Sandbox: ["+ getQualifiedWorkspaceName(workspace)+"],");
+	listener.getLogger().println("Project Config :[" + siProject.getProjectName()+"],");
+	listener.getLogger().println("Project Variant :[" + siProject.getVariantName()+"]");
 	if(response != null && response.getExitCode() == 0){
 	    WorkItemIterator it = response.getWorkItems();
 	    while(it.hasNext()){
 	        WorkItem wi = it.next();
 	        String sBoxname = wi.getField("SandboxName").getValueAsString();
 		String projectName = wi.getField("ProjectName").getValueAsString();
-
+		String variantName = wi.getField("DevelopmentPath").getValueAsString();
 		listener.getLogger()
-				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName);
-		if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))&& projectName.equals(siProject.getProjectName())) {
+				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName+", ["+variantName+"]");
+		if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))
+				&& projectName.equals(siProject.getProjectName())
+				&& Objects.equals(siProject.getVariantName(),variantName)) {
 		    listener.getLogger()
-				    .println("[LocalClient] Found Existing Sandbox for Project:"+ siProject.getProjectName() +
-				    ", Sandbox : " + sBoxname + ", Workspace : "+ getQualifiedWorkspaceName(workspace));
+				    .println("[LocalClient] Found Existing Sandbox for Project:["+ projectName+"],");
+		    listener.getLogger().println("Sandbox : [" + sBoxname + "],");
+		    listener.getLogger().println("Workspace : ["+ getQualifiedWorkspaceName(workspace) + "],");
+		    listener.getLogger().println("Variant : [" +variantName+"]");
 		    return false;
 		}
 		else if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))) {
@@ -153,14 +159,14 @@ public class SandboxUtils implements Serializable
 		}
 	    }
 	}
-
 	//No existing match found! Drop the existing workspace sandbox if there are no matches
 	if(sandboxExists)
 	    return dropSandbox(siProject, workspace) == 0;
 
 	listener.getLogger()
-			.println("[LocalClient] Sandbox not found in :"+ getQualifiedWorkspaceName(workspace) +
-					" for Project Config :" + siProject.getProjectName());
+			.println("[LocalClient] Sandbox not found in :"+ getQualifiedWorkspaceName(workspace)+"],");
+	listener.getLogger().println("Project Config : [" + siProject.getProjectName() + "],");
+	listener.getLogger().println("Project Variant : [" + siProject.getVariantName() + "]");
 	return true;
     }
 
@@ -205,21 +211,30 @@ public class SandboxUtils implements Serializable
     /**
      * Resync the sandbox - cleanCopy forces the resync unchangedFiles as well.
      *
+     *
+     * @param run
      * @param workspace
      * @param cleanCopy
+     * @param changeLogFile
      * @return
      * @throws APIException
      */
-    public boolean resyncSandbox(FilePath workspace, boolean cleanCopy) throws APIException
+    public boolean resyncSandbox(Run<?, ?> run, FilePath workspace,
+		    boolean cleanCopy,
+		    File changeLogFile)
+		    throws APIException, FileNotFoundException,
+		    UnsupportedEncodingException
     {
 	ISession session = getAPISession();
 	session.ping();
-	return resyncSandbox(session, workspace, cleanCopy)==0;
+	return resyncSandbox(run, session, workspace, cleanCopy, changeLogFile)==0;
     }
 
-    private int resyncSandbox(ISession session, FilePath workspace,
-		    boolean cleanCopy)
-		    throws APIException
+    private int resyncSandbox(Run<?, ?> run, ISession session,
+		    FilePath workspace,
+		    boolean cleanCopy, File changeLogFile)
+		    throws APIException, FileNotFoundException,
+		    UnsupportedEncodingException
     {
 	listener.getLogger()
 			.println("[LocalClient] Executing ResyncSandbox :"+ getQualifiedWorkspaceName(workspace));
@@ -238,10 +253,34 @@ public class SandboxUtils implements Serializable
 	    listener.getLogger()
 			    .println("[LocalClient] ResyncSandbox Response:" +
 					    response.getExitCode());
+	    generateChangeLogFile(run, response, changeLogFile);
 	    return response.getExitCode();
 	}
 	else
 	    return -1;
+    }
+
+    private void generateChangeLogFile(Run<?, ?> run,
+		    Response response,
+		    File changeLogFile)
+		    throws APIException, FileNotFoundException,
+		    UnsupportedEncodingException
+    {
+        if(response.getExitCode()!=0)
+            return;
+	try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
+	    WorkItemIterator workItemIterator = response.getWorkItems();
+	    while (workItemIterator.hasNext()) {
+		WorkItem wit = workItemIterator.next();
+		writer.print("msg:"+wit.getResult().getMessage().trim());
+		writer.print(",");
+		writer.print("file:"+wit.getContext("id"));
+		writer.print("\n");
+	    }
+	}
+	listener.getLogger()
+			.println("[Local Client] Change log successfully generated: " +
+					changeLogFile.getAbsolutePath());
     }
 
     /**

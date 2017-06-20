@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+import hudson.scm.localclient.IntegrityLcChangeLogParser;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
@@ -519,7 +520,10 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   {
     // Log the call
     LOGGER.fine("createChangeLogParser() invoked...!");
-    return new IntegrityChangeLogParser(integrityURL);
+    if(localClient)
+      return new IntegrityLcChangeLogParser(integrityURL);
+    else
+      return new IntegrityChangeLogParser(integrityURL);
   }
 
   /**

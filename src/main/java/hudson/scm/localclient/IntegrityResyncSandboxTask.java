@@ -2,6 +2,7 @@ package hudson.scm.localclient;
 
 import com.mks.api.response.APIException;
 import hudson.FilePath;
+import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.IntegrityConfigurable;
@@ -22,15 +23,21 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
     private final SandboxUtils sandboxUtil;
     private final TaskListener listener;
     private final boolean cleanCopy;
+    private final File changeLogFile;
+    private final Run<?, ?> run;
 
-    public IntegrityResyncSandboxTask(IntegrityConfigurable coSettings,
-                    boolean cleanCopy, String alternateWorkspace,
+    public IntegrityResyncSandboxTask(Run<?, ?> run,
+                    IntegrityConfigurable coSettings,
+                    boolean cleanCopy, File changeLogFile,
+                    String alternateWorkspace,
                     TaskListener listener)
     {
+        this.run = run;
         this.integrityConfigurable = coSettings;
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
         this.cleanCopy = cleanCopy;
+        this.changeLogFile = changeLogFile;
         this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
     }
 
@@ -43,7 +50,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try {
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(workspace, cleanCopy);
+            return sandboxUtil.resyncSandbox(run, workspace, cleanCopy, changeLogFile);
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());

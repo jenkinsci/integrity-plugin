@@ -48,6 +48,9 @@ public class IntegritySCMTest
     protected Command cmd;
     protected Response response;
     protected FreeStyleBuild build;
+    protected FreeStyleProject localClientVariantProject;
+    protected FreeStyleProject localClientVariantProjectCleanCopy;
+    protected String variantName;
 
     @Before
     public void setUp() throws Exception {
@@ -55,9 +58,11 @@ public class IntegritySCMTest
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, false,
 			"Administrator", "password");
-	localClientProject = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
-	localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
+	localClientProject = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
+	localClientVariantProject = setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
+	localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
+	localClientVariantProjectCleanCopy = setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
 
     @Test
@@ -111,7 +116,17 @@ public class IntegritySCMTest
 	return project;
     }
 
-    protected FreeStyleProject setupIntegrityProjectWithRemoteClientWithCheckpointOff(
+    private FreeStyleProject setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	configPath = createDevPath();
+	FreeStyleProject project = setupProject(configPath, true, false, false);
+	return project;
+    }
+
+
+    private FreeStyleProject setupIntegrityProjectWithRemoteClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
@@ -119,7 +134,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    protected FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
+    private FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
 		    throws Exception
     {
 	setupIntegrityConfigurable();
@@ -127,7 +142,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
+    private FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
@@ -135,7 +150,16 @@ public class IntegritySCMTest
 	return project;
     }
 
-    protected void setupIntegrityConfigurable()
+    private FreeStyleProject setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	configPath = createDevPath();
+	FreeStyleProject project = setupProject(configPath, true, true, false);
+	return project;
+    }
+
+    private void setupIntegrityConfigurable()
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, false,
@@ -153,53 +177,84 @@ public class IntegritySCMTest
 	return build;
     }
 
-    protected void addTestFileInSource() throws IOException, APIException
+    private String createDevPath() throws APIException
+    {
+        // Create a checkpoint
+        String checkpointLabel = "TestCheckpoint"+Math.random();
+	assert session != null;
+	cmd = new Command(Command.SI, "checkpoint");
+	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("checkpointUnchangedSubprojects"));
+	cmd.addOption(new Option("label", checkpointLabel));
+	response = session.runCommand(cmd);
+	assertEquals("Checkpoint Created Successfully Label: "+checkpointLabel, response.getExitCode(),0);
+
+	// Create a devpath on the above checkpoint
+	cmd = new Command(Command.SI, "createdevpath");
+	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("devpath", "DP_"+Math.random()));
+	cmd.addOption(new Option("projectRevision", checkpointLabel));
+	response = session.runCommand(cmd);
+	assertEquals("Devpath Created Successfully", response.getExitCode(),0);
+	variantName = response.getResult().getField("DevelopmentPath").getValueAsString().trim();
+	return successConfigPath +"#d="+response.getResult().getField("DevelopmentPath").getValueAsString().trim();
+    }
+
+    protected void addTestFileInSource(String variantName) throws IOException, APIException
     {
 	// Add a random file into Integrity Source project directly
 	assert session != null;
 	cmd = new Command(Command.SI, "projectadd");
 	cmd.addOption(new Option("project", successConfigPath));
+	if(variantName != null)
+	    cmd.addOption(new Option("devpath", variantName));
 	fileName = Math.random()+".txt";
 	testFile = testFolder.newFile(fileName);
 	cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
 	cmd.addOption(new Option("cpid", ":bypass"));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
-	assertEquals(response.getExitCode(),0);
+	assertEquals("Test File "+fileName+" added Successfully to "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void dropTestFileFromSource() throws APIException
+    protected void dropTestFileFromSource(String variantName) throws APIException
     {
 	// Drop the file from project
 	assert session != null;
 	cmd = new Command(Command.SI, "drop");
 	cmd.addOption(new Option("project", successConfigPath));
 	cmd.addOption(new Option("cpid", ":bypass"));
+	if(variantName != null)
+	    cmd.addOption(new Option("devpath", variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
-	assertEquals(response.getExitCode(),0);
+	assertEquals("Test File "+fileName+" Dropped Successfully from "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void checkinFileIntoSource() throws APIException
+    protected void checkinFileIntoSource(String variantName) throws APIException
     {
 	cmd = new Command(Command.SI, "projectci");
 	cmd.addOption(new Option("project", successConfigPath));
 	cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
 	cmd.addOption(new Option("description", "checkin"));
 	cmd.addOption(new Option("cpid", ":bypass"));
+	if(variantName != null)
+	    cmd.addOption(new Option("devpath", variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
-	assertEquals(response.getExitCode(),0);
+	assertEquals("Test File "+fileName+" Checked in Successfully to "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void checkoutFileFromSource() throws APIException
+    protected void checkoutFileFromSource(String variantName) throws APIException
     {
 	cmd = new Command(Command.SI, "projectco");
 	cmd.addOption(new Option("project", successConfigPath));
 	cmd.addOption(new Option("targetFile", testFile.getAbsolutePath()));
 	cmd.addOption(new Option("cpid", ":bypass"));
+	if(this.variantName != null)
+	    cmd.addOption(new Option("devpath", this.variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
-	assertEquals(response.getExitCode(),0);
+	assertEquals("Test File "+fileName+" checked out successfully from "+successConfigPath, response.getExitCode(),0);
     }
 }

@@ -1,7 +1,5 @@
 package hudson.scm.localclient;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
 import hudson.model.Result;
 import hudson.scm.IntegritySCMTest;
 import hudson.scm.PollingResult;
@@ -51,7 +49,7 @@ public class IntegrityViewSandboxTaskTest extends IntegritySCMTest
 	build = build(localClientProject, Result.SUCCESS);
 	jenkinsRule.assertBuildStatus(Result.SUCCESS, build);
 
-	addTestFileInSource();
+	addTestFileInSource(null);
 	triggerSCMTrigger(localClientProject.getTrigger(SCMTrigger.class));
 
 	PollingResult poll = localClientProject.poll(listener);

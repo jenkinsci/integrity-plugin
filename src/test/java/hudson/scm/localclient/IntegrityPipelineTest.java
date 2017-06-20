@@ -26,7 +26,7 @@ public class IntegrityPipelineTest extends IntegritySCMTest
     @Test
     public void pipeLineTestWithLocalClient() throws Exception
     {
-        addTestFileInSource();
+        addTestFileInSource(null);
 	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
 	wfJob.setDefinition(new CpsFlowDefinition(
 			"node {\n" +
@@ -40,7 +40,7 @@ public class IntegrityPipelineTest extends IntegritySCMTest
 	WorkflowRun b = jenkinsRule.assertBuildStatusSuccess(wfJob.scheduleBuild2(0));
 	assertTrue(b.getArtifactManager().root().child(fileName).isFile());
 
-	addTestFileInSource();
+	addTestFileInSource(null);
 	b = jenkinsRule.assertBuildStatusSuccess(wfJob.getLastBuild());
 	assertEquals(2, b.number);
 	assertTrue(b.getArtifactManager().root().child(fileName).isFile());
@@ -49,7 +49,7 @@ public class IntegrityPipelineTest extends IntegritySCMTest
     @Test
     public void pipeLineTestWithLocalClientonRemoteNode() throws Exception
     {
-	addTestFileInSource();
+	addTestFileInSource(null);
 	// Create a remote slave
 	jenkinsRule.createOnlineSlave(Label.get("remote"));
 	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
@@ -67,7 +67,7 @@ public class IntegrityPipelineTest extends IntegritySCMTest
 	WorkflowRun b = jenkinsRule.assertBuildStatusSuccess(wfJob.scheduleBuild2(0));
 	assertTrue(b.getArtifactManager().root().child(fileName).isFile());
 
-	addTestFileInSource();
+	addTestFileInSource(null);
 	b = jenkinsRule.assertBuildStatusSuccess(wfJob.getLastBuild());
 	assertEquals(2, b.number);
 	assertTrue(b.getArtifactManager().root().child(fileName).isFile());
