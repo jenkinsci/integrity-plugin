@@ -437,7 +437,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task :"+ cleanCopy);
-        IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(run, coSettings, cleanCopy, changeLogFile, alternateWorkspace, listener);
+        IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
+                        coSettings, cleanCopy, changeLogFile, alternateWorkspace, listener);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
@@ -465,6 +466,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
       throw new AbortException("Caught Derby SQLException!");
     } catch (Exception e) {
+      e.printStackTrace();
       LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);
       listener.getLogger()
                       .println("[Local Client] Exception occured during checkout! : " + e.getMessage());

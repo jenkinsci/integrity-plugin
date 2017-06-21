@@ -3,12 +3,14 @@ package hudson.scm.localclient;
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
 
+import java.io.Serializable;
 import java.util.Collection;
 
 /**
  * Created by asen on 19-06-2017.
  */
-public class IntegrityLcChangeSet extends ChangeLogSet.Entry
+public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
+                Serializable
 {
     private final String messageStart = "msg";
     private final String fileStart = "file";

@@ -4,7 +4,6 @@ import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.*;
 import hudson.FilePath;
-import hudson.model.Run;
 import hudson.model.TaskListener;
 import hudson.scm.IntegrityCMProject;
 import hudson.scm.IntegrityConfigurable;
@@ -91,6 +90,8 @@ public class SandboxUtils implements Serializable
 	cmd.addOption(new APIOption("populate"));
 	if(siProject.isVariant())
 	    cmd.addOption(new Option(IAPIOption.DEVPATH, siProject.getVariantName()));
+	else if(siProject.isBuild())
+	    cmd.addOption(new Option(IAPIOption.PROJECT_REVISION, siProject.getProjectRevision()));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace));
 	Response response = session.runCommand(cmd);
 	if(response != null) {
@@ -139,17 +140,30 @@ public class SandboxUtils implements Serializable
 	        WorkItem wi = it.next();
 	        String sBoxname = wi.getField("SandboxName").getValueAsString();
 		String projectName = wi.getField("ProjectName").getValueAsString();
-		String variantName = wi.getField("DevelopmentPath").getValueAsString();
 		listener.getLogger()
-				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName+", ["+variantName+"]");
+				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName+", ["+
+						wi.getField("DevelopmentPath").getValueAsString() +"]");
 		if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))
 				&& projectName.equals(siProject.getProjectName())
-				&& Objects.equals(siProject.getVariantName(),variantName)) {
+				&& (!siProject.isVariant() ||
+				Objects.equals(siProject.getVariantName(),
+						wi.getField("DevelopmentPath")
+								.getValueAsString()))
+				&& (!siProject.isBuild() ||
+				Objects.equals(siProject.getProjectRevision(),
+						wi.getField("BuildRevision")
+								.getItem()
+								.getId()))) {
 		    listener.getLogger()
 				    .println("[LocalClient] Found Existing Sandbox for Project:["+ projectName+"],");
 		    listener.getLogger().println("Sandbox : [" + sBoxname + "],");
 		    listener.getLogger().println("Workspace : ["+ getQualifiedWorkspaceName(workspace) + "],");
-		    listener.getLogger().println("Variant : [" +variantName+"]");
+		    if(siProject.isVariant())
+		   	 listener.getLogger().println("Variant : [" +
+				    wi.getField("DevelopmentPath").getValueAsString() +"]");
+		    if(siProject.isBuild())
+			listener.getLogger().println("Build : [" +
+					wi.getField("BuildRevision").getValueAsString() +"]");
 		    return false;
 		}
 		else if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))) {
@@ -167,6 +181,7 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Sandbox not found in :"+ getQualifiedWorkspaceName(workspace)+"],");
 	listener.getLogger().println("Project Config : [" + siProject.getProjectName() + "],");
 	listener.getLogger().println("Project Variant : [" + siProject.getVariantName() + "]");
+	listener.getLogger().println("Build Revision : [" + siProject.getProjectRevision() + "]");
 	return true;
     }
 
@@ -212,14 +227,13 @@ public class SandboxUtils implements Serializable
      * Resync the sandbox - cleanCopy forces the resync unchangedFiles as well.
      *
      *
-     * @param run
      * @param workspace
      * @param cleanCopy
      * @param changeLogFile
      * @return
      * @throws APIException
      */
-    public boolean resyncSandbox(Run<?, ?> run, FilePath workspace,
+    public boolean resyncSandbox(FilePath workspace,
 		    boolean cleanCopy,
 		    File changeLogFile)
 		    throws APIException, FileNotFoundException,
@@ -227,10 +241,10 @@ public class SandboxUtils implements Serializable
     {
 	ISession session = getAPISession();
 	session.ping();
-	return resyncSandbox(run, session, workspace, cleanCopy, changeLogFile)==0;
+	return resyncSandbox(session, workspace, cleanCopy, changeLogFile)==0;
     }
 
-    private int resyncSandbox(Run<?, ?> run, ISession session,
+    private int resyncSandbox(ISession session,
 		    FilePath workspace,
 		    boolean cleanCopy, File changeLogFile)
 		    throws APIException, FileNotFoundException,
@@ -253,15 +267,14 @@ public class SandboxUtils implements Serializable
 	    listener.getLogger()
 			    .println("[LocalClient] ResyncSandbox Response:" +
 					    response.getExitCode());
-	    generateChangeLogFile(run, response, changeLogFile);
+	    generateChangeLogFile(response, changeLogFile);
 	    return response.getExitCode();
 	}
 	else
 	    return -1;
     }
 
-    private void generateChangeLogFile(Run<?, ?> run,
-		    Response response,
+    private void generateChangeLogFile(Response response,
 		    File changeLogFile)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
@@ -316,7 +329,8 @@ public class SandboxUtils implements Serializable
 	while(witerator.hasNext()){
 	    WorkItem wit = witerator.next();
 	    String type = wit.getField("type").getValueAsString();
-	    if(!type.equals("subsandbox")) {
+	    if(!type.equals("subsandbox") && !type.equals("variant-subsandbox") && !type.equals("build-subsandbox") && !type.equals("shared-subsandbox")
+	    && !type.equals("shared-variant-subsandbox") && !type.equals("shared-build-subsandbox")){
 	        isMember = true;
 	        break;
 	    }

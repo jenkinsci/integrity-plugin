@@ -10,6 +10,8 @@ import com.mks.api.response.Response;
 import hudson.model.*;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
+import hudson.slaves.DumbSlave;
+import hudson.triggers.SCMTrigger;
 import hudson.util.StreamTaskListener;
 import org.junit.Before;
 import org.junit.Rule;
@@ -21,6 +23,10 @@ import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
 
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
@@ -50,7 +56,12 @@ public class IntegritySCMTest
     protected FreeStyleBuild build;
     protected FreeStyleProject localClientVariantProject;
     protected FreeStyleProject localClientVariantProjectCleanCopy;
-    protected String variantName;
+    protected String variantName = null;
+    protected FreeStyleProject localBuildClientProjectCleanCopy;
+    protected FreeStyleProject localBuildClientProject;
+    protected ExecutorService singleThreadExecutor;
+    protected DumbSlave slave1;
+    protected DumbSlave slave2;
 
     @Before
     public void setUp() throws Exception {
@@ -59,10 +70,9 @@ public class IntegritySCMTest
 			7001, "localhost",7001, false,
 			"Administrator", "password");
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
-	localClientProject = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
-	localClientVariantProject = setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
-	localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
-	localClientVariantProjectCleanCopy = setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
+	singleThreadExecutor = Executors.newSingleThreadExecutor();
+	slave1 = jenkinsRule.createOnlineSlave();
+	slave2 = jenkinsRule.createOnlineSlave();
     }
 
     @Test
@@ -116,7 +126,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    private FreeStyleProject setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(
+    protected FreeStyleProject setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
@@ -134,7 +144,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    private FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
+    protected FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
 		    throws Exception
     {
 	setupIntegrityConfigurable();
@@ -142,7 +152,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    private FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
+    protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
@@ -150,11 +160,29 @@ public class IntegritySCMTest
 	return project;
     }
 
-    private FreeStyleProject setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
+    protected FreeStyleProject setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
 	configPath = createDevPath();
+	FreeStyleProject project = setupProject(configPath, true, true, false);
+	return project;
+    }
+
+    protected FreeStyleProject setupBuildIntegrityProjectWithLocalClientWithCheckpointOff(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	configPath = createCheckpointPath();
+	FreeStyleProject project = setupProject(configPath, true, true, false);
+	return project;
+    }
+
+    protected FreeStyleProject setupBuildIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
+		    String configPath) throws Exception
+    {
+	setupIntegrityConfigurable();
+	configPath = createCheckpointPath();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
     }
@@ -180,7 +208,7 @@ public class IntegritySCMTest
     private String createDevPath() throws APIException
     {
         // Create a checkpoint
-        String checkpointLabel = "TestCheckpoint"+Math.random();
+        /*String checkpointLabel = "TestCheckpoint"+Math.random();
 	assert session != null;
 	cmd = new Command(Command.SI, "checkpoint");
 	cmd.addOption(new Option("project", successConfigPath));
@@ -197,17 +225,31 @@ public class IntegritySCMTest
 	response = session.runCommand(cmd);
 	assertEquals("Devpath Created Successfully", response.getExitCode(),0);
 	variantName = response.getResult().getField("DevelopmentPath").getValueAsString().trim();
-	return successConfigPath +"#d="+response.getResult().getField("DevelopmentPath").getValueAsString().trim();
+	return successConfigPath +"#d="+response.getResult().getField("DevelopmentPath").getValueAsString().trim();*/
+
+        variantName = "DP_0.2995855673219867";
+	return successConfigPath +"#d="+variantName;
     }
 
-    protected void addTestFileInSource(String variantName) throws IOException, APIException
+    private String createCheckpointPath() throws APIException
+    {
+	String checkpointLabel = "TestCheckpoint"+Math.random();
+	assert session != null;
+	cmd = new Command(Command.SI, "checkpoint");
+	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("checkpointUnchangedSubprojects"));
+	cmd.addOption(new Option("label", checkpointLabel));
+	response = session.runCommand(cmd);
+	assertEquals("Checkpoint Created Successfully Label: "+checkpointLabel, response.getExitCode(),0);
+	return successConfigPath+"#b="+checkpointLabel;
+    }
+
+    protected void addTestFileInSource() throws IOException, APIException
     {
 	// Add a random file into Integrity Source project directly
 	assert session != null;
 	cmd = new Command(Command.SI, "projectadd");
-	cmd.addOption(new Option("project", successConfigPath));
-	if(variantName != null)
-	    cmd.addOption(new Option("devpath", variantName));
+	cmd.addOption(new Option("project", successConfigPath+(variantName!=null?"#d="+variantName:"")));
 	fileName = Math.random()+".txt";
 	testFile = testFolder.newFile(fileName);
 	cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
@@ -217,44 +259,51 @@ public class IntegritySCMTest
 	assertEquals("Test File "+fileName+" added Successfully to "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void dropTestFileFromSource(String variantName) throws APIException
+    protected void dropTestFileFromSource() throws APIException
     {
 	// Drop the file from project
 	assert session != null;
 	cmd = new Command(Command.SI, "drop");
-	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("project", successConfigPath+(variantName!=null?"#d="+variantName:"")));
 	cmd.addOption(new Option("cpid", ":bypass"));
-	if(variantName != null)
-	    cmd.addOption(new Option("devpath", variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
 	assertEquals("Test File "+fileName+" Dropped Successfully from "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void checkinFileIntoSource(String variantName) throws APIException
+    protected void checkinFileIntoSource() throws APIException
     {
 	cmd = new Command(Command.SI, "projectci");
-	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("project", successConfigPath+(variantName!=null?"#d="+variantName:"")));
 	cmd.addOption(new Option("sourceFile", testFile.getAbsolutePath()));
 	cmd.addOption(new Option("description", "checkin"));
 	cmd.addOption(new Option("cpid", ":bypass"));
-	if(variantName != null)
-	    cmd.addOption(new Option("devpath", variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
 	assertEquals("Test File "+fileName+" Checked in Successfully to "+successConfigPath, response.getExitCode(),0);
     }
 
-    protected void checkoutFileFromSource(String variantName) throws APIException
+    protected void checkoutFileFromSource() throws APIException
     {
 	cmd = new Command(Command.SI, "projectco");
-	cmd.addOption(new Option("project", successConfigPath));
+	cmd.addOption(new Option("project", successConfigPath+(variantName!=null?"#d="+variantName:"")));
 	cmd.addOption(new Option("targetFile", testFile.getAbsolutePath()));
 	cmd.addOption(new Option("cpid", ":bypass"));
-	if(this.variantName != null)
-	    cmd.addOption(new Option("devpath", this.variantName));
 	cmd.addSelection(fileName);
 	response = session.runCommand(cmd);
 	assertEquals("Test File "+fileName+" checked out successfully from "+successConfigPath, response.getExitCode(),0);
+    }
+
+    protected Future<Void> triggerSCMTrigger(final SCMTrigger trigger)
+    {
+	if(trigger == null) return null;
+	Callable<Void> callable = new Callable<Void>() {
+	    public Void call() throws Exception
+	    {
+		trigger.run();
+		return null;
+	    }
+	};
+	return singleThreadExecutor.submit(callable);
     }
 }

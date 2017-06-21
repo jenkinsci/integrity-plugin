@@ -8,7 +8,6 @@ import hudson.remoting.VirtualChannel;
 import hudson.scm.IntegrityConfigurable;
 import jenkins.security.Roles;
 import org.jenkinsci.remoting.RoleChecker;
-import org.jenkinsci.remoting.RoleSensitive;
 
 import java.io.File;
 import java.io.IOException;
@@ -24,15 +23,12 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
     private final TaskListener listener;
     private final boolean cleanCopy;
     private final File changeLogFile;
-    private final Run<?, ?> run;
 
-    public IntegrityResyncSandboxTask(Run<?, ?> run,
-                    IntegrityConfigurable coSettings,
+    public IntegrityResyncSandboxTask(IntegrityConfigurable coSettings,
                     boolean cleanCopy, File changeLogFile,
                     String alternateWorkspace,
                     TaskListener listener)
     {
-        this.run = run;
         this.integrityConfigurable = coSettings;
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
@@ -50,7 +46,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try {
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(run, workspace, cleanCopy, changeLogFile);
+            return sandboxUtil.resyncSandbox(workspace, cleanCopy, changeLogFile);
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());

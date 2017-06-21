@@ -9,12 +9,14 @@ import org.xml.sax.SAXException;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.util.*;
 
 /**
  * Created by asen on 19-06-2017.
  */
-public class IntegrityLcChangeLogParser extends ChangeLogParser
+public class IntegrityLcChangeLogParser extends ChangeLogParser implements
+                Serializable
 {
     private final String integrityUrl;
 

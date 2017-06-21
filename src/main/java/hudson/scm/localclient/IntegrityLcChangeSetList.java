@@ -4,6 +4,7 @@ import hudson.model.Run;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.RepositoryBrowser;
 
+import java.io.Serializable;
 import java.util.Collections;
 import java.util.Iterator;
 import java.util.List;
@@ -12,7 +13,9 @@ import java.util.List;
  * Created by asen on 19-06-2017.
  */
 public class IntegrityLcChangeSetList
-		extends ChangeLogSet<IntegrityLcChangeSet>{
+		extends ChangeLogSet<IntegrityLcChangeSet> implements
+		Serializable
+{
     private final List<IntegrityLcChangeSet> changeSets;
 
     public IntegrityLcChangeSetList(Run run, RepositoryBrowser<?> browser,
