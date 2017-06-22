@@ -22,12 +22,12 @@ import static org.junit.Assert.*;
 /**
  * Created by asen on 20-06-2017.
  */
-public class IntegrityCreateVariantSandboxTaskTest extends IntegritySCMTest
+public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
 {
-
     @Before
     public void setUp() throws Exception {
-	super.setUp();
+        super.setUp();
+	createDevPath();
 	localClientVariantProject = setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
 	localClientVariantProjectCleanCopy = setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
@@ -41,10 +41,10 @@ public class IntegrityCreateVariantSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testVariantSandboxCreateSuccessResyncWithSlave() throws Exception
     {
-	localClientVariantProject.setAssignedNode(slave1);
+	localClientVariantProject.setAssignedNode(slave0);
 	localClientVariantProject.save();
 	build = build(localClientVariantProject, Result.SUCCESS);
-	assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+	assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
     }
 
     @Test

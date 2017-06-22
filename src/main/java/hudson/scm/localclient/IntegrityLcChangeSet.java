@@ -29,6 +29,8 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
                 this.msg = split[1].trim();
             } else if (split[0].startsWith(fileStart)) {
                 this.file = split[1].trim();
+            } else {
+                this.msg = "Invalid Field Found in Change Log : "+token;
             }
         }
     }

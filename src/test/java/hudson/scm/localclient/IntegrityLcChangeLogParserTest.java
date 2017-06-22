@@ -1,8 +1,5 @@
 package hudson.scm.localclient;
 
-import hudson.scm.IntegrityConfigurable;
-import hudson.scm.api.session.APISession;
-import hudson.util.StreamTaskListener;
 import org.junit.Before;
 import org.junit.Rule;
 import org.junit.Test;
@@ -13,7 +10,7 @@ import java.io.FileOutputStream;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
 
 /**
  * Created by asen on 19-06-2017.
@@ -26,6 +23,8 @@ public class IntegrityLcChangeLogParserTest
     private File changeLogFile;
     private String lineMsgFile = ("msg: checked out revision 1.1, file: a.txt");
     private String lineMsg = ("msg: Test Commit");
+    private String lineMsgWithComma = ("msg: Test Commit,");
+    private String lineInvalidToken = ("invalid: Test Commit");
 
     @Before
     public void setUp() throws Exception {
@@ -63,6 +62,32 @@ public class IntegrityLcChangeLogParserTest
         IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
         for(IntegrityLcChangeSet set : list){
             assertEquals("Test Commit", set.getMsg());
+        }
+    }
+
+    @Test
+    public void parseCorrectChangeLogMsgWithComma() throws Exception
+    {
+        try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
+            writer.print(lineMsgWithComma);
+        }
+        IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
+        IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
+        for(IntegrityLcChangeSet set : list){
+            assertEquals("Test Commit", set.getMsg());
+        }
+    }
+
+    @Test
+    public void parseInvalidChangeLogToken() throws Exception
+    {
+        try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
+            writer.print(lineInvalidToken);
+        }
+        IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
+        IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
+        for(IntegrityLcChangeSet set : list){
+            assertEquals("Invalid Field Found in Change Log : invalid: Test Commit", set.getMsg());
         }
     }
 }

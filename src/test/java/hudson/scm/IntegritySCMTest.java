@@ -3,6 +3,7 @@
  *     PTC 2016
  *******************************************************************************/
 package hudson.scm;
+
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
@@ -14,6 +15,7 @@ import hudson.slaves.DumbSlave;
 import hudson.triggers.SCMTrigger;
 import hudson.util.StreamTaskListener;
 import org.junit.Before;
+import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
@@ -28,9 +30,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.assertEquals;
-import static org.junit.Assert.assertNotNull;
-import static org.junit.Assert.assertTrue;
+import static org.junit.Assert.*;
 
 /**
  *  These integration tests necessitate a local client installation with sample data installed
@@ -41,10 +41,10 @@ public class IntegritySCMTest
     public JenkinsRule jenkinsRule = new JenkinsRule();
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
-    protected String successConfigPath="#/JenkinsBulkProject1";
+    protected static String successConfigPath="#/JenkinsBulkProject1";
     //protected String successConfigPath="#/DummyProject";
-    protected String failureConfigPath="#/THISSHOULDFAIL";
-    protected TaskListener listener;
+    protected static String failureConfigPath="#/THISSHOULDFAIL";
+    protected static TaskListener listener;
     protected FreeStyleProject localClientProject;
     protected FreeStyleProject localClientProjectCleanCopy;
     protected ISession session;
@@ -59,20 +59,25 @@ public class IntegritySCMTest
     protected String variantName = null;
     protected FreeStyleProject localBuildClientProjectCleanCopy;
     protected FreeStyleProject localBuildClientProject;
-    protected ExecutorService singleThreadExecutor;
+    protected static ExecutorService singleThreadExecutor;
+    protected DumbSlave slave0;
     protected DumbSlave slave1;
-    protected DumbSlave slave2;
+
+    @BeforeClass
+    public static void setupClass() throws Exception
+    {
+	singleThreadExecutor = Executors.newSingleThreadExecutor();
+	listener = StreamTaskListener.fromStderr();
+    }
 
     @Before
     public void setUp() throws Exception {
-	listener = StreamTaskListener.fromStderr();
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, false,
 			"Administrator", "password");
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
-	singleThreadExecutor = Executors.newSingleThreadExecutor();
-	slave1 = jenkinsRule.createOnlineSlave();
-	slave2 = jenkinsRule.createOnlineSlave();
+	slave0 = jenkinsRule.createOnlineSlave(Label.get("slave0"));
+	slave1 = jenkinsRule.createOnlineSlave(Label.get("slave1"));
     }
 
     @Test
@@ -80,7 +85,6 @@ public class IntegritySCMTest
     {
 	FreeStyleProject project = setupIntegrityProjectWithRemoteClientWithCheckpointOff(failureConfigPath);
 	FreeStyleBuild build = build(project, Result.FAILURE);
-	//jenkinsRule.assertBuildStatus(Result.FAILURE, build);
 	String buildLog = build.getLog();
 	assertNotNull(buildLog);
 	assertTrue(buildLog.contains(
@@ -114,7 +118,8 @@ public class IntegritySCMTest
     }
 
     protected FreeStyleProject setupProject(String configPath,
-		    boolean isLocalClient, boolean cleanCopy, boolean checkpointBeforebuild) throws Exception
+		    boolean isLocalClient, boolean cleanCopy,
+		    boolean checkpointBeforebuild) throws Exception
     {
 	IntegritySCM scm = new IntegritySCM("test", configPath, "test");
 	FreeStyleProject project = jenkinsRule.createFreeStyleProject();
@@ -130,7 +135,7 @@ public class IntegritySCMTest
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
-	configPath = createDevPath();
+	configPath = getDevPath();
 	FreeStyleProject project = setupProject(configPath, true, false, false);
 	return project;
     }
@@ -164,7 +169,7 @@ public class IntegritySCMTest
 		    String configPath) throws Exception
     {
 	setupIntegrityConfigurable();
-	configPath = createDevPath();
+	configPath = getDevPath();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
     }
@@ -187,7 +192,7 @@ public class IntegritySCMTest
 	return project;
     }
 
-    private void setupIntegrityConfigurable()
+    private static void setupIntegrityConfigurable()
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, false,
@@ -205,10 +210,10 @@ public class IntegritySCMTest
 	return build;
     }
 
-    private String createDevPath() throws APIException
+    protected void createDevPath() throws APIException
     {
-        // Create a checkpoint
-        /*String checkpointLabel = "TestCheckpoint"+Math.random();
+	// Create a checkpoint
+	/*String checkpointLabel = "TestCheckpoint"+Math.random();
 	assert session != null;
 	cmd = new Command(Command.SI, "checkpoint");
 	cmd.addOption(new Option("project", successConfigPath));
@@ -224,10 +229,13 @@ public class IntegritySCMTest
 	cmd.addOption(new Option("projectRevision", checkpointLabel));
 	response = session.runCommand(cmd);
 	assertEquals("Devpath Created Successfully", response.getExitCode(),0);
-	variantName = response.getResult().getField("DevelopmentPath").getValueAsString().trim();
-	return successConfigPath +"#d="+response.getResult().getField("DevelopmentPath").getValueAsString().trim();*/
+	variantName = response.getResult().getField("DevelopmentPath").getValueAsString().trim();*/
+    }
 
-        variantName = "DP_0.2995855673219867";
+    private String getDevPath() throws APIException
+    {
+	//return successConfigPath +"#d="+variantName;
+	variantName = "DP_0.3813840334796077";
 	return successConfigPath +"#d="+variantName;
     }
 
@@ -306,4 +314,5 @@ public class IntegritySCMTest
 	};
 	return singleThreadExecutor.submit(callable);
     }
+
 }

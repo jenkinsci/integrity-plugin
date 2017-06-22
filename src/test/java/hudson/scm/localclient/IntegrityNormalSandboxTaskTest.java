@@ -1,13 +1,14 @@
 package hudson.scm.localclient;
 
-import hudson.model.Node;
-import hudson.model.Result;
-import hudson.model.User;
+import hudson.model.*;
+import hudson.model.queue.QueueTaskFuture;
+import hudson.scm.IntegritySCM;
 import hudson.scm.IntegritySCMTest;
 import hudson.scm.PollingResult;
 import hudson.triggers.SCMTrigger;
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
+import org.junit.Ignore;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -23,9 +24,8 @@ import static org.junit.Assert.*;
  * Created by asen on 06-06-2017.
  * Integration Tests for Local Client Testing
  */
-public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
+public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
 {
-
     @Before
     public void setUp() throws Exception {
         super.setUp();
@@ -56,12 +56,21 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxWithConcurrentBuilds() throws Exception
     {
-        // Test multiple builds within same sandbox concurrently
+        // Test concurrent builds
+        jenkinsRule.jenkins.setNumExecutors(4);
         localClientProject.setConcurrentBuild(true);
-        build = build(localClientProject, Result.SUCCESS);
-        build = build(localClientProject, Result.SUCCESS);
-        build = build(localClientProject, Result.SUCCESS);
-        build = build(localClientProject, Result.SUCCESS);
+        QueueTaskFuture<FreeStyleBuild> build1 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+        build1.waitForStart();
+        QueueTaskFuture<FreeStyleBuild> build2 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+        build2.waitForStart();
+        QueueTaskFuture<FreeStyleBuild> build3 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+        build3.waitForStart();
+        QueueTaskFuture<FreeStyleBuild> build4 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+
+        jenkinsRule.assertBuildStatusSuccess(build1.get());
+        jenkinsRule.assertBuildStatusSuccess(build2.get());
+        jenkinsRule.assertBuildStatusSuccess(build3.get());
+        jenkinsRule.assertBuildStatusSuccess(build4.get());
     }
 
     @Test
@@ -73,6 +82,27 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         build = build(localClientProjectCleanCopy, Result.SUCCESS);
         build = build(localClientProjectCleanCopy, Result.SUCCESS);
         build = build(localClientProjectCleanCopy, Result.SUCCESS);
+    }
+
+    @Test
+    public void testSandboxWithConcurrentBuildsWithSlaves() throws Exception
+    {
+        // Test multiple builds within same sandbox concurrently
+        localClientProject.setConcurrentBuild(true);
+        localClientProject.setAssignedNode(slave0);
+        localClientProject.save();
+        build = build(localClientProject, Result.SUCCESS);
+        localClientProject.setAssignedNode(slave1);
+        localClientProject.save();
+        build = build(localClientProject, Result.SUCCESS);
+        localClientProject.setAssignedNode(slave0);
+        localClientProject.save();
+        build = build(localClientProject, Result.SUCCESS);
+        localClientProject.setAssignedNode(slave1);
+        localClientProject.save();
+        build = build(localClientProject, Result.SUCCESS);
+        localClientProject.setAssignedNode(slave0);
+        localClientProject.save();
     }
 
     @Test
@@ -90,10 +120,10 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxCreateSuccessResyncOnSlave() throws Exception
     {
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
         build = build(localClientProject, Result.SUCCESS);
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
     }
 
     @Test
@@ -114,7 +144,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     public void testSandboxViewWhilePollingWithChangesWithSlave()
                     throws Exception
     {
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
 
         build = build(localClientProject, Result.SUCCESS);
@@ -166,7 +196,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxCreateSuccessResyncWithNewFileWithSlave() throws Exception
     {
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
         // Create the sandbox
         build = build(localClientProject, Result.SUCCESS);
@@ -186,7 +216,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
         // Polling once more. No more changes should be detected
         assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
     }
 
     @Test
@@ -233,7 +263,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     public void testSandboxCreateSuccessResyncWithExistingFileWithSlave()
                     throws Exception
     {
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
         String testData = "hello world";
         // Add a random file into Integrity Source project directly
@@ -245,29 +275,29 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
 
         assertTrue("File Exists in workspace!", new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
         //Assert the file in workspace/sandbox contents are null
         try(BufferedReader br = new BufferedReader(new FileReader(
                         String.valueOf(build.getWorkspace().child(fileName))))) {
             assertEquals(br.readLine(), null);
         }
 
-        // Check out the random file (not in workspace/sandbox)
+        // Check out the random file to a temp folder(not in workspace/sandbox)
         checkoutFileFromSource();
         // Write test data into the checked out file
         FileUtils.writeStringToFile(testFile, testData);
         // Checkin the file directly to the Integrity Source project
         checkinFileIntoSource();
 
-        localClientProject.setAssignedNode(slave2);
+        localClientProject.setAssignedNode(slave1);
         localClientProject.save();
         assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         // Build on Slave 2
         build = build(localClientProject, Result.SUCCESS);
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave2));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave1));
 
         // Switch back to Slave 1
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
 
         // Check that there are no polling updates after switching nodes from slave 2 to Slave 1
@@ -291,7 +321,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
             assertEquals(content, testData);
         }
         assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
     }
 
     @Test
@@ -348,7 +378,7 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
     public void testSandboxCreateSuccessResyncWithDeletedFileWithMultipleSlaves()
                     throws Exception
     {
-        localClientProject.setAssignedNode(slave1);
+        localClientProject.setAssignedNode(slave0);
         localClientProject.save();
         addTestFileInSource();
         assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
@@ -356,17 +386,35 @@ public class IntegrityCreateSandboxTaskTest extends IntegritySCMTest
         // Assert file exists in workspace
         assertTrue(new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile());
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave0));
         // Drop the file from Integrity Project
         dropTestFileFromSource();
-        localClientProject.setAssignedNode(slave2);
+        localClientProject.setAssignedNode(slave1);
         localClientProject.save();
         assertTrue("scm polling should detect a change after build", localClientProject.poll(listener).hasChanges());
         build = build(localClientProject, Result.SUCCESS);
+        assertThat("Needs to build on the slave0 to check serialization", build.getBuiltOn(), is((Node) slave1));
+        assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
+        localClientProject.setAssignedNode(slave0);
+        localClientProject.save();
         assertFalse("scm polling should not detect any more changes after build", localClientProject.poll(listener).hasChanges());
         // Assert that after build, file doesn't exist in in workspace
         assertFalse((new File(
                         String.valueOf(build.getWorkspace().child(fileName))).isFile()));
-        assertThat("Needs to build on the slave1 to check serialization", build.getBuiltOn(), is((Node) slave2));
+    }
+
+    @Ignore
+    @Test
+    public void testSandboxAfterChangingConfigPath() throws Exception
+    {
+        build = build(localClientProject, Result.SUCCESS);
+        // Change the source project on the same job
+        IntegritySCM scm = new IntegritySCM("test", "#/DummyProject", "test");
+        scm.setLocalClient(true);
+        scm.setCheckpointBeforeBuild(false);
+        scm.setCleanCopy(false);
+        localClientProject.setScm(scm);
+        localClientProject.save();
+        build = build(localClientProject, Result.SUCCESS);
     }
 }

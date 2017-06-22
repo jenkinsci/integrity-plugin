@@ -1,28 +1,15 @@
 package hudson.scm.localclient;
 
-import hudson.model.FreeStyleProject;
 import hudson.model.Result;
-import hudson.model.User;
 import hudson.scm.IntegritySCMTest;
-import hudson.scm.PollingResult;
-import hudson.triggers.SCMTrigger;
-import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
-
-import java.io.BufferedReader;
-import java.io.File;
-import java.io.FileReader;
-import java.util.Scanner;
-import java.util.Set;
-
-import static org.junit.Assert.*;
 
 /**
  * Created by asen on 06-06-2017.
  * Integration Tests for Local Client Testing
  */
-public class IntegrityCreateBuildSandboxTaskTest extends IntegritySCMTest
+public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
 {
 
     @Before

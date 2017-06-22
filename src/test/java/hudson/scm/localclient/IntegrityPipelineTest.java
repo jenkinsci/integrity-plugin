@@ -50,7 +50,7 @@ public class IntegrityPipelineTest extends IntegritySCMTest
     public void pipeLineTestWithLocalClientonRemoteNode() throws Exception
     {
 	addTestFileInSource();
-	// Create a remote slave1
+	// Create a remote slave0
 	jenkinsRule.createOnlineSlave(Label.get("remote"));
 	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
 	wfJob.addTrigger(new SCMTrigger(""));
