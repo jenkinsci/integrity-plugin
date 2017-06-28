@@ -9,6 +9,7 @@ import hudson.scm.IntegrityCMProject;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 import hudson.scm.api.APIUtils;
+import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
@@ -87,7 +88,8 @@ public class SandboxUtils implements Serializable
 	Command cmd = new Command(Command.SI, "createsandbox");
 	cmd.addOption(new Option(IAPIOption.PROJECT, siProject.getProjectName()));
 	cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR, lineTerminator));
-	cmd.addOption(new APIOption("populate"));
+	// Don't populate sandbox here. Doing it on resync
+	cmd.addOption(new APIOption("nopopulate"));
 	if(siProject.isVariant())
 	    cmd.addOption(new Option(IAPIOption.DEVPATH, siProject.getVariantName()));
 	else if(siProject.isBuild())
@@ -216,6 +218,10 @@ public class SandboxUtils implements Serializable
 			    "Deleted");
 	    listener.getLogger()
 			    .println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
+	    listener.getLogger()
+			    .println("Sandbox Dropped: "+ sandboxName);
+	    listener.getLogger()
+			    .println("For Project: "+ projectName);
 	    return response.getExitCode();
 	}
 	else
@@ -230,23 +236,26 @@ public class SandboxUtils implements Serializable
      * @param workspace
      * @param cleanCopy
      * @param changeLogFile
-     * @return
+     * @param includeList
+     *@param excludeList @return
      * @throws APIException
      */
     public boolean resyncSandbox(FilePath workspace,
 		    boolean cleanCopy,
-		    File changeLogFile)
+		    File changeLogFile, String includeList,
+		    String excludeList)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
     {
 	ISession session = getAPISession();
 	session.ping();
-	return resyncSandbox(session, workspace, cleanCopy, changeLogFile)==0;
+	return resyncSandbox(session, workspace, cleanCopy, changeLogFile, includeList, excludeList)==0;
     }
 
     private int resyncSandbox(ISession session,
 		    FilePath workspace,
-		    boolean cleanCopy, File changeLogFile)
+		    boolean cleanCopy, File changeLogFile,
+		    String includeList, String excludeList)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
     {
@@ -258,6 +267,7 @@ public class SandboxUtils implements Serializable
 	//cmd.addOption(new APIOption("overwriteChanged"));
 	//cmd.addOption(new APIOption("overwriteDeferred"));
 	cmd.addOption(new APIOption("f"));
+	applyMemberFilters(cmd, includeList, excludeList);
 	if(cleanCopy) {
 	    cmd.addOption(new APIOption("overwriteUnchanged"));
 	}
@@ -297,7 +307,7 @@ public class SandboxUtils implements Serializable
     }
 
     /**
-     * View the sadnbox for any changes during Polling
+     * View the sandbox for any changes during Polling
      * @param workspace
      */
     public boolean viewSandboxChanges(FilePath workspace) throws APIException
@@ -336,5 +346,63 @@ public class SandboxUtils implements Serializable
 	    }
 	}
 	return isMember;
+    }
+
+    /**
+     * TODO: Refactor: This method is a duplicate of IntegritySCM.applyMemberFilters()
+     * @param command
+     * @param includeList
+     * @param excludeList
+     */
+    private void applyMemberFilters(Command command,
+		    String includeList, String excludeList)
+    {
+	// Checking if our include list has any entries
+	if (null != includeList && includeList.length() > 0)
+	{
+	    StringBuilder filterString = new StringBuilder();
+	    String[] filterTokens = includeList.split(",|;");
+	    // prepare a OR combination of include filters (all in one filter, separated by comma if
+	    // needed)
+	    for (int i = 0; i < filterTokens.length; i++)
+	    {
+		filterString.append(i > 0 ? "," : "");
+		filterString.append("file:");
+		filterString.append(filterTokens[i]);
+	    }
+	    command.addOption(new APIOption(IAPIOption.FILTER, filterString.toString()));
+	}
+
+	// Checking if our exclude list has any entries
+	if (null != excludeList && excludeList.length() > 0)
+	{
+	    String[] filterTokens = excludeList.split(",|;");
+	    // prepare a AND combination of exclude filters (one filter each filter)
+	    for (int i = 0; i < filterTokens.length; i++)
+	    {
+		if (filterTokens[i] != null)
+		{
+		    command.addOption(new APIOption(IAPIOption.FILTER, "!file:" + filterTokens[i]));
+		}
+	    }
+	}
+    }
+
+    public int terminateClient()
+    {
+	ISession session = getAPISession();
+	try {
+	    session.ping();
+	    listener.getLogger()
+			    .println("[LocalClient] Terminating Client instances");
+	    Command cmd = new Command(Command.IM, "exit");
+	    cmd.addOption(new APIOption("noabort"));
+	    Response response = session.runCommand(cmd);
+	    return response.getExitCode();
+	} catch (APIException e) {
+	    listener.getLogger()
+			    .println("[LocalClient] Exception occured while terminating client "+e.getLocalizedMessage());
+	}
+	return 0;
     }
 }

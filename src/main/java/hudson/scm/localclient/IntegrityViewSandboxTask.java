@@ -20,17 +20,15 @@ public class IntegrityViewSandboxTask implements FilePath.FileCallable<Boolean>
 {
     private final String alternateWorkspaceDir;
     private final TaskListener listener;
-    private final IntegrityConfigurable integrityConfigurable;
     private final SandboxUtils sandboxUtil;
 
-    public IntegrityViewSandboxTask(IntegrityConfigurable coSettings,
+    public IntegrityViewSandboxTask(SandboxUtils sboxUtil,
                     TaskListener listener,
                     String alternateWorkspace)
     {
-        this.integrityConfigurable = coSettings;
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
-        this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
+        this.sandboxUtil = sboxUtil;
     }
 
     @Override

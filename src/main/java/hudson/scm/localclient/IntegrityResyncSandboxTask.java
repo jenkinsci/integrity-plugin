@@ -18,23 +18,26 @@ import java.io.IOException;
 public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean>
 {
     private final String alternateWorkspaceDir;
-    private final IntegrityConfigurable integrityConfigurable;
     private final SandboxUtils sandboxUtil;
     private final TaskListener listener;
     private final boolean cleanCopy;
     private final File changeLogFile;
+    private final String excludeList;
+    private final String includeList;
 
-    public IntegrityResyncSandboxTask(IntegrityConfigurable coSettings,
+    public IntegrityResyncSandboxTask(SandboxUtils sboxUtil,
                     boolean cleanCopy, File changeLogFile,
                     String alternateWorkspace,
+                    String includeList, String excludeList,
                     TaskListener listener)
     {
-        this.integrityConfigurable = coSettings;
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
         this.cleanCopy = cleanCopy;
         this.changeLogFile = changeLogFile;
-        this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
+        this.sandboxUtil = sboxUtil;
+        this.includeList = includeList;
+        this.excludeList = excludeList;
     }
 
     @Override
@@ -46,7 +49,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try {
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(workspace, cleanCopy, changeLogFile);
+            return sandboxUtil.resyncSandbox(workspace, cleanCopy, changeLogFile, includeList, excludeList);
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());

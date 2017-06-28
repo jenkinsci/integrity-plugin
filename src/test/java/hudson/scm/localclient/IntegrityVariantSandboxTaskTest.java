@@ -1,8 +1,7 @@
 package hudson.scm.localclient;
 
-import hudson.model.Node;
-import hudson.model.Result;
-import hudson.model.User;
+import hudson.model.*;
+import hudson.model.queue.QueueTaskFuture;
 import hudson.scm.IntegritySCMTest;
 import hudson.scm.PollingResult;
 import hudson.triggers.SCMTrigger;
@@ -54,10 +53,9 @@ public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
     }
 
     @Test(timeout=300000)
-    public void testVariantCleanSandboxWithConcurrentBuilds() throws Exception
+    public void testVariantCleanSandboxWithMultipleBuilds() throws Exception
     {
-	// Test multiple builds within same sandbox concurrently
-	localClientVariantProjectCleanCopy.setConcurrentBuild(true);
+	// Test multiple builds within same sandbox
 	build = build(localClientVariantProjectCleanCopy, Result.SUCCESS);
 	build = build(localClientVariantProjectCleanCopy, Result.SUCCESS);
 	build = build(localClientVariantProjectCleanCopy, Result.SUCCESS);
@@ -67,12 +65,20 @@ public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
     @Test(timeout=300000)
     public void testVariantSandboxWithConcurrentBuilds() throws Exception
     {
-	// Test multiple builds within same sandbox concurrently
+	jenkinsRule.jenkins.setNumExecutors(4);
 	localClientVariantProject.setConcurrentBuild(true);
-	build = build(localClientVariantProject, Result.SUCCESS);
-	build = build(localClientVariantProject, Result.SUCCESS);
-	build = build(localClientVariantProject, Result.SUCCESS);
-	build = build(localClientVariantProject, Result.SUCCESS);
+	QueueTaskFuture<FreeStyleBuild> build1 = localClientVariantProject.scheduleBuild2(0, new Cause.UserIdCause());
+	build1.waitForStart();
+	QueueTaskFuture<FreeStyleBuild> build2 = localClientVariantProject.scheduleBuild2(0, new Cause.UserIdCause());
+	build2.waitForStart();
+	QueueTaskFuture<FreeStyleBuild> build3 = localClientVariantProject.scheduleBuild2(0, new Cause.UserIdCause());
+	build3.waitForStart();
+	QueueTaskFuture<FreeStyleBuild> build4 = localClientVariantProject.scheduleBuild2(0, new Cause.UserIdCause());
+
+	jenkinsRule.assertBuildStatusSuccess(build1.get());
+	jenkinsRule.assertBuildStatusSuccess(build2.get());
+	jenkinsRule.assertBuildStatusSuccess(build3.get());
+	jenkinsRule.assertBuildStatusSuccess(build4.get());
     }
 
     @Test

@@ -126,7 +126,7 @@ public class APISession implements ISession
     terminated = false;
 
     if(isLocalIntegration){
-        ip = IntegrationPointFactory.getInstance().createLocalIntegrationPoint(MAJOR_VERSION, MINOR_VERSION);
+        initLocalAPI();
     }
     else {
       // Create a Server Integration Point to a client or the target server itself
@@ -143,11 +143,24 @@ public class APISession implements ISession
       }
     }
     // Create the Session
-    ip.setAutoStartIntegrityClient(true);
     session = ip.createSession(userName, password);
     session.setTimeout(300000); // 5 Minutes
     // No need to ping here as the ping validation is handled by the ISessionPool class
     // ping();
+  }
+
+  /**
+   *  Initialize the Local integration point
+   * @throws APIException
+   */
+  public void initLocalAPI() throws APIException
+  {
+    if(ip == null) {
+      ip = IntegrationPointFactory.getInstance()
+                      .createLocalIntegrationPoint(MAJOR_VERSION,
+                                      MINOR_VERSION);
+      ip.setAutoStartIntegrityClient(true);
+    }
   }
 
   /*

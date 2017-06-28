@@ -28,6 +28,7 @@ import javax.sql.ConnectionPoolDataSource;
 import hudson.scm.localclient.IntegrityCreateSandboxTask;
 import hudson.scm.localclient.IntegrityResyncSandboxTask;
 import hudson.scm.localclient.IntegrityViewSandboxTask;
+import hudson.scm.localclient.SandboxUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
@@ -416,9 +417,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                   SCMRevisionState baseline) throws AbortException
   {
     IntegrityConfigurable coSettings = getProjectSettings();
+    SandboxUtils sboxUtil = new SandboxUtils(coSettings, listener);
 
     try {
-
       IntegrityCMProject siProject = getIntegrityCMProject(run, listener);
 
       if (checkpointBeforeBuild)
@@ -430,15 +431,15 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
 
       IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(
-                      coSettings, siProject, alternateWorkspace, listener, lineTerminator);
+                      sboxUtil, siProject, resolvedAltWkspace, listener, lineTerminator);
       if (workspace.act(createSandboxTask))
       {
         listener.getLogger()
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
-                        .println("[LocalClient] Starting Resync Task :"+ cleanCopy);
+                        .println("[LocalClient] Starting Resync Task :");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
-                        coSettings, cleanCopy, changeLogFile, alternateWorkspace, listener);
+                        sboxUtil, cleanCopy, changeLogFile, alternateWorkspace, includeList, excludeList, listener);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
@@ -471,7 +472,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger()
                       .println("[Local Client] Exception occured during checkout! : " + e.getMessage());
       throw new AbortException("[Local Client] Exception occured during checkout! "+ e.getMessage());
-    }
+    }/*finally {
+      listener.getLogger().println("[Local Client] Client termination response :"+sboxUtil.terminateClient());
+    }*/
   }
 
   /**
@@ -772,8 +775,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println("[Local Client Poll] No previous build, so forcing an initial build.");
       return BUILD_NOW;
     }
+
+    SandboxUtils sboxUtil = new SandboxUtils(coSettings, listener);
+
     // Execute viewsandbox and compare with workspace sandbox
-    IntegrityViewSandboxTask viewSandboxTask = new IntegrityViewSandboxTask(coSettings, listener, alternateWorkspace);
+    IntegrityViewSandboxTask viewSandboxTask = new IntegrityViewSandboxTask(sboxUtil, listener, alternateWorkspace);
     if(workspace.act(viewSandboxTask)){
       listener.getLogger().println("[Local Client Poll] Polling results returned changes. Build Now returned");
       return BUILD_NOW;

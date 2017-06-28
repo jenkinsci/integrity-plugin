@@ -26,8 +26,9 @@ public class IntegrityPipelineTest extends IntegritySCMTest
     @Test
     public void pipeLineTestWithLocalClient() throws Exception
     {
+        jenkinsRule.getInstance().getScm("IntegritySCM");
         addTestFileInSource();
-	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
+	WorkflowJob wfJob= jenkinsRule.getInstance().createProject(WorkflowJob.class, "demo");
 	wfJob.setDefinition(new CpsFlowDefinition(
 			"node {\n" +
 				"    ws {\n" +
@@ -50,13 +51,11 @@ public class IntegrityPipelineTest extends IntegritySCMTest
     public void pipeLineTestWithLocalClientonRemoteNode() throws Exception
     {
 	addTestFileInSource();
-	// Create a remote slave0
-	jenkinsRule.createOnlineSlave(Label.get("remote"));
 	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
 	wfJob.addTrigger(new SCMTrigger(""));
 	wfJob.setQuietPeriod(3); // so it only does one build
 	wfJob.setDefinition(new CpsFlowDefinition(
-			"node ('remote') {\n" +
+			"node ('slave0') {\n" +
 					"    ws {\n" +
 					"    checkout changelog: false, poll: false, " +
 					"scm: [$class: 'IntegritySCM', checkpointBeforeBuild: false, " +

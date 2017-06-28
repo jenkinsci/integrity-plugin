@@ -602,10 +602,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	return ciSettings;
  }
 
-  public boolean getLocalClient()
-  {
-    return this.localClient;
-  }
+  public boolean getLocalClient() { return this.localClient; }
 
   @DataBoundSetter
   public void setLocalClient(boolean localClient)

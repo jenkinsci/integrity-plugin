@@ -1,0 +1,20 @@
+<!--
+	The index.jelly file is used to display a detailed change log on the Changes page. 
+	The listing should include all data that is available in each change log entry.
+-->
+
+<j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
+  <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
+  <h2>${%Summary}</h2>
+  <table class="pane" style="border:none">
+	  <j:forEach var="cs" items="${it.logs}">
+		  <tr class="pane">
+			  <td colspan="2" class="changeset">
+				  <li>
+					  ${cs.date} ${cs.msg} ${cs.file}
+				  </li>
+			  </td>
+		  </tr>
+	  </j:forEach>
+  </table>
+</j:jelly>

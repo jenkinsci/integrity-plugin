@@ -21,16 +21,6 @@
       <email>integrity_jenkins_plugin@ptc.com</email>
     </developer>
   </developers>
-  
-  <!-- 
-  <licenses>
-    <license>
-      <name>The MIT License (MIT)</name>
-      <url>http://opensource.org/licenses/MIT</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  -->
 
   <scm>
 	<connection>scm:git:ssh://github.com/jenkinsci/integrity-plugin.git</connection>
@@ -102,7 +92,7 @@
 	<dependency>
 		<groupId>org.jenkins-ci.plugins</groupId>
 		<artifactId>script-security</artifactId>
-		<version>1.28</version>
+		<version>1.29</version>
 	</dependency>
     <dependency>
           <groupId>org.jenkins-ci.main</groupId>
@@ -141,11 +131,6 @@
           <version>2.3</version>
           <scope>test</scope>
     </dependency>
-      <dependency>
-          <groupId>org.jenkins-ci.main</groupId>
-          <artifactId>jenkins-test-harness</artifactId>
-          <version>2.22</version>
-      </dependency>
   </dependencies>
   
   <distributionManagement>

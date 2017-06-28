@@ -12,12 +12,12 @@ import java.util.Collection;
 public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
                 Serializable
 {
-    private final String messageStart = "msg";
-    private final String fileStart = "file";
+    private static final String messageStart = "msg";
+    private static final String fileStart = "file";
     private String msg;
     private String file;
-    private final String splitOperator = ":";
-    private final String tokenOperator = ",";
+    private static final String splitOperator = ":";
+    private static final String tokenOperator = ",";
     private String author = "user";
 
     public IntegrityLcChangeSet(String line)

@@ -20,7 +20,6 @@ import java.util.logging.Logger;
  */
 public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean>
 {
-    private final IntegrityConfigurable integrityConfigurable;
     private final String alternateWorkspaceDir;
     private final IntegrityCMProject siProject;
 
@@ -29,25 +28,17 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
     private final TaskListener listener;
     private final String lineTerminator;
 
-    /**
-     * @param integrityConfigurable
-     * @param siProject
-     * @param alternateWorkspace
-     * @param listener
-     * @param lineTerminator
-     */
     public IntegrityCreateSandboxTask(
-		    IntegrityConfigurable integrityConfigurable,
+		    SandboxUtils sboxUtil,
 		    IntegrityCMProject siProject,
 		    String alternateWorkspace,
 		    TaskListener listener, String lineTerminator)
     {
-	this.integrityConfigurable = integrityConfigurable;
 	this.siProject = siProject;
 	this.alternateWorkspaceDir = alternateWorkspace;
 	this.listener = listener;
 	this.lineTerminator = lineTerminator;
-	this.sandboxUtil = new SandboxUtils(integrityConfigurable, listener);
+	this.sandboxUtil = sboxUtil;
     }
 
     @Override
@@ -62,7 +53,7 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
 			    lineTerminator);
 	} catch (APIException e) {
 	    listener.getLogger()
-			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getExceptionId());
+			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getLocalizedMessage());
 	    return false;
 	}
     }

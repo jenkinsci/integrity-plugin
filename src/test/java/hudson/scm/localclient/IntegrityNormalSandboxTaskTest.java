@@ -56,11 +56,11 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxWithConcurrentBuilds() throws Exception
     {
-        // Test concurrent builds
+        // Test concurrent builds apread across sandboxes
         jenkinsRule.jenkins.setNumExecutors(4);
         localClientProject.setConcurrentBuild(true);
         QueueTaskFuture<FreeStyleBuild> build1 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
-        build1.waitForStart();
+        build1.waitForStart(); // trigger the build!
         QueueTaskFuture<FreeStyleBuild> build2 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
         build2.waitForStart();
         QueueTaskFuture<FreeStyleBuild> build3 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
@@ -76,12 +76,21 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testCleanSandboxWithConcurrentBuilds() throws Exception
     {
-        // Test multiple builds within same sandbox concurrently
-        localClientProject.setConcurrentBuild(true);
-        build = build(localClientProjectCleanCopy, Result.SUCCESS);
-        build = build(localClientProjectCleanCopy, Result.SUCCESS);
-        build = build(localClientProjectCleanCopy, Result.SUCCESS);
-        build = build(localClientProjectCleanCopy, Result.SUCCESS);
+        // Test concurrent builds apread across sandboxes
+        jenkinsRule.jenkins.setNumExecutors(4);
+        localClientProjectCleanCopy.setConcurrentBuild(true);
+        QueueTaskFuture<FreeStyleBuild> build1 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
+        build1.waitForStart(); // trigger the build!
+        QueueTaskFuture<FreeStyleBuild> build2 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
+        build2.waitForStart();
+        QueueTaskFuture<FreeStyleBuild> build3 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
+        build3.waitForStart();
+        QueueTaskFuture<FreeStyleBuild> build4 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
+
+        jenkinsRule.assertBuildStatusSuccess(build1.get());
+        jenkinsRule.assertBuildStatusSuccess(build2.get());
+        jenkinsRule.assertBuildStatusSuccess(build3.get());
+        jenkinsRule.assertBuildStatusSuccess(build4.get());
     }
 
     @Test
@@ -407,6 +416,7 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
     @Test
     public void testSandboxAfterChangingConfigPath() throws Exception
     {
+        // TODO : Don't have a '#/DummyProject' yet, so need to create one and move on!
         build = build(localClientProject, Result.SUCCESS);
         // Change the source project on the same job
         IntegritySCM scm = new IntegritySCM("test", "#/DummyProject", "test");
