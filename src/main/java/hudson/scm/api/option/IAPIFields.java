@@ -42,6 +42,7 @@ public interface IAPIFields
   public static final String LOCATION = "location";
   public static final String CLOSED_DATE = "closeddate";
   public static final String CONFIG_PATH = "configpath";
+  public static final String DEVELOPMENT_PATH = "developmentPath";
 
   public enum CP_MEMBER_OPERATION
   {

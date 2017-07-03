@@ -11,6 +11,7 @@ import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Logger;
 
+import hudson.scm.localclient.IntegrityLcChangeLogParser;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.export.Exported;
 
@@ -62,6 +63,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected boolean deleteNonMembers = false;
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
   protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
+  protected boolean localClient;
 
   public AbstractIntegritySCM()
   {
@@ -504,7 +506,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   @Override
   public boolean requiresWorkspaceForPolling()
   {
-    return false;
+    return localClient;
   }
 
   /**
@@ -518,7 +520,10 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   {
     // Log the call
     LOGGER.fine("createChangeLogParser() invoked...!");
-    return new IntegrityChangeLogParser(integrityURL);
+    if(localClient)
+      return new IntegrityLcChangeLogParser(integrityURL);
+    else
+      return new IntegrityChangeLogParser(integrityURL);
   }
 
   /**
@@ -596,4 +601,12 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	LOGGER.fine("Project User password = " + strPassword);
 	return ciSettings;
  }
+
+  public boolean getLocalClient() { return this.localClient; }
+
+  @DataBoundSetter
+  public void setLocalClient(boolean localClient)
+  {
+    this.localClient = localClient;
+  }
 }
