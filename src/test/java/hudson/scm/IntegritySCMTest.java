@@ -121,7 +121,8 @@ public class IntegritySCMTest
 		    boolean isLocalClient, boolean cleanCopy,
 		    boolean checkpointBeforebuild) throws Exception
     {
-	IntegritySCM scm = new IntegritySCM("test", configPath, "test");
+	setupIntegrityConfigurable();
+        IntegritySCM scm = new IntegritySCM("test", configPath, "test");
 	FreeStyleProject project = jenkinsRule.createFreeStyleProject();
 	scm.setLocalClient(isLocalClient);
 	scm.setCleanCopy(cleanCopy);
@@ -134,7 +135,6 @@ public class IntegritySCMTest
     protected FreeStyleProject setupVariantIntegrityProjectWithLocalClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	configPath = getDevPath();
 	FreeStyleProject project = setupProject(configPath, true, false, false);
 	return project;
@@ -144,7 +144,6 @@ public class IntegritySCMTest
     private FreeStyleProject setupIntegrityProjectWithRemoteClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	FreeStyleProject project = setupProject(configPath, false, false, false);
 	return project;
     }
@@ -152,7 +151,6 @@ public class IntegritySCMTest
     protected FreeStyleProject setupIntegrityProjectWithLocalClientWithCheckpointOff(String configPath)
 		    throws Exception
     {
-	setupIntegrityConfigurable();
 	FreeStyleProject project = setupProject(configPath, true, false, false);
 	return project;
     }
@@ -160,7 +158,6 @@ public class IntegritySCMTest
     protected FreeStyleProject setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
     }
@@ -168,7 +165,6 @@ public class IntegritySCMTest
     protected FreeStyleProject setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	configPath = getDevPath();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
@@ -177,7 +173,6 @@ public class IntegritySCMTest
     protected FreeStyleProject setupBuildIntegrityProjectWithLocalClientWithCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	configPath = createCheckpointPath();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
@@ -186,13 +181,12 @@ public class IntegritySCMTest
     protected FreeStyleProject setupBuildIntegrityProjectWithLocalClientCleanCopyCheckpointOff(
 		    String configPath) throws Exception
     {
-	setupIntegrityConfigurable();
 	configPath = createCheckpointPath();
 	FreeStyleProject project = setupProject(configPath, true, true, false);
 	return project;
     }
 
-    private static void setupIntegrityConfigurable()
+    protected static void setupIntegrityConfigurable()
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, false,
@@ -232,7 +226,7 @@ public class IntegritySCMTest
 	variantName = response.getResult().getField("DevelopmentPath").getValueAsString().trim();*/
     }
 
-    private String getDevPath() throws APIException
+    protected String getDevPath() throws APIException
     {
 	//return successConfigPath +"#d="+variantName;
 	variantName = "DP_0.3813840334796077";

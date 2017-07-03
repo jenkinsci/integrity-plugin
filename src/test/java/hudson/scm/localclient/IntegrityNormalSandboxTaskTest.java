@@ -412,18 +412,12 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
                         String.valueOf(build.getWorkspace().child(fileName))).isFile()));
     }
 
-    @Ignore
     @Test
     public void testSandboxAfterChangingConfigPath() throws Exception
     {
-        // TODO : Don't have a '#/DummyProject' yet, so need to create one and move on!
         build = build(localClientProject, Result.SUCCESS);
-        // Change the source project on the same job
-        IntegritySCM scm = new IntegritySCM("test", "#/DummyProject", "test");
-        scm.setLocalClient(true);
-        scm.setCheckpointBeforeBuild(false);
-        scm.setCleanCopy(false);
-        localClientProject.setScm(scm);
+        // Change the source project config path on the same job
+        ((IntegritySCM)localClientProject.getScm()).setConfigPath(getDevPath());
         localClientProject.save();
         build = build(localClientProject, Result.SUCCESS);
     }

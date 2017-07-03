@@ -42,6 +42,7 @@ public class IntegrityViewSandboxTask implements FilePath.FileCallable<Boolean>
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityViewSandboxTask invoke Exception :"+ e.getLocalizedMessage());
+            e.printStackTrace(listener.getLogger());
             return false;
         }
     }

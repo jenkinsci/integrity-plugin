@@ -47,13 +47,12 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
     {
 	FilePath workspace = sandboxUtil.getFilePath(workspaceFile, alternateWorkspaceDir);
 	try {
-	    listener.getLogger()
-			    .println("[LocalClient] Executing IntegrityCreateSandboxTask :"+ workspaceFile);
 	    return sandboxUtil.createSandbox(siProject, workspace,
 			    lineTerminator);
 	} catch (APIException e) {
 	    listener.getLogger()
 			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getLocalizedMessage());
+	    e.printStackTrace(listener.getLogger());
 	    return false;
 	}
     }

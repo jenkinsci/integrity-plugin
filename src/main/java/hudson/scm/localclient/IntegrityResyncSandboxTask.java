@@ -53,6 +53,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         } catch (APIException e) {
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());
+            e.printStackTrace(listener.getLogger());
             return false;
         }
     }

@@ -136,6 +136,7 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Searching Sandbox: ["+ getQualifiedWorkspaceName(workspace)+"],");
 	listener.getLogger().println("Project Config :[" + siProject.getProjectName()+"],");
 	listener.getLogger().println("Project Variant :[" + siProject.getVariantName()+"]");
+	listener.getLogger().println("Project Revision :[" + siProject.getProjectRevision()+"]");
 	if(response != null && response.getExitCode() == 0){
 	    WorkItemIterator it = response.getWorkItems();
 	    while(it.hasNext()){
@@ -143,8 +144,9 @@ public class SandboxUtils implements Serializable
 	        String sBoxname = wi.getField("SandboxName").getValueAsString();
 		String projectName = wi.getField("ProjectName").getValueAsString();
 		listener.getLogger()
-				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName+", ["+
-						wi.getField("DevelopmentPath").getValueAsString() +"]");
+				.println("[LocalClient] Sandbox: "+ sBoxname + " for project: "+projectName+" - ["+
+						wi.getField("DevelopmentPath").getValueAsString() +"] - ["+
+						wi.getField("BuildRevision").getValueAsString() +"]");
 		if(sBoxname.replace("\\project.pj", "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))
 				&& projectName.equals(siProject.getProjectName())
 				&& (!siProject.isVariant() ||
@@ -206,8 +208,10 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Executing DropSandbox :"+ getQualifiedWorkspaceName(workspace));
 	Command cmd = new Command(Command.SI, "dropsandbox");
 	cmd.addOption(new Option("delete", "all"));
-	cmd.addSelection(workspace.getName());
+	cmd.addSelection(getQualifiedWorkspaceName(workspace));
 	Response response = session.runCommand(cmd);
+	listener.getLogger()
+			.println("[Local Client] Drop Sandbox Response :"+ response!=null?response.getExitCode():null);
 	if((response != null) && (response.getExitCode() == 0)){
 	    WorkItem item = APIUtils.getWorkItem(response);
 	    System.out.println(item);
@@ -334,7 +338,7 @@ public class SandboxUtils implements Serializable
 	listener.getLogger()
 			.println("[LocalClient] ViewSandBox Response : "+ response.getExitCode());
 
-	// Have to deal with this ugliness as --filtersubs not working
+	// Have to deal with this ugliness as --filtersubs not exposed
 	WorkItemIterator witerator = response.getWorkItems();
 	while(witerator.hasNext()){
 	    WorkItem wit = witerator.next();

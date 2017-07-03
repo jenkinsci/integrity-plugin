@@ -423,9 +423,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       IntegrityCMProject siProject = getIntegrityCMProject(run, listener);
 
       if (checkpointBeforeBuild)
-      {
         checkPointBeforeBuild(run, listener, siProject);
-      }
 
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
@@ -439,7 +437,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task :");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
-                        sboxUtil, cleanCopy, changeLogFile, alternateWorkspace, includeList, excludeList, listener);
+                        sboxUtil, cleanCopy, changeLogFile, resolvedAltWkspace, includeList, excludeList, listener);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
@@ -449,8 +447,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       {
         throw new AbortException("[Local Client] Failed to create sandbox!");
       }
-
-
     } catch (APIException aex) {
       LOGGER.severe("[Local Client] API Exception caught...");
       listener.getLogger().println("[Local Client] An API Exception was caught!");
@@ -465,12 +461,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println("[Local Client] A SQL Exception was caught!");
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-      throw new AbortException("Caught Derby SQLException!");
+      throw new AbortException("[Local Client]Caught Derby SQLException!");
     } catch (Exception e) {
-      e.printStackTrace();
+      e.printStackTrace(listener.getLogger());
       LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);
-      listener.getLogger()
-                      .println("[Local Client] Exception occured during checkout! : " + e.getMessage());
       throw new AbortException("[Local Client] Exception occured during checkout! "+ e.getMessage());
     }/*finally {
       listener.getLogger().println("[Local Client] Client termination response :"+sboxUtil.terminateClient());
@@ -755,7 +749,13 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     LOGGER.fine("compareRemoteRevisionWith() invoked...!");
 
     if(localClient){
-      return getPollingResultForLocalClient(job, launcher, workspace, listener, baseline);
+      try {
+        return getPollingResultForLocalClient(job, launcher, workspace, listener, baseline);
+      } catch (Exception e) {
+        listener.getLogger().println("[Local Client] Exception while Polling workspace :"+ e.getMessage());
+        e.printStackTrace(listener.getLogger());
+        return PollingResult.NO_CHANGES;
+      }
     }
     else {
       return getPollingResultForRemoteClient(job, listener, baseline);
@@ -765,7 +765,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   private PollingResult getPollingResultForLocalClient(Job<?, ?> job, Launcher launcher,
                   FilePath workspace, TaskListener listener,
                   SCMRevisionState baseline)
-                  throws IOException, InterruptedException
+                  throws Exception
   {
     listener.getLogger().println("[Local Client Poll] Polling for Changes");
     final Run lastBuild = job.getLastBuild();
@@ -777,9 +777,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     }
 
     SandboxUtils sboxUtil = new SandboxUtils(coSettings, listener);
+    String resolvedAltWkspace = IntegrityCheckpointAction
+                    .evalGroovyExpression(lastBuild.getEnvironment(listener), alternateWorkspace);
 
     // Execute viewsandbox and compare with workspace sandbox
-    IntegrityViewSandboxTask viewSandboxTask = new IntegrityViewSandboxTask(sboxUtil, listener, alternateWorkspace);
+    IntegrityViewSandboxTask viewSandboxTask = new IntegrityViewSandboxTask(sboxUtil, listener, resolvedAltWkspace);
     if(workspace.act(viewSandboxTask)){
       listener.getLogger().println("[Local Client Poll] Polling results returned changes. Build Now returned");
       return BUILD_NOW;
