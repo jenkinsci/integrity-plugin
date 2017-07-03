@@ -86,6 +86,7 @@ public class IntegrityCMProject implements Serializable
   private boolean restoreTimestamp;
   private boolean skipAuthorInfo;
   private boolean checkpointBeforeBuild;
+  private String variantName;
 
   private Document xmlDoc;
   private StringBuffer changeLog;
@@ -123,6 +124,7 @@ public class IntegrityCMProject implements Serializable
       Field pjTypeFld = wi.getField(IAPIFields.PROJECT_TYPE);
       Field pjCfgPathFld = wi.getField(IAPIFields.FULL_CONFIG_SYNTAX);
       Field pjChkptFld = wi.getField(IAPIFields.LAST_CHECKPOINT);
+      Field pjDpFld = wi.getField(IAPIFields.DEVELOPMENT_PATH);
       // Convert to our class fields
       // First obtain the project name field
       if (null != pjNameFld && null != pjNameFld.getValueAsString())
@@ -173,6 +175,17 @@ public class IntegrityCMProject implements Serializable
         LOGGER.warning("Project info did not provide a value for the 'lastCheckpoint' field!");
         lastCheckpoint = Calendar.getInstance().getTime();
       }
+
+      // Also, let's not forget if this is a variant
+      if (null != pjDpFld && null != pjDpFld.getValueAsString())
+      {
+        variantName = pjDpFld.getValueAsString();
+      } else
+      {
+        LOGGER.warning("Project info did not provide a value for the 'developmentPath' field!");
+        variantName = null;
+      }
+
     } catch (NoSuchElementException nsee)
     {
       LOGGER.severe("Project info did not provide a value for field " + nsee.getMessage());
@@ -627,6 +640,12 @@ public class IntegrityCMProject implements Serializable
   {
     return projectCacheTable;
   }
+
+  /**
+   * Returns the variant path name
+   * @return
+   */
+  public String getVariantName()  { return variantName; }
 
   /**
    * Parses the output from the si viewproject command to get a list of members and updates Derby DB

@@ -33,7 +33,7 @@ public class APISession implements ISession
   public static final String VERSION = "4.13";
   public static final int MAJOR_VERSION = 4;
   public static final int MINOR_VERSION = 13;
-
+  private final boolean isLocalIntegration;
   // Class variables used to create an API Session
   private String ipHostName;
   private int ipPort = 0;
@@ -63,7 +63,32 @@ public class APISession implements ISession
           "Creating Integrity API Session for :" + settings.getUserName() + settings.getSecure());
       return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
           settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(),
-          settings.getSecure());
+          settings.getSecure(), false);
+    } catch (APIException aex)
+    {
+      ExceptionHandler eh = new ExceptionHandler(aex);
+      LOGGER.severe(eh.getMessage());
+      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      LOGGER.log(Level.SEVERE, "APIException", aex);
+      return null;
+    }
+  }
+
+  /**
+   * Creates a local integration point
+   *
+   * @param settings
+   * @return
+   */
+  public static APISession createLocalIntegrationPoint(IntegrityConfigurable settings)
+  {
+    try
+    {
+      LOGGER.fine(
+                      "Creating Integrity API Session for :" + settings.getUserName() + settings.getSecure());
+      return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
+                      settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(),
+                      settings.getSecure(), true);
     } catch (APIException aex)
     {
       ExceptionHandler eh = new ExceptionHandler(aex);
@@ -79,8 +104,9 @@ public class APISession implements ISession
    * 
    * @throws APIException
    */
-  private APISession(String ipHost, int ipPortNum, String host, int portNum, String user,
-      String paswd, boolean secure) throws APIException
+  private APISession(String ipHost, int ipPortNum, String host, int portNum,
+                  String user,
+                  String paswd, boolean secure, boolean isLocalIntegration) throws APIException
   {
 
     ipHostName = ipHost;
@@ -90,6 +116,7 @@ public class APISession implements ISession
     userName = user;
     password = paswd;
     this.secure = secure;
+    this.isLocalIntegration = isLocalIntegration;
     initAPI();
   }
 
@@ -97,23 +124,43 @@ public class APISession implements ISession
   {
     // Initialize our termination flag...
     terminated = false;
-    // Create a Server Integration Point to a client or the target server itself
-    if (null != ipHostName && ipHostName.length() > 0 && ipPort > 0)
-    {
-      // Connect via the client, using "client as server"
-      ip = IntegrationPointFactory.getInstance().createIntegrationPoint(ipHostName, ipPort, secure,
-          MAJOR_VERSION, MINOR_VERSION);
-    } else
-    {
-      // Directly to the server...
-      ip = IntegrationPointFactory.getInstance().createIntegrationPoint(hostName, port, secure,
-          MAJOR_VERSION, MINOR_VERSION);
+
+    if(isLocalIntegration){
+        initLocalAPI();
+    }
+    else {
+      // Create a Server Integration Point to a client or the target server itself
+      if (null != ipHostName && ipHostName.length() > 0 && ipPort > 0) {
+        // Connect via the client, using "client as server"
+        ip = IntegrationPointFactory.getInstance()
+                        .createIntegrationPoint(ipHostName, ipPort, secure,
+                                        MAJOR_VERSION, MINOR_VERSION);
+      } else {
+        // Directly to the server...
+        ip = IntegrationPointFactory.getInstance()
+                        .createIntegrationPoint(hostName, port, secure,
+                                        MAJOR_VERSION, MINOR_VERSION);
+      }
     }
     // Create the Session
     session = ip.createSession(userName, password);
     session.setTimeout(300000); // 5 Minutes
     // No need to ping here as the ping validation is handled by the ISessionPool class
     // ping();
+  }
+
+  /**
+   *  Initialize the Local integration point
+   * @throws APIException
+   */
+  public void initLocalAPI() throws APIException
+  {
+    if(ip == null) {
+      ip = IntegrationPointFactory.getInstance()
+                      .createLocalIntegrationPoint(MAJOR_VERSION,
+                                      MINOR_VERSION);
+      ip.setAutoStartIntegrityClient(true);
+    }
   }
 
   /*
@@ -376,5 +423,4 @@ public class APISession implements ISession
     builder.append("Session User :" + this.userName + " ");
     return builder.toString();
   }
-
 }

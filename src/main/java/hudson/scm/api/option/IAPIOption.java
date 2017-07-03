@@ -62,4 +62,6 @@ public interface IAPIOption
   public static final String REV = "r";
   public static final String ASOF_REVISION_PREFIX = "asof:";
   public static final String TIMESTAMP_PREFIX = "ts=";
+  public static final String SANDBOX = "sandbox";
+  public static final String DEVPATH = "devpath";
 }
