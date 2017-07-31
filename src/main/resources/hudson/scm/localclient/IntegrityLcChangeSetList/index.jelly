@@ -11,7 +11,7 @@
 		  <tr class="pane">
 			  <td colspan="2" class="changeset">
 				  <li>
-					  ${cs.date} ${cs.msg} ${cs.file}
+					  ${cs.date} ${cs.msg} - ${cs.file} - ${cs.context} 
 				  </li>
 			  </td>
 		  </tr>

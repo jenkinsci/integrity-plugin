@@ -1,23 +1,24 @@
 package hudson.scm.localclient;
 
-import com.mks.api.response.APIException;
-import hudson.FilePath;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-import hudson.scm.IntegrityConfigurable;
-import jenkins.security.Roles;
-import org.jenkinsci.remoting.RoleChecker;
-
 import java.io.File;
 import java.io.IOException;
+
+import org.jenkinsci.remoting.RoleChecker;
+
+import com.mks.api.response.APIException;
+
+import hudson.FilePath;
+import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
+import jenkins.security.Roles;
 
 /**
  * Created by asen on 08-06-2017.
  */
 public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean>
 {
-    private final String alternateWorkspaceDir;
+	private static final long serialVersionUID = 4886592227995487766L;
+	private final String alternateWorkspaceDir;
     private final SandboxUtils sandboxUtil;
     private final TaskListener listener;
     private final boolean cleanCopy;

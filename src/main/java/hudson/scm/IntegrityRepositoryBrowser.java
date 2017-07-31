@@ -9,7 +9,7 @@ import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import java.io.IOException;
 import java.net.URL;
 
-public abstract class IntegrityRepositoryBrowser extends RepositoryBrowser<IntegrityChangeLog>
+public abstract class IntegrityRepositoryBrowser extends RepositoryBrowser<ChangeLogSet.Entry>
 {
   private static final long serialVersionUID = 4745105100520040559L;
 

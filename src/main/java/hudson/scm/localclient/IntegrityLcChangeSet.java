@@ -1,21 +1,21 @@
 package hudson.scm.localclient;
 
+import java.util.Collection;
+
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
-
-import java.io.Serializable;
-import java.util.Collection;
 
 /**
  * Created by asen on 19-06-2017.
  */
-public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
-                Serializable
+public class IntegrityLcChangeSet extends ChangeLogSet.Entry
 {
-    private static final String messageStart = "msg";
+	private static final String messageStart = "msg";
     private static final String fileStart = "file";
+    private static final String contextStart = "context";
     private String msg;
     private String file;
+    private String context;
     private static final String splitOperator = ":";
     private static final String tokenOperator = ",";
     private String author = "user";
@@ -29,6 +29,8 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
                 this.msg = split[1].trim();
             } else if (split[0].startsWith(fileStart)) {
                 this.file = split[1].trim();
+            } else if (split[0].startsWith(contextStart)) {
+                this.context = split[1].trim();
             } else {
                 this.msg = "Invalid Field Found in Change Log : "+token;
             }
@@ -39,6 +41,11 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
     public String getMsg()
     {
 	return msg;
+    }
+    
+    public String getContext()
+    {
+	return context;
     }
 
     @Override
@@ -63,7 +70,7 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry implements
     }
 
     @Override
-    protected void setParent(ChangeLogSet parent)
+    protected void setParent(@SuppressWarnings("rawtypes") ChangeLogSet parent)
     {
         super.setParent(parent);
     }

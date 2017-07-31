@@ -1,24 +1,25 @@
 package hudson.scm.localclient;
 
-import com.mks.api.response.APIException;
-import hudson.FilePath;
-import hudson.model.TaskListener;
-import hudson.remoting.VirtualChannel;
-import hudson.scm.IntegrityCMProject;
-import hudson.scm.IntegrityConfigurable;
-import jenkins.security.Roles;
+import java.io.File;
+import java.io.IOException;
+
 import org.jenkinsci.remoting.RoleChecker;
 import org.jenkinsci.remoting.RoleSensitive;
 
-import java.io.File;
-import java.io.IOException;
+import com.mks.api.response.APIException;
+
+import hudson.FilePath;
+import hudson.model.TaskListener;
+import hudson.remoting.VirtualChannel;
+import jenkins.security.Roles;
 
 /**
  * Created by asen on 15-06-2017.
  */
 public class IntegrityViewSandboxTask implements FilePath.FileCallable<Boolean>
 {
-    private final String alternateWorkspaceDir;
+	private static final long serialVersionUID = -3691106939728961721L;
+	private final String alternateWorkspaceDir;
     private final TaskListener listener;
     private final SandboxUtils sandboxUtil;
 

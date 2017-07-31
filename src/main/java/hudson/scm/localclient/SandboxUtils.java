@@ -1,30 +1,40 @@
 package hudson.scm.localclient;
 
+import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
+
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
+import java.util.Objects;
+
 import com.mks.api.Command;
 import com.mks.api.Option;
-import com.mks.api.response.*;
+import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
+
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.scm.AbstractIntegritySCM;
 import hudson.scm.IntegrityCMProject;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
-import hudson.scm.api.APIUtils;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
-
-import java.io.*;
-import java.util.Objects;
-
-import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
 
 /**
  * Created by asen on 07-06-2017.
  */
 public class SandboxUtils implements Serializable
 {
-    public static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
+	private static final long serialVersionUID = -6355703584281019909L;
+	public static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
     private final IntegrityConfigurable integrityConfigurable;
     private final TaskListener listener;
 
@@ -129,7 +139,7 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Executing si sandboxes ");
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
-			.println("[LocalClient] si sandboxes response:"+ response.getExitCode());
+			.println("[LocalClient] si sandboxes response:"+ Objects.toString(response.getExitCode(), null));
 	listener.getLogger()
 			.printf("[LocalClient] Searching Sandbox: : %s, for Project Config: [%s], Variant: [%s], Build Revision: [%s]"+
 							AbstractIntegritySCM.NL,
@@ -142,21 +152,14 @@ public class SandboxUtils implements Serializable
 	        String sBoxname = wi.getField("SandboxName").getValueAsString();
 		String projectName = wi.getField("ProjectName").getValueAsString();
 		listener.getLogger()
-				.printf("[LocalClient]Evaluating Sandbox: %s for project: %s - [%s] - [%s]"+AbstractIntegritySCM.NL,
+				.printf("[LocalClient] Evaluating Sandbox: %s for project: %s - [%s] - [%s]"+AbstractIntegritySCM.NL,
 						sBoxname, projectName,
 						Objects.toString(wi.getField("DevelopmentPath").getValueAsString(),""),
 						Objects.toString(wi.getField("BuildRevision").getValueAsString(),""));
 		if(sBoxname.replace(PROJECT_PJ, "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))
 				&& projectName.equals(siProject.getProjectName())
-				&& (!siProject.isVariant() ||
-				Objects.equals(siProject.getVariantName(),
-						wi.getField("DevelopmentPath")
-								.getValueAsString()))
-				&& (!siProject.isBuild() ||
-				Objects.equals(siProject.getProjectRevision(),
-						wi.getField("BuildRevision")
-								.getItem()
-								.getId()))) {
+				&& (Objects.equals(siProject.getVariantName(), wi.getField("DevelopmentPath").getValueAsString()))
+				&& (Objects.equals(siProject.getProjectRevision(),wi.getField("BuildRevision").getItem().getId()))) {
 		    listener.getLogger()
 				    .printf("[LocalClient] Found Existing Sandbox for Project:[%s], Sandbox: [%s], Variant: [%s], " +
 						    "Build: [%s], in Workspace: [%s]"+AbstractIntegritySCM.NL, projectName,
@@ -176,7 +179,7 @@ public class SandboxUtils implements Serializable
 	}
 	//No existing match found! Drop the existing workspace sandbox if there are no matches
 	if(sandboxExists)
-	    return dropSandbox(workspace) == 0;
+	    return dropSandbox(workspace, siProject) == 0;
 
 	listener.getLogger()
 			.printf("[LocalClient] Sandbox not found in : %s, for Project Config: [%s], Variant: [%s], Build Revision: [%s]"+AbstractIntegritySCM.NL,
@@ -188,43 +191,35 @@ public class SandboxUtils implements Serializable
     /** @throws APIException
      * @param workspace
      */
-    protected int dropSandbox(FilePath workspace)
+    protected int dropSandbox(FilePath workspace, IntegrityCMProject siProject)
 		    throws APIException
     {
 	ISession session = getAPISession();
 	session.ping();
-	return dropSandbox(session, workspace);
+	return dropSandbox(session, workspace, siProject);
     }
 
     private int dropSandbox(ISession session,
-		    FilePath workspace) throws APIException
+		    FilePath workspace, IntegrityCMProject siProject) throws APIException
     {
 	listener.getLogger()
 			.println("[LocalClient] Executing DropSandbox :"+ getQualifiedWorkspaceName(workspace));
 	Command cmd = new Command(Command.SI, "dropsandbox");
 	cmd.addOption(new Option("delete", "all"));
-	cmd.addSelection(getQualifiedWorkspaceName(workspace));
+	cmd.addOption(new APIOption("forceConfirm","yes"));
+	cmd.addSelection(getQualifiedWorkspaceName(workspace).replace("\\", "/").concat("/project.pj"));
 	Response response = session.runCommand(cmd);
 	listener.getLogger()
-			.println("[Local Client] Drop Sandbox Response :"+ response!=null?response.getExitCode():null);
+			.println("[Local Client] Drop Sandbox Response :"+ Objects.toString(response.getExitCode(), null));
 	if((response != null) && (response.getExitCode() == 0)){
-	    WorkItem item = APIUtils.getWorkItem(response);
-	    Field projectName = item.getField("Working-\n" +
-			    "Files-Deleted");
-	    Field sandboxName = item.getField("Sandbox-\n" +
-			    "Directory-\n" +
-			    "Deleted");
 	    listener.getLogger()
 			    .println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
-	    listener.getLogger()
-			    .println("Sandbox Dropped: "+ sandboxName);
-	    listener.getLogger()
-			    .println("For Project: "+ projectName);
+	    listener.getLogger().println("[LocalClient] Sandbox Dropped: "+ workspace);
+	    listener.getLogger().println("[LocalClient] For Project: "+ siProject.getProjectName());
 	    return response.getExitCode();
 	}
 	else
 	    return -1;
-
     }
 
     /**
@@ -268,6 +263,7 @@ public class SandboxUtils implements Serializable
 	cmd.addOption(new APIOption("f"));
 	applyMemberFilters(cmd, includeList, excludeList);
 	if(cleanCopy) { cmd.addOption(new APIOption("overwriteUnchanged")); }
+	else{ cmd.addOption(new Option("filter", "changed:all")); } 
 	if(deleteNonMembers){ cmd.addOption(new APIOption("removeOutOfScope"));}
 	if(restoreTimestamp){ cmd.addOption(new APIOption("restoreTimestamp"));}
 	cmd.addOption(new Option(IAPIOption.SANDBOX, getQualifiedWorkspaceName(workspace).concat(PROJECT_PJ)));
@@ -283,7 +279,7 @@ public class SandboxUtils implements Serializable
 	    return -1;
     }
 
-    private void generateChangeLogFile(Response response,
+   private void generateChangeLogFile(Response response,
 		    File changeLogFile)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
@@ -296,7 +292,9 @@ public class SandboxUtils implements Serializable
 		WorkItem wit = workItemIterator.next();
 		writer.print("msg:"+wit.getResult().getMessage().trim());
 		writer.print(",");
-		writer.print("file:"+wit.getContext("id"));
+		writer.print("file:"+wit.getId());
+		writer.print(",");
+		writer.print("context:"+wit.getContext());
 		writer.print(AbstractIntegritySCM.NL);
 	    }
 	}
@@ -349,9 +347,10 @@ public class SandboxUtils implements Serializable
 	    }
 	}
 	return isMember;
+	//Stream.of(response.getWorkItems().next()).parallel().forEach(wit -> { return checkIfMember(wit)});
     }
 
-    /**
+	/**
      * TODO: Refactor: This method is a duplicate of IntegritySCM.applyMemberFilters()
      * @param command
      * @param includeList
