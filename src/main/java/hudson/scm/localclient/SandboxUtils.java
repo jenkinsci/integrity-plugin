@@ -33,8 +33,8 @@ import hudson.scm.api.session.ISession;
  */
 public class SandboxUtils implements Serializable
 {
-	private static final long serialVersionUID = -6355703584281019909L;
-	public static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
+    private static final long serialVersionUID = -6355703584281019909L;
+    public static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
     private final IntegrityConfigurable integrityConfigurable;
     private final TaskListener listener;
 
@@ -158,8 +158,8 @@ public class SandboxUtils implements Serializable
 						Objects.toString(wi.getField("BuildRevision").getValueAsString(),""));
 		if(sBoxname.replace(PROJECT_PJ, "").equalsIgnoreCase(getQualifiedWorkspaceName(workspace))
 				&& projectName.equals(siProject.getProjectName())
-				&& (Objects.equals(siProject.getVariantName(), wi.getField("DevelopmentPath").getValueAsString()))
-				&& (Objects.equals(siProject.getProjectRevision(),wi.getField("BuildRevision").getItem().getId()))) {
+				&& (siProject.isVariant() && Objects.equals(siProject.getVariantName(), wi.getField("DevelopmentPath").getValueAsString()))
+				&& (siProject.isBuild() && Objects.equals(siProject.getProjectRevision(),wi.getField("BuildRevision").getItem().getId()))) {
 		    listener.getLogger()
 				    .printf("[LocalClient] Found Existing Sandbox for Project:[%s], Sandbox: [%s], Variant: [%s], " +
 						    "Build: [%s], in Workspace: [%s]"+AbstractIntegritySCM.NL, projectName,
@@ -209,8 +209,6 @@ public class SandboxUtils implements Serializable
 	cmd.addOption(new APIOption("forceConfirm","yes"));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace).replace("\\", "/").concat("/project.pj"));
 	Response response = session.runCommand(cmd);
-	listener.getLogger()
-			.println("[Local Client] Drop Sandbox Response :"+ Objects.toString(response.getExitCode(), null));
 	if((response != null) && (response.getExitCode() == 0)){
 	    listener.getLogger()
 			    .println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
@@ -229,6 +227,7 @@ public class SandboxUtils implements Serializable
      * @param cleanCopy
      * @param deleteNonMembers
      * @param restoreTimestamp
+ *
      * @param changeLogFile
      * @param includeList
      * @param excludeList @return
