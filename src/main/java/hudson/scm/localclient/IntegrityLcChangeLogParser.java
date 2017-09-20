@@ -1,16 +1,21 @@
 package hudson.scm.localclient;
 
-import hudson.model.Run;
-import hudson.scm.ChangeLogParser;
-import hudson.scm.RepositoryBrowser;
+import java.io.File;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.ArrayList;
+import java.util.Iterator;
+import java.util.LinkedHashSet;
+import java.util.List;
+import java.util.Set;
+
 import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.LineIterator;
 import org.xml.sax.SAXException;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.Serializable;
-import java.util.*;
+import hudson.model.Run;
+import hudson.scm.ChangeLogParser;
+import hudson.scm.RepositoryBrowser;
 
 /**
  * Created by asen on 19-06-2017.
@@ -18,7 +23,8 @@ import java.util.*;
 public class IntegrityLcChangeLogParser extends ChangeLogParser implements
                 Serializable
 {
-    private final String integrityUrl;
+	private static final long serialVersionUID = 3380552685713306298L;
+	private final String integrityUrl;
 
     public IntegrityLcChangeLogParser(String url)
     {
@@ -27,7 +33,7 @@ public class IntegrityLcChangeLogParser extends ChangeLogParser implements
     }
 
     @Override
-    public IntegrityLcChangeSetList parse(Run build,
+    public IntegrityLcChangeSetList parse(@SuppressWarnings("rawtypes") Run build,
                     RepositoryBrowser<?> browser, File changelogFile)
                     throws IOException, SAXException
     {
@@ -35,7 +41,7 @@ public class IntegrityLcChangeLogParser extends ChangeLogParser implements
         LineIterator lineIterator = null;
         try {
             lineIterator = FileUtils.lineIterator(changelogFile,"UTF-8");
-            return new IntegrityLcChangeSetList(build, browser, parse(lineIterator));
+            return new IntegrityLcChangeSetList(build, browser, integrityUrl, parse(lineIterator));
         } finally {
             LineIterator.closeQuietly(lineIterator);
         }

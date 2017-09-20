@@ -10,6 +10,7 @@ import java.sql.SQLException;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
+import java.util.Objects;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -90,27 +91,21 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 			.createSecureClassLoader(Jenkins.getActiveInstance().getPluginManager().uberClassLoader);
 	Object result = new SecureGroovyScript("return \"" + expression + "\"", true, null)
 			.configuring(ApprovalContext.create()).evaluate(loader, binding);
-    if (result == null)
-    {
-      return "";
-    } else
-    {
-      return result.toString().trim();
-    }
+    return Objects.toString(result.toString().trim(), "");
   }
   
   /**
-	 * @author asen
-	 * Default Whitelist
-	 *
-	 */
-	@Extension
-	public static class DefaultWhitelist extends ProxyWhitelist {
-		public DefaultWhitelist() throws IOException {
-			super(new StaticWhitelist("method java.text.Format format java.lang.Object",
-					"new java.text.SimpleDateFormat java.lang.String"));
-		}
-	}
+   * @author asen
+   * Default Whitelist
+   *
+   */
+  @Extension
+  public static class DefaultWhitelist extends ProxyWhitelist {
+      public DefaultWhitelist() throws IOException {
+              super(new StaticWhitelist("method java.text.Format format java.lang.Object",
+                              "new java.text.SimpleDateFormat java.lang.String"));
+      }
+  }
 
   /**
    * Checks if the given value is a valid Integrity Label. If it's invalid, this method gives you
