@@ -11,6 +11,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 
 import hudson.Extension;
 import hudson.model.Descriptor;
+import hudson.scm.ChangeLogSet;
 import hudson.scm.IntegrityChangeLogSet.IntegrityChangeLog;
 import hudson.scm.IntegrityRepositoryBrowser;
 import hudson.scm.RepositoryBrowser;
@@ -81,7 +82,7 @@ public class IntegrityWebUI extends IntegrityRepositoryBrowser
    * a change set within itself Returns an Integrity annotation view link for a specific file
    */
   @Override
-  public URL getChangeSetLink(IntegrityChangeLog logEntry) throws IOException
+  public URL getChangeSetLink(ChangeLogSet.Entry logEntry) throws IOException
   {
     URL context = null;
     // Check to see if a URL has been overridden
@@ -94,12 +95,16 @@ public class IntegrityWebUI extends IntegrityRepositoryBrowser
       {
         context = new URL(url + "/si/");
       }
-      return new URL(context, logEntry.getAnnotation());
+      if(logEntry instanceof IntegrityChangeLog)
+    	  return new URL(context, ((IntegrityChangeLog)logEntry).getAnnotation());
     } else // Use the URL from the Change Log Set
     {
-      context = new URL(logEntry.getParent().getIntegrityURL() + "/si/");
-      return new URL(context, logEntry.getAnnotation());
+      if(logEntry instanceof IntegrityChangeLog){
+    	context = new URL(((IntegrityChangeLog)logEntry).getParent().getIntegrityURL() + "/si/");
+    	return new URL(context, ((IntegrityChangeLog)logEntry).getAnnotation());
+      }
     }
+	return context;
   }
   
   /* (non-Javadoc)

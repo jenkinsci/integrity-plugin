@@ -435,9 +435,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         listener.getLogger()
                         .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
-                        .println("[LocalClient] Starting Resync Task :");
+                        .println("[LocalClient] Starting Resync Task..");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
-                        sboxUtil, cleanCopy, changeLogFile, resolvedAltWkspace, includeList, excludeList, listener);
+                        sboxUtil, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, resolvedAltWkspace, includeList, excludeList, listener);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
@@ -456,12 +456,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
       listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
       throw new AbortException("[Local Client] Caught Integrity APIException!");
-    } catch (SQLException sqlex) {
-      LOGGER.severe("[Local Client] SQL Exception caught...");
-      listener.getLogger().println("[Local Client] A SQL Exception was caught!");
-      listener.getLogger().println(sqlex.getMessage());
-      LOGGER.log(Level.SEVERE, "SQLException", sqlex);
-      throw new AbortException("[Local Client]Caught Derby SQLException!");
     } catch (Exception e) {
       e.printStackTrace(listener.getLogger());
       LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);

@@ -12,9 +12,9 @@
     <j:otherwise>
       Summary of Changes (<a href="changes">detail view</a>)
       <ol>
-        <j:forEach var="cs" items="${it.items}" varStatus="loop">
+        <j:forEach var="cs" items="${it.logs}" varStatus="loop">
           <li>
-            ${cs.date} ${cs.msg} ${cs.file}
+            ${cs.date} ${cs.msg} -  ${cs.file}
           </li>
         </j:forEach>
       </ol>
