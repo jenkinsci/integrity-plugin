@@ -59,7 +59,7 @@
                 <groupId>org.hamcrest</groupId>
             </exclusion>
         </exclusions>
-      <scope>test</scope>
+      <scope>compile</scope>
     </dependency>
     <dependency>
       <groupId>org.jenkins-ci.plugins.workflow</groupId>
