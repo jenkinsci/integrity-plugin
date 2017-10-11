@@ -1,6 +1,7 @@
 package hudson.scm.localclient;
 
 import java.util.Collection;
+import java.util.Collections;
 
 import hudson.model.User;
 import hudson.scm.ChangeLogSet;
@@ -10,7 +11,7 @@ import hudson.scm.ChangeLogSet;
  */
 public class IntegrityLcChangeSet extends ChangeLogSet.Entry
 {
-	private static final String messageStart = "msg";
+    private static final String messageStart = "msg";
     private static final String fileStart = "file";
     private static final String contextStart = "context";
     private String msg;
@@ -66,7 +67,7 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry
     @Override
     public Collection<String> getAffectedPaths()
     {
-	return null;
+	return Collections.emptyList();
     }
 
     @Override

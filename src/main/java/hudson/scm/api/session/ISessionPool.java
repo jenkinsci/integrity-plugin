@@ -11,6 +11,7 @@ import java.util.logging.Logger;
 
 import org.apache.commons.pool2.BaseKeyedPooledObjectFactory;
 import org.apache.commons.pool2.KeyedObjectPool;
+import org.apache.commons.pool2.PoolUtils;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultPooledObject;
 import org.apache.commons.pool2.impl.GenericKeyedObjectPool;
@@ -36,9 +37,9 @@ public class ISessionPool
   private KeyedObjectPool<IntegrityConfigurable, ISession> pool;
   // Max APIsessions in the pool, per IntegrityConfigurable. Note that this has to be higher than
   // the checkout thread count to prevent CO threads from blocking
-  private int maxTotalPerKey = 30;
+  private int maxTotalPerKey = 60;
   // Max idle APIsession objects in the pool, per IntegrityConfigurable
-  private int maxIdlePerKey = 3;
+  private int maxIdlePerKey = 10;
   // 3 mins before idle Sessions are checked for eviction
   private long minEvictableIdleTimeMillis = 600000;
   private GenericKeyedObjectPoolConfig config = new GenericKeyedObjectPoolConfig();
@@ -65,16 +66,16 @@ public class ISessionPool
   private void startPool()
   {
     config.setMaxTotalPerKey(maxTotalPerKey);
-    config.setMaxIdlePerKey(maxIdlePerKey);
+    //config.setMaxIdlePerKey(maxIdlePerKey);
     config.setTestOnBorrow(true);
-    config.setTestOnCreate(true);
-    config.setTestWhileIdle(true);
+    //config.setTestOnCreate(true);
+    //config.setTestWhileIdle(true);
+    //config.setTestOnReturn(true);
     config.setMaxWaitMillis(1000);
-    // config.setTestOnReturn(true);
     config.setMinEvictableIdleTimeMillis(minEvictableIdleTimeMillis);
+    config.setTimeBetweenEvictionRunsMillis(minEvictableIdleTimeMillis);
     config.setEvictionPolicyClassName("hudson.scm.api.session.SessionPoolEvictionPolicy");
-    pool =
-        new GenericKeyedObjectPool<IntegrityConfigurable, ISession>(new ISessionFactory(), config);
+    pool = PoolUtils.synchronizedPool(new GenericKeyedObjectPool<IntegrityConfigurable, ISession>(new ISessionFactory(), config));
     LOGGER.log(Level.FINEST,
         "Session Pool started with configuration : MaxTotalPerConfig : " + maxTotalPerKey
             + " , MaxIdlePerKey : " + maxIdlePerKey + " , MinEvictableTimeinMillis : "
@@ -105,10 +106,10 @@ public class ISessionPool
       extends BaseKeyedPooledObjectFactory<IntegrityConfigurable, ISession>
   {
     /*
-     * (non-Javadoc)
-     * 
-     * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#create(java.lang.Object)
-     */
+	 * (non-Javadoc)
+	 *
+	 * @see org.apache.commons.pool2.BaseKeyedPooledObjectFactory#create(java.lang.Object)
+	 */
     @Override
     public ISession create(IntegrityConfigurable settings) throws Exception
     {
@@ -162,29 +163,28 @@ public class ISessionPool
       LOGGER.log(Level.FINEST, "Validating Integrity Session Pool object : " + key.getConfigId()
           + " :: " + key.toString());
       ISession session = p.getObject();
-      if (null != session)
-      {
-        try
-        {
-          // Sessions may custom timeout(configured on the Integrity Server) lying in the pool.
-          // Ping the pool session before any commands are executed on them.
-          session.ping();
-        } catch (InterruptedException e)
-        {
-          LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
-              + key.getConfigId() + " :: " + key.toString(), e);
-          return false;
-        } catch (APIException e)
-        {
-          LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
-              + key.getConfigId() + " :: " + key.toString(), e);
-          return false;
-        }
-      } else
+
+      if(null == session)
         return false;
+
+      try
+      {
+        // Sessions may custom timeout(configured on the Integrity Server) lying in the pool.
+        // Ping the pool session before any commands are executed on them.
+        session.ping();
+      } catch (InterruptedException e)
+      {
+        LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+            + key.getConfigId() + " :: " + key.toString(), e);
+        return false;
+      } catch (APIException e)
+      {
+        LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+            + key.getConfigId() + " :: " + key.toString(), e);
+        return false;
+      }
 
       return true;
     }
-
   }
 }
