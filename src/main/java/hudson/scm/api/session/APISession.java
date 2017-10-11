@@ -14,7 +14,6 @@ import com.mks.api.IntegrationPoint;
 import com.mks.api.IntegrationPointFactory;
 import com.mks.api.Session;
 import com.mks.api.response.APIException;
-import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 
 import hudson.scm.IntegrityConfigurable;
@@ -33,6 +32,8 @@ public class APISession implements ISession
   public static final String VERSION = "4.13";
   public static final int MAJOR_VERSION = 4;
   public static final int MINOR_VERSION = 13;
+  private static final String RETURNED_EXIT_CODE = " returned exit code ";
+  private static final String API_EXCEPTION = "APIException";
   private final boolean isLocalIntegration;
   // Class variables used to create an API Session
   private String ipHostName;
@@ -68,8 +69,8 @@ public class APISession implements ISession
     {
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
-      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      LOGGER.log(Level.SEVERE, "APIException", aex);
+      LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
+      LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
       return null;
     }
   }
@@ -93,8 +94,8 @@ public class APISession implements ISession
     {
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
-      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      LOGGER.log(Level.SEVERE, "APIException", aex);
+      LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
+      LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
       return null;
     }
   }
@@ -145,8 +146,6 @@ public class APISession implements ISession
     // Create the Session
     session = ip.createSession(userName, password);
     session.setTimeout(300000); // 5 Minutes
-    // No need to ping here as the ping validation is handled by the ISessionPool class
-    // ping();
   }
 
   /**
@@ -169,7 +168,7 @@ public class APISession implements ISession
    * @see hudson.scm.api.session.ISession#ping()
    */
   @Override
-  public void ping() throws APIException, InterruptedException
+  public void ping() throws APIException
   {
     // Test the connection to the Integrity Server
     LOGGER.log(Level.FINE, "Pinging server :" + userName + "@" + hostName + ":" + port);
@@ -182,7 +181,7 @@ public class APISession implements ISession
     cmdRunner.setDefaultPassword(password);
     // Execute the connection
     Response res = cmdRunner.execute(ping);
-    LOGGER.log(Level.FINEST, res.getCommandString() + " returned exit code " + res.getExitCode());
+    LOGGER.log(Level.FINEST, res.getCommandString() + RETURNED_EXIT_CODE + res.getExitCode());
     // Initialize class variables
     cmdRunner.release();
     LOGGER.log(Level.FINE,
@@ -204,7 +203,7 @@ public class APISession implements ISession
     cmdRunner.setDefaultUsername(userName);
     cmdRunner.setDefaultPassword(password);
     Response res = cmdRunner.execute(cmd);
-    LOGGER.fine(res.getCommandString() + " returned exit code " + res.getExitCode());
+    LOGGER.fine(res.getCommandString() + RETURNED_EXIT_CODE + res.getExitCode());
     cmdRunner.release();
     return res;
   }
@@ -255,7 +254,7 @@ public class APISession implements ISession
     cmdRunner.setDefaultPassword(password);
     cmdRunner.setDefaultImpersonationUser(impersonateUser);
     Response res = cmdRunner.execute(cmd);
-    LOGGER.fine(res.getCommandString() + " returned exit code " + res.getExitCode());
+    LOGGER.fine(res.getCommandString() + RETURNED_EXIT_CODE + res.getExitCode());
     cmdRunner.release();
     return res;
   }
@@ -300,7 +299,7 @@ public class APISession implements ISession
       } catch (APIException aex)
       {
         LOGGER.fine("Caught API Exception when releasing Command Runner!");
-        LOGGER.log(Level.SEVERE, "APIException", aex);
+        LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
       } catch (Exception ex)
       {
         LOGGER.fine("Caught Exception when releasing Command Runner!");
@@ -315,8 +314,8 @@ public class APISession implements ISession
         {
           // disconnect any users explicitly
           Command  cmd = new Command(Command.IM, "disconnect");
-          runCommand(cmd); 
-        	
+          runCommand(cmd);
+
           // force the termination of an running command
           session.release(true);
           sessionKilled = true;
@@ -328,13 +327,12 @@ public class APISession implements ISession
       } catch (APIException aex)
       {
         LOGGER.fine("Caught API Exception when releasing session!");
-        LOGGER.log(Level.SEVERE, "APIException", aex);
+        LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
       } catch (IOException ioe)
       {
         LOGGER.fine("Caught IO Exception when releasing session!");
         LOGGER.log(Level.SEVERE, "IOException", ioe);
       }
-
 
       if (null != ip)
       {
@@ -406,12 +404,6 @@ public class APISession implements ISession
   public String getUserName()
   {
     return userName;
-  }
-
-  @Override
-  public boolean isSecure()
-  {
-    return this.secure;
   }
 
   @Override

@@ -146,7 +146,7 @@ public class ParseProjectMemberTask implements Callable<Void>
               + " :: Parse Member Task: Defaulting 'membertimestamp' to now - " + timestamp);
         }
 
-        try
+        try(StringReader reader = new StringReader(description))
         {
           insert.clearParameters();
           insert.setShort(1, (short) 0); // Type
@@ -157,7 +157,7 @@ public class ParseProjectMemberTask implements Callable<Void>
           LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Member Task: MemberID: " + wi.getId());
           insert.setTimestamp(4, new Timestamp(timestamp.getTime())); // Timestamp
-          insert.setClob(5, new StringReader(description)); // Description
+          insert.setClob(5, reader); // Description
           LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Member Task: Description: " + description);
           insert.setString(6, pjConfigHash.get(parentProject)); // ConfigPath

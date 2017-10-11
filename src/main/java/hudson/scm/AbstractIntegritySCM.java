@@ -29,7 +29,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 {
   private static final long serialVersionUID = 7559894846609712683L;
 
-  protected static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
+  protected static final Logger LOGGER = Logger.getLogger(AbstractIntegritySCM.class.getSimpleName());
   protected static final Map<String, IntegrityCMProject> projects =
       new ConcurrentHashMap<String, IntegrityCMProject>();
   public static final String NL = System.getProperty("line.separator");
@@ -37,7 +37,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   public static final int MIN_PORT_VALUE = 1;
   public static final int MAX_PORT_VALUE = 65535;
   protected static final int DEFAULT_THREAD_POOL_SIZE = 5;
-  protected static final int DEFAULT_CHECKOUT_THREAD_TIMEOUT = 10;  // Timeout checkout threads after 10 minutes per thread.
+  protected static final int DEFAULT_CHECKOUT_THREAD_TIMEOUT = 20;  // Timeout checkout threads after 10 minutes per thread.
   public static final String DEFAULT_DATE_FORMAT = "MMM dd, yyyy h:mm:ss a";
   public static final SimpleDateFormat SDF = new SimpleDateFormat(DEFAULT_DATE_FORMAT);
   protected final String ciServerURL =
@@ -64,6 +64,8 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
   protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
   protected boolean localClient;
+  protected static final String RETURNED_EXIT_CODE = " returned exit code ";
+  protected static final String SQL_EXCEPTION_CAUGHT = "A SQL Exception caught.";
 
   public AbstractIntegritySCM()
   {

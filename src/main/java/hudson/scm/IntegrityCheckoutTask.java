@@ -43,7 +43,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 {
   private static final long serialVersionUID = 1240357991626897900L;
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
-  private static final int CHECKOUT_TRESHOLD = 500;
+  private static final int CHECKOUT_TRESHOLD = 5000;
   private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
   private final List<String> dirList;
   private final String lineTerminator;
@@ -309,7 +309,6 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         // Wait 2 seconds a check again if all threads are done
         Thread.sleep(2000);
       }
-      executor.shutdown();
 
       // Lets advice the user that we've checked out all the members
       if (cleanCopy)
@@ -334,6 +333,12 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       listener.getLogger().println(iex.getMessage());
       listener.getLogger().println("Failed to clean up workspace (" + workspace + ") contents!");
       return false;
+    } finally {
+      listener.getLogger().println("Terminating checkout threads");
+      if(executor != null)
+        executor.shutdown();
+      if( generateAPISession != null )
+        generateAPISession.remove();
     }
 
     // If we got here, everything is good on the checkout...

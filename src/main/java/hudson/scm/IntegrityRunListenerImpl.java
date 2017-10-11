@@ -4,16 +4,19 @@
  *******************************************************************************/
 package hudson.scm;
 
+import java.io.IOException;
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import hudson.Launcher;
+import hudson.model.*;
+import hudson.scm.api.session.ISession;
+import org.apache.commons.pool2.KeyedObjectPool;
+import org.apache.commons.pool2.PoolUtils;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import hudson.Extension;
-import hudson.model.Job;
-import hudson.model.Run;
-import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
 import hudson.scm.api.session.ISessionPool;
@@ -63,22 +66,16 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
    * hudson.model.TaskListener)
    */
   @Override
-  public void onCompleted(R r, TaskListener listener)
+  public void onCompleted(R run, TaskListener listener)
   {
-    // TODO Auto-generated method stub
-    super.onCompleted(r, listener);
-
+    super.onCompleted(run, listener);
     try
     {
         LOGGER.log(Level.FINEST, "Clearing Integrity Session Pool");
-        ISessionPool.getInstance().getPool().clear();
-    } catch (UnsupportedOperationException e)
-    {
-      LOGGER.log(Level.SEVERE, e.getMessage(), e);
+        //ISessionPool.getInstance().getPool().clear();
     } catch (Exception e)
     {
       LOGGER.log(Level.SEVERE, e.getMessage(), e);
-    };
+    }
   }
-
 }

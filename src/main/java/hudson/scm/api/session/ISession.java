@@ -6,7 +6,6 @@ package hudson.scm.api.session;
 
 import com.mks.api.Command;
 import com.mks.api.response.APIException;
-import com.mks.api.response.InterruptedException;
 import com.mks.api.response.Response;
 
 public interface ISession
@@ -20,16 +19,8 @@ public interface ISession
 
   public String getUserName();
 
-  public boolean isSecure();
-
   public void refreshAPISession() throws APIException;
 
-  /**
-   * Ping the API session to test connectivity
-   * 
-   * @throws APIException
-   * @throws InterruptedException
-   */
-  void ping() throws APIException, InterruptedException;
+  void ping() throws APIException;
 
 }

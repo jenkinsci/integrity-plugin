@@ -23,8 +23,8 @@ import hudson.scm.RepositoryBrowser;
 public class IntegrityLcChangeLogParser extends ChangeLogParser implements
                 Serializable
 {
-	private static final long serialVersionUID = 3380552685713306298L;
-	private final String integrityUrl;
+    private static final long serialVersionUID = 3380552685713306298L;
+    private final String integrityUrl;
 
     public IntegrityLcChangeLogParser(String url)
     {

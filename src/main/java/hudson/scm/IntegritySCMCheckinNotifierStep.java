@@ -23,6 +23,7 @@ import jenkins.tasks.SimpleBuildStep;
 public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleBuildStep
 {
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
+  private static final String WITH_CONTENTS_OF_WS = "' with contents of workspace (";
   private final IntegrityConfigurable ciSettings;
   private final String configPath;
   private final String includes;
@@ -86,7 +87,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
 
         // Log the success
         listener.getLogger().println("Successfully updated Integrity project '" + configPath
-            + "' with contents of workspace (" + workspace + ")!");
+            + WITH_CONTENTS_OF_WS + workspace + ")!");
       }
 
     } catch (InterruptedException iex)
@@ -96,7 +97,8 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
       LOGGER.log(Level.SEVERE, "InterruptedException", iex);
       listener.getLogger().println(iex.getMessage());
       listener.getLogger().println("Failed to update Integrity project '" + configPath
-          + "' with contents of workspace (" + workspace + ")!");
+          + WITH_CONTENTS_OF_WS + workspace + ")!");
+      throw iex;
     } catch (APIException aex)
     {
       LOGGER.severe("API Exception caught...");
@@ -105,7 +107,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
       LOGGER.severe(eh.getMessage());
       listener.getLogger().println(eh.getMessage());
       listener.getLogger().println("Failed to update Integrity project '" + configPath
-          + "' with contents of workspace (" + workspace + ")!");
+          + WITH_CONTENTS_OF_WS + workspace + ")!");
       LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
       LOGGER.log(Level.SEVERE, "APIException", aex);
     }
