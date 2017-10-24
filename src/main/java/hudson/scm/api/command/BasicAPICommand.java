@@ -6,24 +6,22 @@
 
 package hudson.scm.api.command;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.apache.commons.pool2.KeyedObjectPool;
-
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
-
 import hudson.AbortException;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
 import hudson.scm.api.session.ISessionPool;
+import org.apache.commons.pool2.KeyedObjectPool;
+
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * All Jenkins Integrity API Commands have to extend this class in order to execute Integrity API
@@ -191,7 +189,8 @@ public abstract class BasicAPICommand implements IAPICommand
         {
           LOGGER.log(Level.FINEST,
               "Returning session object back to pool :" + serverConfig.getName());
-          pool.returnObject(serverConfig, api);
+          api.terminate();
+          pool.invalidateObject(serverConfig, api);
         }
       } catch (Exception e)
       {

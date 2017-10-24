@@ -4,22 +4,17 @@
  *******************************************************************************/
 package hudson.scm;
 
-import java.io.IOException;
+import hudson.Extension;
+import hudson.model.Job;
+import hudson.model.Run;
+import hudson.model.listeners.RunListener;
+import hudson.scm.IntegritySCM.DescriptorImpl;
+import hudson.scm.api.session.APISession;
+import org.kohsuke.stapler.DataBoundConstructor;
+
 import java.sql.SQLException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
-
-import hudson.Launcher;
-import hudson.model.*;
-import hudson.scm.api.session.ISession;
-import org.apache.commons.pool2.KeyedObjectPool;
-import org.apache.commons.pool2.PoolUtils;
-import org.kohsuke.stapler.DataBoundConstructor;
-
-import hudson.Extension;
-import hudson.model.listeners.RunListener;
-import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.session.ISessionPool;
 
 /**
  * This class implements the onDeleted event when a build is deleted The sole purpose is to ensure
@@ -66,16 +61,17 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
    * hudson.model.TaskListener)
    */
   @Override
-  public void onCompleted(R run, TaskListener listener)
+  public void onFinalized(R run)
   {
-    super.onCompleted(run, listener);
     try
     {
-        LOGGER.log(Level.FINEST, "Clearing Integrity Session Pool");
-        //ISessionPool.getInstance().getPool().clear();
+      LOGGER.log(Level.FINEST, "Terminating unclosed sessions");
+      APISession.terminateUnclosedSessions();
     } catch (Exception e)
     {
       LOGGER.log(Level.SEVERE, e.getMessage(), e);
     }
   }
+
+
 }
