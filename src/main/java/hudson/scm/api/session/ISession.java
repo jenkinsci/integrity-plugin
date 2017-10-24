@@ -8,14 +8,14 @@ import com.mks.api.Command;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
-public interface ISession
+public interface ISession extends AutoCloseable
 {
 
   public Response runCommand(Command cmd) throws APIException;
 
   public Response runCommandWithInterim(Command cmd) throws APIException;
 
-  public void terminate();
+  public boolean terminate();
 
   public String getUserName();
 

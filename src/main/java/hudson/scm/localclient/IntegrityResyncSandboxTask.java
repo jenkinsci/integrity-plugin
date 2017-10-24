@@ -1,16 +1,14 @@
 package hudson.scm.localclient;
 
-import java.io.File;
-import java.io.IOException;
-
-import org.jenkinsci.remoting.RoleChecker;
-
-import com.mks.api.response.APIException;
-
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.remoting.VirtualChannel;
+import hudson.scm.api.session.ISession;
 import jenkins.security.Roles;
+import org.jenkinsci.remoting.RoleChecker;
+
+import java.io.File;
+import java.io.IOException;
 
 /**
  * Created by asen on 08-06-2017.
@@ -51,12 +49,12 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
 		    throws IOException, InterruptedException
     {
         FilePath workspace = sandboxUtil.getFilePath(workspaceFile, alternateWorkspaceDir);
-
-        try {
+        try (ISession session = sandboxUtil.getLocalAPISession()){
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(workspace, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, includeList, excludeList);
-        } catch (APIException e) {
+            return sandboxUtil.resyncSandbox(session, workspace, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, includeList, excludeList);
+        } catch (Exception e) {
+
             listener.getLogger()
                             .println("[LocalClient] IntegrityResyncSandboxTask invoke Exception :"+ e.getLocalizedMessage());
             e.printStackTrace(listener.getLogger());

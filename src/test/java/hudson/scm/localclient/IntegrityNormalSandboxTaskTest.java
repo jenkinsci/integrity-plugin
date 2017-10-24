@@ -66,6 +66,7 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
         QueueTaskFuture<FreeStyleBuild> build3 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
         build3.waitForStart();
         QueueTaskFuture<FreeStyleBuild> build4 = localClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+        build4.waitForStart();
 
         jenkinsRule.assertBuildStatusSuccess(build1.get());
         jenkinsRule.assertBuildStatusSuccess(build2.get());
@@ -77,7 +78,7 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
     public void testCleanSandboxWithConcurrentBuilds() throws Exception
     {
         // Test concurrent builds apread across sandboxes
-        jenkinsRule.jenkins.setNumExecutors(4);
+        //jenkinsRule.jenkins.setNumExecutors(4);
         localClientProjectCleanCopy.setConcurrentBuild(true);
         QueueTaskFuture<FreeStyleBuild> build1 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
         build1.waitForStart(); // trigger the build!
@@ -86,6 +87,7 @@ public class IntegrityNormalSandboxTaskTest extends IntegritySCMTest
         QueueTaskFuture<FreeStyleBuild> build3 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
         build3.waitForStart();
         QueueTaskFuture<FreeStyleBuild> build4 = localClientProjectCleanCopy.scheduleBuild2(0, new Cause.UserIdCause());
+        build4.waitForStart();
 
         jenkinsRule.assertBuildStatusSuccess(build1.get());
         jenkinsRule.assertBuildStatusSuccess(build2.get());
