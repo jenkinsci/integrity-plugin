@@ -12,10 +12,6 @@ import hudson.scm.IntegritySCM;
 import hudson.scm.api.ExceptionHandler;
 
 import java.io.IOException;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.Iterator;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -47,7 +43,8 @@ public class APISession implements ISession
   private boolean terminated;
   private boolean secure;
   private boolean isLocalIntegration;
-  private static List<ISession> unClosedSessions = Collections.synchronizedList(new ArrayList<ISession>());
+  private static Session localSession;
+  private static IntegrationPoint localip;
 
   /**
    * Creates an authenticated API Session against the Integrity Server
@@ -82,7 +79,7 @@ public class APISession implements ISession
    * @param settings
    * @return
    */
-  public static APISession createLocalIntegrationPoint(
+  public static synchronized ISession createLocalIntegrationPoint(
                   IntegrityConfigurable settings)
   {
     try {
@@ -122,32 +119,31 @@ public class APISession implements ISession
     password = paswd;
     this.secure = secure;
     this.isLocalIntegration = isLocalIntegration;
-    initAPI();
+    if (isLocalIntegration) {
+      initLocalAPI();
+    }else
+      initAPI();
   }
 
   private void initAPI() throws APIException
   {
     // Initialize our termination flag...
     terminated = false;
-    if (isLocalIntegration) {
-      initLocalAPI();
+    // Create a Server Integration Point to a client or the target server itself
+    if (null != ipHostName && ipHostName.length() > 0 && ipPort > 0) {
+      // Connect via the client, using "client as server"
+      ip = IntegrationPointFactory.getInstance()
+                      .createIntegrationPoint(ipHostName, ipPort, secure,
+                                      MAJOR_VERSION, MINOR_VERSION);
     } else {
-      // Create a Server Integration Point to a client or the target server itself
-      if (null != ipHostName && ipHostName.length() > 0 && ipPort > 0) {
-        // Connect via the client, using "client as server"
-        ip = IntegrationPointFactory.getInstance()
-                        .createIntegrationPoint(ipHostName, ipPort, secure,
-                                        MAJOR_VERSION, MINOR_VERSION);
-      } else {
-        // Directly to the server...
-        ip = IntegrationPointFactory.getInstance()
-                        .createIntegrationPoint(hostName, port, secure,
-                                        MAJOR_VERSION, MINOR_VERSION);
-      }
+      // Directly to the server...
+      ip = IntegrationPointFactory.getInstance()
+                      .createIntegrationPoint(hostName, port, secure,
+                                      MAJOR_VERSION, MINOR_VERSION);
     }
     // Create the Session
     session = ip.createSession(userName, password);
-    session.setTimeout(300000); // 5 Minutes
+    session.setTimeout(300000); // 15 Minutes
   }
 
   /**
@@ -157,11 +153,19 @@ public class APISession implements ISession
    */
   private void initLocalAPI() throws APIException
   {
-    if (ip == null) {
-      ip = IntegrationPointFactory.getInstance()
-                      .createLocalIntegrationPoint(MAJOR_VERSION,
-                                      MINOR_VERSION);
-      ip.setAutoStartIntegrityClient(true);
+    // Initialize our termination flag...
+    terminated = false;
+    if(localSession == null) {
+      if (localip == null) {
+        localip = IntegrationPointFactory.getInstance()
+                        .createLocalIntegrationPoint(MAJOR_VERSION,
+                                        MINOR_VERSION);
+        localip.setAutoStartIntegrityClient(true);
+      }
+
+      LOGGER.log(Level.FINEST, "[Local Client] Initializing Local Client session");
+      localSession = localip.createSession(userName, password);
+      localSession.setAutoReconnect(true);
     }
   }
 
@@ -178,7 +182,11 @@ public class APISession implements ISession
                     "Pinging server :" + userName + "@" + hostName + ":" +
                                     port);
     Command ping = new Command("api", "ping");
-    CmdRunner cmdRunner = session.createCmdRunner();
+    CmdRunner cmdRunner;
+    if(isLocalIntegration)
+      cmdRunner = localSession.createCmdRunner();
+    else
+      cmdRunner = session.createCmdRunner();
     cmdRunner.setDefaultHostname(hostName);
     cmdRunner.setDefaultPort(port);
     cmdRunner.setDefaultUsername(userName);
@@ -203,7 +211,11 @@ public class APISession implements ISession
    */
   public Response runCommand(Command cmd) throws APIException
   {
-    CmdRunner cmdRunner = session.createCmdRunner();
+    CmdRunner cmdRunner;
+    if(isLocalIntegration)
+      cmdRunner = localSession.createCmdRunner();
+    else
+      cmdRunner = session.createCmdRunner();
     cmdRunner.setDefaultHostname(hostName);
     cmdRunner.setDefaultPort(port);
     cmdRunner.setDefaultUsername(userName);
@@ -231,7 +243,10 @@ public class APISession implements ISession
       }
       icr.release();
     }
-    icr = session.createCmdRunner();
+    if(isLocalIntegration)
+      icr = localSession.createCmdRunner();
+    else
+      icr = session.createCmdRunner();
     icr.setDefaultHostname(hostName);
     icr.setDefaultPort(port);
     icr.setDefaultUsername(userName);
@@ -252,7 +267,11 @@ public class APISession implements ISession
   public Response runCommandAs(Command cmd, String impersonateUser)
                   throws APIException
   {
-    CmdRunner cmdRunner = session.createCmdRunner();
+    CmdRunner cmdRunner;
+    if(isLocalIntegration)
+      cmdRunner = localSession.createCmdRunner();
+    else
+      cmdRunner = session.createCmdRunner();
     cmdRunner.setDefaultHostname(hostName);
     cmdRunner.setDefaultPort(port);
     cmdRunner.setDefaultUsername(userName);
@@ -286,17 +305,11 @@ public class APISession implements ISession
     if (!terminated) {
       try {
         if (null != icr) {
-          if(!isLocalIntegration) {
             if (!icr.isFinished()) {
               icr.interrupt();
             }
             icr.release();
             cmdRunnerKilled = true;
-          }
-          else if (icr.isFinished()){
-            icr.release();
-            cmdRunnerKilled = true;
-          }
         } else {
           cmdRunnerKilled = true;
         }
@@ -311,17 +324,12 @@ public class APISession implements ISession
       // exception
       try {
         if (null != session) {
-          // disconnect any users explicitly
-          if (!isLocalIntegration) {
-            //Command cmd = new Command(Command.IM, "disconnect");
-            //runCommand(cmd);
-            // force the termination of an running command
-            session.release(true);
-            sessionKilled = true;
-          } else if (cmdRunnerKilled){
-            session.release(false);
-            sessionKilled = true;
-          }
+        // disconnect any users explicitly
+         Command cmd = new Command(Command.IM, "disconnect");
+         runCommand(cmd);
+         // force the termination of an running command
+         session.release(false);
+         sessionKilled = true;
         } else { sessionKilled = true; }
       } catch (APIException aex) {
         LOGGER.fine("Caught API Exception when releasing session!");
@@ -331,16 +339,15 @@ public class APISession implements ISession
         LOGGER.log(Level.SEVERE, "IOException", ioe);
       }
 
-      if(!isLocalIntegration) {
-        if (null != ip) {
-          ip.release();
-          intPointKilled = true;
-        } else {
-          intPointKilled = true;
-        }
-      } else { intPointKilled = true; }
+      if (null != ip) {
+        ip.release();
+        IntegrationPointFactory.getInstance().removeIntegrationPoint(ip);
+        intPointKilled = true;
+      } else {
+        intPointKilled = true;
+      }
 
-      if (cmdRunnerKilled && sessionKilled && intPointKilled) {
+      if (cmdRunnerKilled && sessionKilled  && intPointKilled) {
         terminated = true;
         LOGGER
                         .fine("Successfully disconnected connection " +
@@ -416,28 +423,9 @@ public class APISession implements ISession
   }
 
   @Override
-  public void close() throws IllegalStateException
+  public void close()
   {
-    synchronized (unClosedSessions) {
-      unClosedSessions.add(this);
-    }
-  }
-
-  public static void terminateUnclosedSessions()
-  {
-    synchronized (unClosedSessions) {
-    Iterator i = unClosedSessions.iterator();
-      while (i.hasNext()){
-        ISession session = (ISession) i.next();
-        try {
-          boolean isTerminated = session.terminate();
-          if(isTerminated) {i.remove();}
-        } catch (Exception e) {
-          LOGGER.warning("Error while shutting down Local API session: " +
-                          e.getMessage());
-        }
-      }
-    }
+    // do nothing. This is used for LC session termination.
   }
 
 }
