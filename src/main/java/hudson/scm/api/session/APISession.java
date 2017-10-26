@@ -151,10 +151,10 @@ public class APISession implements ISession
    *
    * @throws APIException
    */
-  private void initLocalAPI() throws APIException
+  private static void initLocalAPI() throws APIException
   {
     // Initialize our termination flag...
-    terminated = false;
+    //terminated = false;
     if(localSession == null) {
       if (localip == null) {
         localip = IntegrationPointFactory.getInstance()
@@ -164,7 +164,7 @@ public class APISession implements ISession
       }
 
       LOGGER.log(Level.FINEST, "[Local Client] Initializing Local Client session");
-      localSession = localip.createSession(userName, password);
+      localSession = localip.createSession();
       localSession.setAutoReconnect(true);
     }
   }
