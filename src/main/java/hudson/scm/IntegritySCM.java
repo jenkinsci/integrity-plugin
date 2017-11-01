@@ -425,13 +425,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
-
+      listener.getLogger()
+                      .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
       IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(
                       sboxUtil, siProject, resolvedAltWkspace, listener, lineTerminator);
       if (workspace.act(createSandboxTask))
       {
-        listener.getLogger()
-                        .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task..");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
@@ -440,11 +439,13 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
         } else
-            throw new AbortException("[Local Client] Failed to resync workspace!");
+            throw new AbortException("[LocalClient] Failed to resync workspace!");
       } else
       {
-        throw new AbortException("[Local Client] Failed to create sandbox!");
+        throw new AbortException("[LocalClient] Failed to create sandbox!");
       }
+      listener.getLogger()
+                      .println("[LocalClient] Checkout complete!");
     } catch (APIException aex) {
       LOGGER.log(Level.SEVERE, "[Local Client] API Exception caught", aex);
       listener.getLogger().println("[Local Client] An API Exception was caught!");
@@ -629,7 +630,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    *  Initialize the project to be used with Local /Remote Client connections
    * @param run
    * @param listener
-   * @param projectCacheTable
    * @return
    * @throws Exception
    */

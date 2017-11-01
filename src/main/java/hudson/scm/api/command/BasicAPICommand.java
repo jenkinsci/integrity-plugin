@@ -191,6 +191,7 @@ public abstract class BasicAPICommand implements IAPICommand
               "Returning session object back to pool :" + serverConfig.getName());
           api.terminate();
           pool.invalidateObject(serverConfig, api);
+          //pool.returnObject(serverConfig, api);
         }
       } catch (Exception e)
       {

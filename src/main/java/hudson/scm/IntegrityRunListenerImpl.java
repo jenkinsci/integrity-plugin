@@ -9,7 +9,6 @@ import hudson.model.Job;
 import hudson.model.Run;
 import hudson.model.listeners.RunListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.session.APISession;
 import org.kohsuke.stapler.DataBoundConstructor;
 
 import java.sql.SQLException;
@@ -51,27 +50,5 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
 
     LOGGER.fine("RunListenerImpl.onDeleted() execution complete!");
   }
-
-  /*
-   * Clear the session pool of APISession objects post the build run
-   * 
-   * (non-Javadoc)
-   * 
-   * @see hudson.model.listeners.RunListener#onCompleted(hudson.model.Run,
-   * hudson.model.TaskListener)
-   */
-  @Override
-  public void onFinalized(R run)
-  {
-    try
-    {
-      LOGGER.log(Level.FINEST, "Terminating unclosed sessions");
-      APISession.terminateUnclosedSessions();
-    } catch (Exception e)
-    {
-      LOGGER.log(Level.SEVERE, e.getMessage(), e);
-    }
-  }
-
 
 }
