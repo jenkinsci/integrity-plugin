@@ -144,6 +144,7 @@ public class APISession implements ISession
     // Create the Session
     session = ip.createSession(userName, password);
     session.setTimeout(300000); // 15 Minutes
+    session.setAutoReconnect(true);
   }
 
   /**
@@ -154,7 +155,6 @@ public class APISession implements ISession
   private static void initLocalAPI() throws APIException
   {
     // Initialize our termination flag...
-    //terminated = false;
     if(localSession == null) {
       if (localip == null) {
         localip = IntegrationPointFactory.getInstance()
@@ -300,7 +300,6 @@ public class APISession implements ISession
   {
     boolean cmdRunnerKilled = false;
     boolean sessionKilled = false;
-    boolean intPointKilled = false;
     // Terminate only if not already terminated!
     if (!terminated) {
       try {
@@ -324,9 +323,15 @@ public class APISession implements ISession
       // exception
       try {
         if (null != session) {
-        // disconnect any users explicitly
-         Command cmd = new Command(Command.IM, "disconnect");
-         runCommand(cmd);
+          // disconnect any users explicitly
+          Command cmd = new Command(Command.IM, "disconnect");
+          CmdRunner cmdRunner = session.createCmdRunner();
+          cmdRunner.setDefaultHostname(hostName);
+          cmdRunner.setDefaultPort(port);
+          cmdRunner.setDefaultUsername(userName);
+          cmdRunner.setDefaultPassword(password);
+          Response res = cmdRunner.execute(cmd);
+          cmdRunner.release();
          // force the termination of an running command
          session.release(false);
          sessionKilled = true;
@@ -342,12 +347,9 @@ public class APISession implements ISession
       if (null != ip) {
         ip.release();
         IntegrationPointFactory.getInstance().removeIntegrationPoint(ip);
-        intPointKilled = true;
-      } else {
-        intPointKilled = true;
       }
 
-      if (cmdRunnerKilled && sessionKilled  && intPointKilled) {
+      if (cmdRunnerKilled && sessionKilled) {
         terminated = true;
         LOGGER
                         .fine("Successfully disconnected connection " +
@@ -359,46 +361,6 @@ public class APISession implements ISession
       }
     }
     return terminated;
-  }
-
-  /**
-   * Returns the Integrity Integration Point Hostname for this APISession
-   *
-   * @return
-   */
-  public String getIPHostName()
-  {
-    return ipHostName;
-  }
-
-  /**
-   * Returns the Integrity Integration Point Port for this APISession
-   *
-   * @return
-   */
-  public String getIPPort()
-  {
-    return String.valueOf(ipPort);
-  }
-
-  /**
-   * Returns the Integrity Hostname for this APISession
-   *
-   * @return
-   */
-  public String getHostName()
-  {
-    return hostName;
-  }
-
-  /**
-   * Returns the Integrity Port for this APISession
-   *
-   * @return
-   */
-  public String getPort()
-  {
-    return String.valueOf(port);
   }
 
   /**
@@ -428,4 +390,14 @@ public class APISession implements ISession
     // do nothing. This is used for LC session termination.
   }
 
+  @Override
+  public void checkifAlive() throws APIException
+  {
+    try {
+      this.ping();
+    } catch (Exception e) {
+      LOGGER.warning("[LocalClient] Exception while pinging session :"+e.getMessage());
+      initLocalAPI();
+    }
+  }
 }

@@ -85,7 +85,7 @@ public class SandboxUtils implements Serializable
 		    IntegrityCMProject siProject, FilePath workspace,
 		    String lineTerminator) throws APIException
     {
-	session.ping();
+	session.checkifAlive();
 	listener.getLogger()
 			.println("[LocalClient] Executing CreateSandbox :" +
 					getQualifiedWorkspaceName(
@@ -125,7 +125,7 @@ public class SandboxUtils implements Serializable
 		    IntegrityCMProject siProject,
 		    FilePath workspace) throws APIException
     {
-	session.ping();
+	session.checkifAlive();
 	listener.getLogger()
 			.println("[LocalClient] Executing Sandbox Verification ");
 	boolean sandboxExists = false;
@@ -227,19 +227,21 @@ public class SandboxUtils implements Serializable
     protected boolean dropSandbox(ISession session,
 		    FilePath workspace, IntegrityCMProject siProject) throws APIException
     {
-	listener.getLogger()
+
+        listener.getLogger()
 			.println("[LocalClient] Executing DropSandbox :"+ getQualifiedWorkspaceName(workspace));
 	Command cmd = new Command(Command.SI, "dropsandbox");
 	cmd.addOption(new Option("delete", "all"));
 	cmd.addOption(new APIOption("forceConfirm","yes"));
 	cmd.addSelection(getQualifiedWorkspaceName(workspace).replace("\\", "/").concat("/project.pj"));
+	session.checkifAlive();
 	Response response = session.runCommand(cmd);
 	if((response != null) && (response.getExitCode() == 0)){
 	    listener.getLogger()
-			    .println("[LocalClient] DropSandbox Response:"+ response.getExitCode());
+			    .println("[LocalClient] DropSandbox Response: "+ response.getExitCode());
 	    listener.getLogger().println("[LocalClient] Sandbox Dropped: "+ workspace);
 	    listener.getLogger().println("[LocalClient] For Project: "+ siProject.getProjectName());
-	    return response.getExitCode() == 0;
+	    return true;
 	}
 	return false;
     }
@@ -267,7 +269,7 @@ public class SandboxUtils implements Serializable
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
     {
-	session.ping();
+	session.checkifAlive();
 	listener.getLogger()
 			.printf("[LocalClient] Executing ResyncSandbox :%s" +
 							AbstractIntegritySCM.NL,
@@ -302,7 +304,7 @@ public class SandboxUtils implements Serializable
 	return false;
     }
 
-   private boolean generateChangeLogFile(Response response,
+    private boolean generateChangeLogFile(Response response,
 		    File changeLogFile)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
@@ -321,7 +323,7 @@ public class SandboxUtils implements Serializable
 	   }
        }
        listener.getLogger()
-		       .println("[Local Client] Change log successfully generated: " +
+		       .println("[LocalClient] Change log successfully generated: " +
 				       changeLogFile.getAbsolutePath());
        return true;
    }
@@ -335,7 +337,7 @@ public class SandboxUtils implements Serializable
 		    FilePath workspace)
 		    throws APIException
     {
-	session.ping();
+	session.checkifAlive();
 	listener.getLogger()
 			.println("[LocalClient] Executing ViewSandBox : " +
 					getQualifiedWorkspaceName(

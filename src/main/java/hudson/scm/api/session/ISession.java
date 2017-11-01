@@ -23,4 +23,5 @@ public interface ISession extends AutoCloseable
 
   void ping() throws APIException;
 
+  void checkifAlive() throws APIException;
 }
