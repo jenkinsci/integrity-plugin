@@ -46,6 +46,7 @@ import hudson.tasks.test.AggregatedTestResultAction;
 import hudson.tasks.test.TestResult;
 import hudson.tasks.test.AggregatedTestResultAction.ChildReport;
 import hudson.util.ListBoxModel;
+import hudson.util.Secret;
 import net.sf.json.JSONObject;
 
 public class IntegrityItemAction extends Notifier implements Serializable
@@ -684,11 +685,29 @@ public class IntegrityItemAction extends Notifier implements Serializable
    */    
   private IntegrityConfigurable getProjectSettings(AbstractBuild<?, ?> thisBuild)
   {
-	AbstractProject<?, ?> thisProject = thisBuild.getProject();
-	if (!(thisProject.getScm() instanceof IntegritySCM)) {
-	    LOGGER.severe("IntegrityItemAction - Failed to initialize project specific connection settings!");
-	}
-	return ((IntegritySCM) thisProject.getScm()).getProjectSettings();
+	IntegrityConfigurable desSettings =
+	        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
+	    IntegrityConfigurable ciSettings =
+	        new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(),
+	            desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "");
+	    AbstractProject<?, ?> thisProject = thisBuild.getProject();
+	    if (thisProject.getScm() instanceof IntegritySCM)
+	    {
+	      String userName = ((IntegritySCM) thisProject.getScm()).getUserName();
+	      ciSettings.setUserName(userName);
+	      LOGGER.fine("IntegrityItemAction - Project Userame = " + userName);
+
+	      Secret password = ((IntegritySCM) thisProject.getScm()).getSecretPassword();
+	      ciSettings.setPassword(password.getEncryptedValue());
+	      LOGGER.fine("IntegrityItemAction - Project User password = " + password.getEncryptedValue());
+	    } else
+	    {
+	      LOGGER.severe(
+	          "IntegrityItemAction - Failed to initialize project specific connection settings!");
+	      return desSettings;
+	    }
+
+	    return ciSettings;
   }  
 
   /**
