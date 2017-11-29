@@ -55,6 +55,7 @@ public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
         QueueTaskFuture<FreeStyleBuild> build3 = localBuildClientProject.scheduleBuild2(0, new Cause.UserIdCause());
         build3.waitForStart();
         QueueTaskFuture<FreeStyleBuild> build4 = localBuildClientProject.scheduleBuild2(0, new Cause.UserIdCause());
+        build4.waitForStart();
 
         jenkinsRule.assertBuildStatusSuccess(build1.get());
         jenkinsRule.assertBuildStatusSuccess(build2.get());
