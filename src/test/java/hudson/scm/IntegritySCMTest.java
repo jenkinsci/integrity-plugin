@@ -8,10 +8,13 @@ import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import hudson.Functions;
 import hudson.model.*;
+import hudson.remoting.VirtualChannel;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 import hudson.slaves.DumbSlave;
+import hudson.slaves.SlaveComputer;
 import hudson.triggers.SCMTrigger;
 import hudson.util.StreamTaskListener;
 import org.junit.Before;
@@ -20,6 +23,7 @@ import org.junit.Rule;
 import org.junit.Test;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestEnvironment;
 
 import java.io.File;
 import java.io.IOException;
@@ -38,7 +42,58 @@ import static org.junit.Assert.*;
 public class IntegritySCMTest
 {
     @Rule
-    public JenkinsRule jenkinsRule = new JenkinsRule();
+    public JenkinsRule jenkinsRule = new JenkinsRule(){
+        private void purgeSlaves(){
+	    List<Computer> disconnectingComputers = new ArrayList<Computer>();
+	    List<VirtualChannel> closingChannels = new ArrayList<VirtualChannel>();
+	    for (Computer computer: jenkins.getComputers()) {
+		if (!(computer instanceof SlaveComputer)) {
+		    continue;
+		}
+		// disconnect slaves.
+		// retrieve the channel before disconnecting.
+		// even a computer gets offline, channel delays to close.
+		if (!computer.isOffline()) {
+		    VirtualChannel ch = computer.getChannel();
+		    computer.disconnect(null);
+		    disconnectingComputers.add(computer);
+		    closingChannels.add(ch);
+		}
+	    }
+
+	    try {
+		// Wait for all computers disconnected and all channels closed.
+		for (Computer computer: disconnectingComputers) {
+		    computer.waitUntilOffline();
+		}
+		for (VirtualChannel ch: closingChannels) {
+		    ch.join();
+		}
+	    } catch (InterruptedException e) {
+		e.printStackTrace();
+	    }
+	}
+
+	@Override
+	public void after() throws Exception
+	{
+	    if(Functions.isWindows()) {
+		purgeSlaves();
+	    }
+	    super.after();
+	    if(TestEnvironment.get() != null)
+	    {
+		try
+		{
+		    TestEnvironment.get().dispose();
+		}
+		catch(Exception e)
+		{
+		    e.printStackTrace();
+		}
+	    }
+	}
+    };
     @Rule
     public TemporaryFolder testFolder = new TemporaryFolder();
     protected static String successConfigPath="#/JenkinsBulkProject1";
@@ -294,5 +349,4 @@ public class IntegritySCMTest
 	};
 	return singleThreadExecutor.submit(callable);
     }
-
 }

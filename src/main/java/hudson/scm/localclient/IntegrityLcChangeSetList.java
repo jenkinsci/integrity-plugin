@@ -60,4 +60,10 @@ public class IntegrityLcChangeSetList
     {
       return changeSets;
     }
+
+    @Override
+    public String getKind()
+    {
+	return "integrity";
+    }
 }
