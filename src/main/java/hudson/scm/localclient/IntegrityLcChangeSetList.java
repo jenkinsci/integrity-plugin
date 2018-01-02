@@ -17,9 +17,9 @@ public class IntegrityLcChangeSetList
 		Serializable
 {
 
-	private static final long serialVersionUID = -5571987574672621692L;
-	private final List<IntegrityLcChangeSet> changeSets;
-	private String url;
+    private static final long serialVersionUID = -5571987574672621692L;
+    private final List<IntegrityLcChangeSet> changeSets;
+    private String url;
 
     public IntegrityLcChangeSetList(Run<?, ?> run, RepositoryBrowser<?> browser,
 		    String integrityUrl, List<IntegrityLcChangeSet> logs)
@@ -59,5 +59,11 @@ public class IntegrityLcChangeSetList
     public List<IntegrityLcChangeSet> getLogs()
     {
       return changeSets;
+    }
+
+    @Override
+    public String getKind()
+    {
+	return "integrity";
     }
 }

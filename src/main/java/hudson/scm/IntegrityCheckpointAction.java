@@ -93,19 +93,6 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 			.configuring(ApprovalContext.create()).evaluate(loader, binding);
     return Objects.toString(result.toString().trim(), "");
   }
-  
-  /**
-   * @author asen
-   * Default Whitelist
-   *
-   */
-  @Extension
-  public static class DefaultWhitelist extends ProxyWhitelist {
-      public DefaultWhitelist() throws IOException {
-              super(new StaticWhitelist("method java.text.Format format java.lang.Object",
-                              "new java.text.SimpleDateFormat java.lang.String"));
-      }
-  }
 
   /**
    * Checks if the given value is a valid Integrity Label. If it's invalid, this method gives you
@@ -196,7 +183,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
   /**
    * Sets the build configuration name for this project
    * 
-   * @param configurationName
+   * @param thisBuild
    */
   private void setConfigurationName(AbstractBuild<?, ?> thisBuild)
   {
@@ -328,7 +315,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
       }
     } catch (APIException aex)
     {
-      LOGGER.severe("API Exception caught...");
+      LOGGER.log(Level.SEVERE, "API Exception", aex);
       ExceptionHandler eh = new ExceptionHandler(aex);
       aex.printStackTrace(listener.fatalError(eh.getMessage()));
       LOGGER.severe(eh.getMessage());
@@ -336,16 +323,16 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
       return false;
     } catch (SQLException sqlex)
     {
-      LOGGER.severe("SQL Exception caught...");
+      LOGGER.log(Level.SEVERE, "SQL Exception", sqlex);
       listener.getLogger().println("A SQL Exception was caught!");
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
       return false;
     } catch (Exception e) {
-      LOGGER.severe("Exception caught...");
+      LOGGER.log(Level.SEVERE, "Exception", e);
       listener.getLogger().println("An Exception was caught!");
       listener.getLogger().println(e.getMessage());
-	}
+    }
 
     return true;
   }
@@ -441,7 +428,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     /**
      * Provides a list box for users to choose from a list of Integrity Server configurations
      * 
-     * @param configuration Simple configuration name
+     * @param serverConfig Simple configuration name
      * @return
      */
     public ListBoxModel doFillServerConfigItems(@QueryParameter String serverConfig)
@@ -469,7 +456,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
         } catch (Exception e) {
 			if(e instanceof RejectedAccessException){
 				return FormValidation
-	                    .error("Unapproved Script! .Please provide approval before usage: " + e.getMessage());
+	                    .error("Unapproved Script. Please provide approval before usage: " + e.getMessage());
 			}
 			else{
 				return FormValidation.error(e.getMessage());

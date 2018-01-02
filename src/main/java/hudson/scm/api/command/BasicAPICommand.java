@@ -6,24 +6,22 @@
 
 package hudson.scm.api.command;
 
-import java.util.Map;
-import java.util.NoSuchElementException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.apache.commons.pool2.KeyedObjectPool;
-
 import com.mks.api.Command;
 import com.mks.api.Option;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
-
 import hudson.AbortException;
 import hudson.scm.IntegrityConfigurable;
 import hudson.scm.IntegritySCM;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
 import hudson.scm.api.session.ISessionPool;
+import org.apache.commons.pool2.KeyedObjectPool;
+
+import java.util.Map;
+import java.util.NoSuchElementException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * All Jenkins Integrity API Commands have to extend this class in order to execute Integrity API
@@ -42,6 +40,11 @@ public abstract class BasicAPICommand implements IAPICommand
   protected boolean runCommandWithInterim = false;
   protected final IntegrityConfigurable serverConfig;
   private ISession api = null;
+  private static final String SESSION_INVALID_FAILED = "Failed to invalidate Session Pool Object :";
+  private static final String SESSION_NOT_ESTABLISHED_TO = "An Integrity API Session could not be established to ";
+  private static final String CANNOT_PERFORM = "!  Cannot perform ";
+  private static final String OPERATION = " operation : ";
+  private final KeyedObjectPool<IntegrityConfigurable, ISession> pool;
 
   /**
    * Constructor initialized with serverconfig id for commands to fire to a particular Integrity
@@ -51,12 +54,13 @@ public abstract class BasicAPICommand implements IAPICommand
    */
   public BasicAPICommand(IntegrityConfigurable serverConfig)
   {
+    this.pool = ISessionPool.getInstance().getPool();
     this.serverConfig = serverConfig;
   }
 
   public BasicAPICommand()
   {
-    this.serverConfig = null;
+    this(null);
   }
 
   /*
@@ -117,9 +121,6 @@ public abstract class BasicAPICommand implements IAPICommand
           "Unable to get Server configuration for " + cmd.getCommandName() + " operation");
     }
 
-    Response res;
-    KeyedObjectPool<IntegrityConfigurable, ISession> pool = ISessionPool.getInstance().getPool();
-
     try
     {
       LOGGER.log(Level.FINEST, "Borrowing Session Object from Pool :" + serverConfig.getName()
@@ -128,7 +129,7 @@ public abstract class BasicAPICommand implements IAPICommand
       api = pool.borrowObject(serverConfig);
       res = execute(api);
 
-    } catch (NoSuchElementException e)
+    } catch (NoSuchElementException | IllegalStateException e)
     {
       try
       {
@@ -136,42 +137,28 @@ public abstract class BasicAPICommand implements IAPICommand
           pool.invalidateObject(serverConfig, api);
       } catch (Exception e1)
       {
-        LOGGER.log(Level.SEVERE,
-            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-        if (api != null)
-          api = null;
+        LOGGER.log(Level.SEVERE,SESSION_INVALID_FAILED + serverConfig.getName(), e1);
       }
-      api = null;
       LOGGER.log(Level.SEVERE,
-          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
-              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
-              + " operation : " + e.getMessage(),
+          SESSION_NOT_ESTABLISHED_TO + serverConfig.getHostName() + ":"
+              + serverConfig.getPort() + CANNOT_PERFORM + cmd.getCommandName()
+              + OPERATION + e.getMessage(),
           e);
-      throw new AbortException("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getMessage());
-    } catch (IllegalStateException e)
-    {
-      try
-      {
-        if (api != null)
-          pool.invalidateObject(serverConfig, api);
-      } catch (Exception e1)
-      {
-        LOGGER.log(Level.SEVERE,
-            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
-      }
-      api = null;
-      LOGGER.log(Level.SEVERE,
-          "An Integrity API Session could not be established to " + serverConfig.getHostName() + ":"
-              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
-              + " operation : " + e.getMessage(),
-          e);
-      throw new AbortException("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getMessage());
+      throw new AbortException(SESSION_NOT_ESTABLISHED_TO
+          + serverConfig.getHostName() + ":" + serverConfig.getPort() +
+                      CANNOT_PERFORM
+          + cmd.getCommandName() + OPERATION + e.getMessage());
     } catch (APIException aex)
     {
+      try
+      {
+        if (api != null)
+          pool.invalidateObject(serverConfig, api);
+      } catch (Exception e1)
+      {
+        LOGGER.log(Level.SEVERE,
+                        SESSION_INVALID_FAILED + serverConfig.getName(), e1);
+      }
       // Do Nothing. Rethrow
       throw aex;
     } catch (Exception e)
@@ -183,17 +170,17 @@ public abstract class BasicAPICommand implements IAPICommand
       } catch (Exception e1)
       {
         LOGGER.log(Level.SEVERE,
-            "Failed to invalidate Session Pool Object :" + serverConfig.getName(), e1);
+                        SESSION_INVALID_FAILED + serverConfig.getName(), e1);
       }
-      api = null;
       LOGGER.log(Level.SEVERE,
-          "An Integrity API Session could not be established to " + serverConfig.getName() + ":"
-              + serverConfig.getPort() + "!  Cannot perform " + cmd.getCommandName()
-              + " operation : " + e.getMessage(),
+          SESSION_NOT_ESTABLISHED_TO + serverConfig.getName() + ":"
+              + serverConfig.getPort() + CANNOT_PERFORM + cmd.getCommandName()
+              + OPERATION + e.getMessage(),
           e);
-      throw new AbortException("An Integrity API Session could not be established to "
-          + serverConfig.getHostName() + ":" + serverConfig.getPort() + "!  Cannot perform "
-          + cmd.getCommandName() + " operation : " + e.getMessage());
+      throw new AbortException(SESSION_NOT_ESTABLISHED_TO
+          + serverConfig.getHostName() + ":" + serverConfig.getPort() +
+                      CANNOT_PERFORM
+          + cmd.getCommandName() + OPERATION + e.getMessage());
     } finally
     {
       try
@@ -202,7 +189,9 @@ public abstract class BasicAPICommand implements IAPICommand
         {
           LOGGER.log(Level.FINEST,
               "Returning session object back to pool :" + serverConfig.getName());
-          pool.returnObject(serverConfig, api);
+          api.terminate();
+          pool.invalidateObject(serverConfig, api);
+          //pool.returnObject(serverConfig, api);
         }
       } catch (Exception e)
       {

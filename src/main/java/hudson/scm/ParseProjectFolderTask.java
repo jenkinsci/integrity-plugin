@@ -69,7 +69,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
         LOGGER.warning("Parse Folder Task: Skipping " + entryType + " " + wi.getId());
       } else
       {
-        try
+        try(StringReader reader = new StringReader(""))
         {
           // Save the configuration path for the current subproject, using the canonical path name
           pjConfigHash.put(wi.getField(IAPIFields.NAME).getValueAsString(), wi.getId());
@@ -86,7 +86,7 @@ public class ParseProjectFolderTask implements Callable<Map<String, String>>
           LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Folder Task: MemberID: " + wi.getId());
           insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis())); // Timestamp
-          insert.setClob(5, new StringReader("")); // Description
+          insert.setClob(5, reader); // Description
           insert.setString(6, wi.getId()); // ConfigPath
           LOGGER.log(Level.FINEST, Thread.currentThread().getName()
               + " :: Parse Folder Task: ConfigPath: " + wi.getId());

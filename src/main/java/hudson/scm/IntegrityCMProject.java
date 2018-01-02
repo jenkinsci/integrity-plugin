@@ -711,11 +711,11 @@ public class IntegrityCMProject implements Serializable
     for (Future<Void> f : futures)
     {
     	try {
-			// Wait for threads for finish processing, giving 5 minutes atmost for each thread.
-			f.get(5, TimeUnit.MINUTES);
-		} catch (TimeoutException e) {
-			LOGGER.log(Level.SEVERE, "Timeout Exception caught while parsing Derby objects:: ", e);
-		}
+          // Wait for threads for finish processing, giving 5 minutes atmost for each thread.
+          f.get(5, TimeUnit.MINUTES);
+        } catch (TimeoutException e) {
+          LOGGER.log(Level.SEVERE, "Timeout Exception caught while parsing Derby objects:: ", e);
+        }
     }
 
     LOGGER.log(Level.INFO, "Parsing project " + this.getConfigurationPath() + " complete!");

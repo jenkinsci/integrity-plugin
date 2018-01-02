@@ -78,6 +78,7 @@ import static hudson.scm.PollingResult.NO_CHANGES;
  */
 public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 {
+
   /**
    * Create a constructor that takes non-transient fields, and add the
    * annotation @DataBoundConstructor to it. Using the annotation helps the Stapler class to find
@@ -252,8 +253,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           run.getNumber());
     } catch (SQLException sqlex)
     {
-      LOGGER.severe("SQL Exception caught...");
-      listener.getLogger().println("A SQL Exception was caught!");
+      LOGGER.severe(SQL_EXCEPTION_CAUGHT);
+      listener.getLogger().println(SQL_EXCEPTION_CAUGHT);
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     }
@@ -393,11 +394,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     if(localClient){
       listener.getLogger().println("[Local Client] Checkout started using local client for :" + configPath);
-      checkoutUsingLocalClient(run, launcher, workspace, listener, changeLogFile, baseline);
+      checkoutUsingLocalClient(run, workspace, listener, changeLogFile);
     }
     else{
       listener.getLogger().println("Checkout started using remote client for :" + configPath);
-      checkoutUsingRemoteClient(run, launcher, workspace, listener, changeLogFile, baseline);
+      checkoutUsingRemoteClient(run, workspace, listener, changeLogFile, baseline);
     }
     // Log the completion...
     LOGGER.fine("Completed execution of checkout() routine...!");
@@ -406,15 +407,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   /**
    * Run checkout using a local Client
    * @param run
-   * @param launcher
    * @param workspace
    * @param listener
    * @param changeLogFile
-   * @param baseline
    */
-  private void checkoutUsingLocalClient(Run<?, ?> run, Launcher launcher,
-                  FilePath workspace, TaskListener listener, File changeLogFile,
-                  SCMRevisionState baseline) throws AbortException
+  private void checkoutUsingLocalClient(Run<?, ?> run,
+                  FilePath workspace, TaskListener listener, File changeLogFile) throws AbortException
   {
     IntegrityConfigurable coSettings = getProjectSettings();
     SandboxUtils sboxUtil = new SandboxUtils(coSettings, listener);
@@ -427,13 +425,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
-
+      listener.getLogger()
+                      .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
       IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(
                       sboxUtil, siProject, resolvedAltWkspace, listener, lineTerminator);
       if (workspace.act(createSandboxTask))
       {
-        listener.getLogger()
-                        .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task..");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
@@ -442,40 +439,39 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
         } else
-            throw new AbortException("[Local Client] Failed to resync workspace!");
+            throw new AbortException("[LocalClient] Failed to resync workspace!");
       } else
       {
-        throw new AbortException("[Local Client] Failed to create sandbox!");
+        throw new AbortException("[LocalClient] Failed to create sandbox!");
       }
+      listener.getLogger()
+                      .println("[LocalClient] Checkout complete!");
     } catch (APIException aex) {
-      LOGGER.severe("[Local Client] API Exception caught...");
+      LOGGER.log(Level.SEVERE, "[Local Client] API Exception caught", aex);
       listener.getLogger().println("[Local Client] An API Exception was caught!");
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
       listener.getLogger().println(eh.getMessage());
-      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
+      listener.getLogger().println(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
       throw new AbortException("[Local Client] Caught Integrity APIException!");
     } catch (Exception e) {
       e.printStackTrace(listener.getLogger());
       LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);
       throw new AbortException("[Local Client] Exception occured during checkout! "+ e.getMessage());
-    }/*finally {
-      listener.getLogger().println("[Local Client] Client termination response :"+sboxUtil.terminateClient());
-    }*/
+    }
   }
 
   /**
    * Run checkout using a remote integration point
    * @param run
-   * @param launcher
    * @param workspace
    * @param listener
    * @param changeLogFile
    * @param baseline
    * @throws AbortException
    */
-  private void checkoutUsingRemoteClient(Run<?, ?> run, Launcher launcher,
+  private void checkoutUsingRemoteClient(Run<?, ?> run,
                   FilePath workspace, TaskListener listener, File changeLogFile,
                   SCMRevisionState baseline) throws AbortException
   {
@@ -524,12 +520,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         {
           if (CPBasedMode && !cleanCopy)
           {
-            Set<String> projectCPIDs = new HashSet<String>();
             Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
             if (lastSuccjob != null)
             {
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
-              projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
+              Set<String> projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
 
               IntegrityCMMember.viewCP(coSettings, projectCPIDs,
                               job.getFullName().replace("/", "_"), membersInCP);
@@ -606,13 +601,13 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
       listener.getLogger().println(eh.getMessage());
-      LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
-      listener.getLogger().println(eh.getCommand() + " returned exit code " + eh.getExitCode());
+      LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
+      listener.getLogger().println(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
       throw new AbortException("Caught Integrity APIException!");
     } catch (SQLException sqlex)
     {
-      LOGGER.severe("SQL Exception caught...");
-      listener.getLogger().println("A SQL Exception was caught!");
+      LOGGER.severe(SQL_EXCEPTION_CAUGHT);
+      listener.getLogger().println(SQL_EXCEPTION_CAUGHT);
       listener.getLogger().println(sqlex.getMessage());
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
       throw new AbortException("Caught Derby SQLException!");
@@ -635,7 +630,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    *  Initialize the project to be used with Local /Remote Client connections
    * @param run
    * @param listener
-   * @param projectCacheTable
    * @return
    * @throws Exception
    */
@@ -667,11 +661,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   private void writeChangeLog(Run<?, ?> run, TaskListener listener, File changeLogFile,
 			Map<CPInfo, List<CPMember>> membersInCP, IntegrityCMProject siProject,
 			List<Hashtable<CM_PROJECT, Object>> projectMembersList) throws IOException {
-		PrintWriter writer = null;
-		try {
+		try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
 			listener.getLogger().println("Writing build change log...");
 			if (changeLogFile != null) {
-				writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"));
 				if (CPBasedMode) {
 					writer.println(siProject.getChangeLogforCPMode(String.valueOf(run.getNumber()), membersInCP));
 				} else {
@@ -683,10 +675,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 			// else {
 			//	createEmptyChangeLog(changeLogFile, listener, "changelog");
 			//}
-		} finally {
-			if (writer != null) {
-				writer.close();
-			}
 		}
 	}
 
@@ -744,7 +732,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
     if(localClient){
       try {
-        return getPollingResultForLocalClient(job, launcher, workspace, listener, baseline);
+        return getPollingResultForLocalClient(job, workspace, listener, baseline);
       } catch (Exception e) {
         listener.getLogger().println("[Local Client] Exception while Polling workspace :"+ e.getMessage());
         e.printStackTrace(listener.getLogger());
@@ -756,7 +744,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     }
   }
 
-  private PollingResult getPollingResultForLocalClient(Job<?, ?> job, Launcher launcher,
+  private PollingResult getPollingResultForLocalClient(Job<?, ?> job,
                   FilePath workspace, TaskListener listener,
                   SCMRevisionState baseline)
                   throws Exception
@@ -810,13 +798,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 			  projectCacheTable);
 	  Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
 	  if (CPBasedMode) {
-	    Set<String> projectCPIDs = new HashSet<String>();
 	    Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
 	    if (lastSuccjob != null) {
 	      IntegrityConfigurable coSettings = this.getProjectSettings();
 	      Date lastSuccBuildDate = new Date(
 			      lastSuccjob.getStartTimeInMillis());
-	      projectCPIDs = getIntegrityProject().projectCPDiff(
+              Set<String> projectCPIDs = getIntegrityProject().projectCPDiff(
 			      this.getProjectSettings(), lastSuccBuildDate);
 	      IntegrityCMMember.viewCP(coSettings, projectCPIDs,
 			      job.getFullName().replace("/", ""),
@@ -853,16 +840,16 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	  ExceptionHandler eh = new ExceptionHandler(aex);
 	  LOGGER.severe(eh.getMessage());
 	  listener.getLogger().println(eh.getMessage());
-	  LOGGER.fine(eh.getCommand() + " returned exit code " +
+	  LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE +
 			  eh.getExitCode());
 	  listener.getLogger()
-			  .println(eh.getCommand() + " returned exit code " +
+			  .println(eh.getCommand() + RETURNED_EXIT_CODE +
 					  eh.getExitCode());
 	  aex.printStackTrace();
 	  return PollingResult.NO_CHANGES;
 	} catch (SQLException sqlex) {
-	  LOGGER.severe("SQL Exception caught...");
-	  listener.getLogger().println("A SQL Exception was caught!");
+	  LOGGER.severe(SQL_EXCEPTION_CAUGHT);
+	  listener.getLogger().println(SQL_EXCEPTION_CAUGHT);
 	  listener.getLogger().println(sqlex.getMessage());
 	  LOGGER.log(Level.SEVERE, "SQLException", sqlex);
 	  return PollingResult.NO_CHANGES;
@@ -923,7 +910,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       // Initialize our derby environment
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
-          Jenkins.getInstance().getRootDir().getAbsolutePath());;
+          Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
       LOGGER.info("Creating Integrity SCM cache db connection...");
       dataSource = DerbyUtils

@@ -4,19 +4,16 @@
  *******************************************************************************/
 package hudson.scm;
 
-import java.sql.SQLException;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-
 import hudson.Extension;
 import hudson.model.Job;
 import hudson.model.Run;
-import hudson.model.TaskListener;
 import hudson.model.listeners.RunListener;
 import hudson.scm.IntegritySCM.DescriptorImpl;
-import hudson.scm.api.session.ISessionPool;
+import org.kohsuke.stapler.DataBoundConstructor;
+
+import java.sql.SQLException;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * This class implements the onDeleted event when a build is deleted The sole purpose is to ensure
@@ -52,33 +49,6 @@ public class IntegrityRunListenerImpl<R extends Run<?, ?>> extends RunListener<R
     }
 
     LOGGER.fine("RunListenerImpl.onDeleted() execution complete!");
-  }
-
-  /*
-   * Clear the session pool of APISession objects post the build run
-   * 
-   * (non-Javadoc)
-   * 
-   * @see hudson.model.listeners.RunListener#onCompleted(hudson.model.Run,
-   * hudson.model.TaskListener)
-   */
-  @Override
-  public void onCompleted(R r, TaskListener listener)
-  {
-    // TODO Auto-generated method stub
-    super.onCompleted(r, listener);
-
-    try
-    {
-        LOGGER.log(Level.FINEST, "Clearing Integrity Session Pool");
-        ISessionPool.getInstance().getPool().clear();
-    } catch (UnsupportedOperationException e)
-    {
-      LOGGER.log(Level.SEVERE, e.getMessage(), e);
-    } catch (Exception e)
-    {
-      LOGGER.log(Level.SEVERE, e.getMessage(), e);
-    };
   }
 
 }

@@ -12,10 +12,7 @@ import java.util.logging.Logger;
 import org.apache.commons.pool2.PooledObject;
 import org.apache.commons.pool2.impl.DefaultEvictionPolicy;
 import org.apache.commons.pool2.impl.EvictionConfig;
-
 import com.mks.api.response.APIException;
-import com.mks.api.response.InterruptedException;
-
 import hudson.scm.IntegritySCM;
 
 /**
@@ -42,12 +39,6 @@ public class SessionPoolEvictionPolicy extends DefaultEvictionPolicy<ISession>
       try
       {
         session.ping();
-      } catch (InterruptedException e)
-      {
-        LOGGER.log(Level.FINEST,
-            "Eviction Thread: Failed to ping Integrity Session Pool object : " + session.toString(),
-            e);
-        return true;
       } catch (APIException e)
       {
         LOGGER.log(Level.FINEST,
