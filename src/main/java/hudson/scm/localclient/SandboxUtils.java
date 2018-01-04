@@ -2,10 +2,7 @@ package hudson.scm.localclient;
 
 import com.mks.api.Command;
 import com.mks.api.Option;
-import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
-import com.mks.api.response.WorkItem;
-import com.mks.api.response.WorkItemIterator;
+import com.mks.api.response.*;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.scm.AbstractIntegritySCM;
@@ -114,110 +111,75 @@ public class SandboxUtils implements Serializable
 	return false;
     }
 
-    /**
-     * Verifies the sandbox associated with the workspace.
-     *
-     * @param session
-     * @param siProject
-     * @param workspace
-     */
     protected boolean verifySandbox(ISession session,
 		    IntegrityCMProject siProject,
 		    FilePath workspace) throws APIException
     {
+	boolean sandboxToBeDropped = false;
+	Response response = null;
 	session.checkifAlive();
 	listener.getLogger()
-			.println("[LocalClient] Executing Sandbox Verification ");
-	boolean sandboxExists = false;
-	Command cmd = new Command(Command.SI, "sandboxes");
-	listener.getLogger()
-			.println("[LocalClient] Executing si sandboxes ");
-	Response response = session.runCommand(cmd);
-	listener.getLogger()
-			.println("[LocalClient] si sandboxes response:" +
-					Objects.toString(
-							response.getExitCode(),
-							null));
-	listener.getLogger()
-			.printf("[LocalClient] Searching Sandbox: : %s, for Project Config: [%s], Variant: [%s], Build Revision: [%s]" +
-							AbstractIntegritySCM.NL,
-					getQualifiedWorkspaceName(
-							workspace),
-					siProject.getProjectName(),
-					siProject.getVariantName(),
-					siProject.getProjectRevision());
-	if (response != null && response.getExitCode() == 0) {
+			.println("[LocalClient] Checking sandbox exists for :"+siProject.getConfigurationPath());
+	Command cmd = new Command(Command.SI, "sandboxinfo");
+	cmd.addOption(new Option(IAPIOption.SANDBOX,
+			getQualifiedWorkspaceName(workspace).concat("/project.pj")));
+	try {
+	    response  = session.runCommand(cmd);
+	} catch (CommandException e) {
+	    listener.getLogger().println("[LocalClient] "+e.getMessage());
+	    return true;
+	}
+	if(response !=null && response.getExitCode() == 0){
+	    // Determine if the sandbox is the on the same backing project as the jenkins project
 	    WorkItemIterator it = response.getWorkItems();
-	    while (it.hasNext()) {
-		WorkItem wi = it.next();
-		String sBoxname = wi.getField("SandboxName")
-				.getValueAsString();
-		String projectName = wi.getField("ProjectName")
-				.getValueAsString();
-		listener.getLogger()
-				.printf("[LocalClient] Evaluating Sandbox: %s for project: %s - [%s] - [%s]" +
-								AbstractIntegritySCM.NL,
-						sBoxname, projectName,
-						Objects.toString(
-								wi.getField(DEVELOPMENT_PATH)
-										.getValueAsString(),
-								""),
-						Objects.toString(
-								wi.getField(BUILD_REVISION)
-										.getValueAsString(),
-								""));
-		if (sBoxname.replace(PROJECT_PJ, "").equalsIgnoreCase(
-				getQualifiedWorkspaceName(workspace))
-				&& projectName.equals(
-				siProject.getProjectName())
-				&& (siProject.isVariant() &&
-				Objects.equals(siProject.getVariantName(),
-						wi.getField(DEVELOPMENT_PATH)
-								.getValueAsString()))
-				&& (siProject.isBuild() &&
-				Objects.equals(siProject
-								.getProjectRevision(),
-						wi.getField(BUILD_REVISION)
-								.getItem()
-								.getId()))) {
+	    WorkItem wi = it.next();
+	    String projectName = wi.getField("ProjectName")
+			    .getValueAsString();
+	    String devPath = wi.contains(DEVELOPMENT_PATH)?wi.getField(DEVELOPMENT_PATH).getValueAsString():"";
+	    String buildRev = wi.contains(BUILD_REVISION)?wi.getField(BUILD_REVISION).getValueAsString():"";
+
+	    listener.getLogger()
+			    .println("[LocalClient] Existing workspace sandbox :"+wi.getField("sandboxName").getValueAsString());
+	    listener.getLogger()
+			    .println("[LocalClient] Checking sandbox. Sandbox Project: "+ projectName
+					    + " & Jenkins project: "+siProject.getProjectName());
+	    if(Objects.equals(siProject.getProjectName(), projectName)) {
+		if (siProject.isVariant()) {
 		    listener.getLogger()
-				    .printf("[LocalClient] Found Existing Sandbox for Project:[%s], Sandbox: [%s], Variant: [%s], " +
-								    "Build: [%s], in Workspace: [%s]" +
-								    AbstractIntegritySCM.NL,
-						    projectName,
-						    sBoxname,
-						    Objects.toString(
-								    wi.getField(DEVELOPMENT_PATH)
-										    .getValueAsString(),
-								    ""),
-						    Objects.toString(
-								    wi.getField(BUILD_REVISION)
-										    .getValueAsString(),
-								    ""),
-						    getQualifiedWorkspaceName(
-								    workspace));
+				    .println("[LocalClient] Checking sandbox. Sandbox Variant: "+ devPath
+						    + " & Jenkins project variant: "+siProject.getVariantName());
+		    if(Objects.equals(siProject.getVariantName(), devPath))
+		    {
+		        // Same variant. Don't recreate sandbox
+			return false;
+		    } else {
+			sandboxToBeDropped = true;
+		    }
+		}
+		else if (siProject.isBuild()){
+		    listener.getLogger()
+				    .println("[LocalClient] Checking sandbox. Sandbox Revision: "+ buildRev
+						    + " & Jenkins project revision: "+siProject.getProjectRevision());
+		    if(Objects.equals(siProject
+				    .getProjectRevision(), buildRev))
+		    {
+			// Same revision. Don't recreate sandbox
+			return false;
+		    } else {
+			sandboxToBeDropped = true;
+		    }
+		} else {
 		    return false;
-		} else if (sBoxname.replace(PROJECT_PJ, "")
-				.equalsIgnoreCase(getQualifiedWorkspaceName(
-						workspace))) {
-		    listener.getLogger()
-				    .println("[LocalClient] Sandbox marked for deletion: " +
-						    sBoxname);
-		    sandboxExists = true;
 		}
 	    }
+	    else {
+		sandboxToBeDropped = true;
+	    }
+
+	    if(sandboxToBeDropped) {
+		return dropSandbox(session, workspace, siProject);
+	    }
 	}
-	//No existing match found! Drop the existing workspace sandbox if there are no matches
-	if (sandboxExists)
-	    return dropSandbox(session, workspace, siProject);
-	listener.getLogger()
-			.printf("[LocalClient] Sandbox not found in : %s, for Project Config: [%s], Variant: [%s], Build Revision: [%s]" +
-							AbstractIntegritySCM.NL,
-					getQualifiedWorkspaceName(
-							workspace),
-					siProject.getProjectName(),
-					siProject.getVariantName(),
-					siProject.getProjectRevision());
 	return true;
     }
 

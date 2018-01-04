@@ -910,7 +910,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       // Initialize our derby environment
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
-          Jenkins.getInstance().getRootDir().getAbsolutePath());;
+          Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
       LOGGER.info("Creating Integrity SCM cache db connection...");
       dataSource = DerbyUtils
