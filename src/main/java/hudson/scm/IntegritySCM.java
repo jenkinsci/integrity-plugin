@@ -3,53 +3,18 @@
  *******************************************************************************/
 package hudson.scm;
 
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.Serializable;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-
-import javax.servlet.ServletException;
-import javax.sql.ConnectionPoolDataSource;
-
-import hudson.scm.localclient.IntegrityCreateSandboxTask;
-import hudson.scm.localclient.IntegrityResyncSandboxTask;
-import hudson.scm.localclient.IntegrityViewSandboxTask;
-import hudson.scm.localclient.SandboxUtils;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-
-import com.mks.api.Command;
-import com.mks.api.MultiValue;
-import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
-import com.mks.api.response.WorkItem;
-import com.mks.api.response.WorkItemIterator;
-
+import static hudson.scm.PollingResult.BUILD_NOW;
+import static hudson.scm.PollingResult.NO_CHANGES;
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
+import hudson.model.ModelObject;
+import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.Job;
-import hudson.model.ModelObject;
 import hudson.model.Run;
-import hudson.model.TaskListener;
 import hudson.scm.IntegrityCMMember.CPInfo;
 import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
@@ -63,14 +28,48 @@ import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 import hudson.scm.browsers.IntegrityWebUI;
+import hudson.scm.localclient.IntegrityCreateSandboxTask;
+import hudson.scm.localclient.IntegrityResyncSandboxTask;
+import hudson.scm.localclient.IntegrityViewSandboxTask;
+import hudson.scm.localclient.SandboxUtils;
 import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
 import hudson.util.Secret;
+import hudson.util.ListBoxModel;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+
+import javax.servlet.ServletException;
+import javax.sql.ConnectionPoolDataSource;
+
 import jenkins.model.Jenkins;
 import net.sf.json.JSONObject;
 
-import static hudson.scm.PollingResult.BUILD_NOW;
-import static hudson.scm.PollingResult.NO_CHANGES;
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import com.mks.api.Command;
+import com.mks.api.MultiValue;
+import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and PTC Integrity
@@ -184,6 +183,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     this.checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
     this.checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
     this.configurationName = configurationName;
+    this.sandboxScope = "";
 
     // Initialize the Integrity URL
     initIntegrityURL();
@@ -428,13 +428,13 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger()
                       .println("[LocalClient] Clean Copy Requested :"+ cleanCopy);
       IntegrityCreateSandboxTask createSandboxTask = new IntegrityCreateSandboxTask(
-                      sboxUtil, siProject, resolvedAltWkspace, listener, lineTerminator);
+                      sboxUtil, siProject, resolvedAltWkspace, listener, lineTerminator, sandboxScope);
       if (workspace.act(createSandboxTask))
       {
         listener.getLogger()
                         .println("[LocalClient] Starting Resync Task..");
         IntegrityResyncSandboxTask resyncSandboxTask = new IntegrityResyncSandboxTask(
-                        sboxUtil, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, resolvedAltWkspace, includeList, excludeList, listener);
+                        sboxUtil, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, resolvedAltWkspace, includeList, excludeList, listener, sandboxScope);
         if (workspace.act(resyncSandboxTask)) {
           listener.getLogger()
                           .println("[LocalClient] Resync SandBox Success!");
@@ -461,7 +461,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       throw new AbortException("[Local Client] Exception occured during checkout! "+ e.getMessage());
     }
   }
-
+  
   /**
    * Run checkout using a remote integration point
    * @param run

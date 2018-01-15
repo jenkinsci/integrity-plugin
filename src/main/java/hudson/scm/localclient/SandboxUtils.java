@@ -1,8 +1,6 @@
 package hudson.scm.localclient;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
-import com.mks.api.response.*;
+import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
 import hudson.FilePath;
 import hudson.model.TaskListener;
 import hudson.scm.AbstractIntegritySCM;
@@ -13,10 +11,22 @@ import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIOption;
 import hudson.scm.api.session.ISession;
 
-import java.io.*;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.io.UnsupportedEncodingException;
 import java.util.Objects;
 
-import static hudson.scm.api.session.APISession.createLocalIntegrationPoint;
+import com.mks.api.Command;
+import com.mks.api.Option;
+import com.mks.api.response.APIException;
+import com.mks.api.response.CommandException;
+import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
 
 /**
  * Created by asen on 07-06-2017.
@@ -69,18 +79,42 @@ public class SandboxUtils implements Serializable
     protected boolean verifyCreateSandbox(
 		    ISession session,
 		    IntegrityCMProject siProject,
-		    FilePath workspace, String lineTerminator) throws APIException
+		    FilePath workspace, String lineTerminator, String sandboxScope) throws APIException
     {
-	if(verifySandbox(session, siProject, workspace)) {
-	    return createSandbox(session, siProject, workspace, lineTerminator);
-	}
-	/* Sandbox already exists */
-	return true;
+		if(verifySandbox(session, siProject, workspace)) {
+		    return createSandbox(session, siProject, workspace, lineTerminator, sandboxScope);
+		} else {
+			return configureSandbox(session, siProject, workspace, lineTerminator, sandboxScope);
+		}
+    }
+    
+    private boolean configureSandbox(ISession session,
+		    IntegrityCMProject siProject, FilePath workspace,
+		    String lineTerminator, String sandboxScope) throws APIException
+    {
+		session.checkifAlive();
+		listener.getLogger().println(
+				"[LocalClient] Executing ConfigureSandbox :"
+						+ getQualifiedWorkspaceName(workspace));
+		Command cmd = new Command(Command.SI, "configuresandbox");
+		cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR, lineTerminator));
+		if (sandboxScope != null && !sandboxScope.isEmpty()) {
+			setSandboxScope(sandboxScope, cmd);
+		}
+		cmd.addSelection(getQualifiedWorkspaceName(workspace).concat(PROJECT_PJ));
+		Response response = session.runCommand(cmd);
+		if (response != null) {
+			listener.getLogger().println(
+					"[LocalClient] ConfigureSandbox response:"
+							+ response.getExitCode());
+			return response.getExitCode() == 0;
+		}
+		return false;
     }
 
     private boolean createSandbox(ISession session,
 		    IntegrityCMProject siProject, FilePath workspace,
-		    String lineTerminator) throws APIException
+		    String lineTerminator, String sandboxScope) throws APIException
     {
 	session.checkifAlive();
 	listener.getLogger()
@@ -92,6 +126,9 @@ public class SandboxUtils implements Serializable
 			siProject.getProjectName()));
 	cmd.addOption(new Option(IAPIOption.LINE_TERMINATOR,
 			lineTerminator));
+	if(sandboxScope != null && !sandboxScope.isEmpty()){
+		setSandboxScope(sandboxScope, cmd);
+	}
 	// Don't populate sandbox here. Doing it on resync
 	cmd.addOption(new APIOption("nopopulate"));
 	if (siProject.isVariant())
@@ -111,6 +148,17 @@ public class SandboxUtils implements Serializable
 	return false;
     }
 
+	private void setSandboxScope(String sandboxScope, Command cmd) {
+		String[] sandboxScopeAttributes = sandboxScope.split(" && ");
+		if(sandboxScopeAttributes.length == 1){
+			cmd.addOption(new Option(IAPIOption.SCOPE,sandboxScope));
+		} else {
+			for(int counter = 0; counter < sandboxScopeAttributes.length; counter++){
+				cmd.addOption(new Option(IAPIOption.SCOPE,sandboxScopeAttributes[counter].trim()));
+			}
+		}
+	}
+
     protected boolean verifySandbox(ISession session,
 		    IntegrityCMProject siProject,
 		    FilePath workspace) throws APIException
@@ -122,7 +170,7 @@ public class SandboxUtils implements Serializable
 			.println("[LocalClient] Checking sandbox exists for :"+siProject.getConfigurationPath());
 	Command cmd = new Command(Command.SI, "sandboxinfo");
 	cmd.addOption(new Option(IAPIOption.SANDBOX,
-			getQualifiedWorkspaceName(workspace).concat("/project.pj")));
+			getQualifiedWorkspaceName(workspace).concat(PROJECT_PJ)));
 	try {
 	    response  = session.runCommand(cmd);
 	} catch (CommandException e) {
@@ -195,7 +243,7 @@ public class SandboxUtils implements Serializable
 	Command cmd = new Command(Command.SI, "dropsandbox");
 	cmd.addOption(new Option("delete", "all"));
 	cmd.addOption(new APIOption("forceConfirm","yes"));
-	cmd.addSelection(getQualifiedWorkspaceName(workspace).replace("\\", "/").concat("/project.pj"));
+	cmd.addSelection(getQualifiedWorkspaceName(workspace).replace("\\", "/").concat(PROJECT_PJ));
 	session.checkifAlive();
 	Response response = session.runCommand(cmd);
 	if((response != null) && (response.getExitCode() == 0)){
@@ -227,7 +275,7 @@ public class SandboxUtils implements Serializable
 		    ISession session, FilePath workspace,
 		    boolean cleanCopy, boolean deleteNonMembers,
 		    boolean restoreTimestamp, File changeLogFile,
-		    String includeList, String excludeList)
+		    String includeList, String excludeList, String sandboxScope)
 		    throws APIException, FileNotFoundException,
 		    UnsupportedEncodingException
     {
@@ -246,7 +294,8 @@ public class SandboxUtils implements Serializable
 	} else {
 	    cmd.addOption(new Option("filter", "changed:all"));
 	}
-	if (deleteNonMembers) {
+	// Either deleteNonMembers is checked OR scope is defined. In both cases, remove out of scope members.
+	if (deleteNonMembers || (sandboxScope != null && !sandboxScope.isEmpty())) {
 	    cmd.addOption(new APIOption("removeOutOfScope"));
 	}
 	if (restoreTimestamp) {

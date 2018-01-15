@@ -2,9 +2,11 @@ package hudson.scm.localclient;
 
 import hudson.model.*;
 import hudson.model.queue.QueueTaskFuture;
+import hudson.scm.IntegritySCM;
 import hudson.scm.IntegritySCMTest;
 import hudson.scm.PollingResult;
 import hudson.triggers.SCMTrigger;
+
 import org.apache.commons.io.FileUtils;
 import org.junit.Before;
 import org.junit.Test;
@@ -12,6 +14,7 @@ import org.junit.Test;
 import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileReader;
+import java.util.List;
 import java.util.Scanner;
 import java.util.Set;
 
@@ -23,7 +26,8 @@ import static org.junit.Assert.*;
  */
 public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
 {
-    @Before
+
+	@Before
     public void setUp() throws Exception {
         super.setUp();
 	createDevPath();
@@ -223,5 +227,267 @@ public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
 	// Assert that after build, file doesn't exist in in workspace
 	assertFalse((new File(
 			String.valueOf(build.getWorkspace().child(fileName))).isFile()));
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForFileType() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(TYPE_TEXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB0_MBR_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateScopedSandboxForSpecificMemberName() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(NAME_MBR_1_0_0_0_TXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateScopedSandboxForWildCard() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope("name:*.txt");
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForMemberRevLabel() throws Exception
+    {
+	addLabel("YourLabel1", "#/JenkinsBulkProject1#sub0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope("memberrevlabellike:YourLabel1");
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB0_MBR_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForAnyRevLabel() throws Exception
+    {
+    addLabel("YourLabel11", "#/JenkinsBulkProject1#sub0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope("memberrevlabellike:YourLabel11");
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child("sub0\\mbr-0-0.txt"))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForSubProject() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(SUBPROJECT_SUB1_SUB1_0_SUB1_0_0);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForAttrAny() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(ANY);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateBlankVariantScopedSandbox() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(EMPTY_STRING);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+
+    @Test
+    public void testReconfigureVariantBlankScopedSandbox() throws Exception
+    {
+	build = build(localClientVariantProject, Result.SUCCESS);
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(EMPTY_STRING);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testReconfigureVariantScopedSandbox() throws Exception
+    {
+    addLabel("Label2", "#/JenkinsBulkProject1#sub0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(ANYREVLABELLIKE_LABEL2);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB0_MBR_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+	
+	addLabel("MyLabel", "#/JenkinsBulkProject1#sub0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(MEMBERREVLABELLIKE_MY_LABEL);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB0_MBR_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+	
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(TYPE_TEXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB0_MBR_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForDifferentMembersOfSameProject() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(NAME_MBR_1_0_0_0_TXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(NAME_MBR_1_0_0_1_TXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForMultipleSubProject() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(MULTIPLE_PROJECTS);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForInvalidScopeValue() throws Exception
+    {
+		// Change the sandbox Scope
+		String scopeName = "inValidScope";
+		((IntegritySCM) localClientVariantProject.getScm()).setSandboxScope(scopeName);
+		localClientVariantProject.save();
+		build = build(localClientVariantProject, Result.FAILURE);
+		List<String> log = build.getLog(200);
+		assertTrue(log
+				.contains("[LocalClient] IntegrityCreateSandboxTask Exception Caught : Failed to create sandbox : MKS124812: Unknown filter name: "
+						+ scopeName));
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForPathAttribute() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(WAILDCARD_SCOPE_ATTR);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_1_MBR_1_0_1_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateVariantScopedSandboxForANDOperation() throws Exception
+    {
+    addLabel("QQQQ", "#/JenkinsBulkProject1#sub1/sub1-0/sub1-0-0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(SCOPE_WITH_AND_OPERATOR); 
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT2))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testReconfigureVariantScopedSandboxForANDOperation() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(NAME_MBR_1_2_4_0_TXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_2_4_MBR_1_2_4_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+	
+	addLabel("QQQQ", "#/JenkinsBulkProject1#sub1-2-2/sub1-2-2-1");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+	
+	addLabel("MyLabel", "#/JenkinsBulkProject1#sub0");
+	// Change the sandbox Scope
+	((IntegritySCM)localClientVariantProject.getScm()).setSandboxScope(MEMBERREVLABELLIKE_MY_LABEL);
+	localClientVariantProject.save();
+	build = build(localClientVariantProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+	           String.valueOf(build.getWorkspace().child(SUB0_MBR_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+	           String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
     }
 }

@@ -4,12 +4,17 @@
  *******************************************************************************/
 package hudson.scm;
 
-import com.mks.api.Command;
-import com.mks.api.Option;
-import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.assertNotNull;
+import static org.junit.Assert.assertTrue;
 import hudson.Functions;
-import hudson.model.*;
+import hudson.model.FreeStyleBuild;
+import hudson.model.Result;
+import hudson.model.TaskListener;
+import hudson.model.Cause;
+import hudson.model.Computer;
+import hudson.model.FreeStyleProject;
+import hudson.model.Label;
 import hudson.remoting.VirtualChannel;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
@@ -17,13 +22,6 @@ import hudson.slaves.DumbSlave;
 import hudson.slaves.SlaveComputer;
 import hudson.triggers.SCMTrigger;
 import hudson.util.StreamTaskListener;
-import org.junit.Before;
-import org.junit.BeforeClass;
-import org.junit.Rule;
-import org.junit.Test;
-import org.junit.rules.TemporaryFolder;
-import org.jvnet.hudson.test.JenkinsRule;
-import org.jvnet.hudson.test.TestEnvironment;
 
 import java.io.File;
 import java.io.IOException;
@@ -34,7 +32,19 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
-import static org.junit.Assert.*;
+import org.junit.Before;
+import org.junit.BeforeClass;
+import org.junit.Rule;
+import org.junit.Test;
+import org.junit.rules.ExpectedException;
+import org.junit.rules.TemporaryFolder;
+import org.jvnet.hudson.test.JenkinsRule;
+import org.jvnet.hudson.test.TestEnvironment;
+
+import com.mks.api.Command;
+import com.mks.api.Option;
+import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
 
 /**
  *  These integration tests necessitate a local client installation with sample data installed
@@ -118,6 +128,29 @@ public class IntegritySCMTest
     protected static ExecutorService singleThreadExecutor;
     protected DumbSlave slave0;
     protected DumbSlave slave1;
+    protected static final String ANY = "any";
+    protected static final String SUBPROJECT_SUB1_SUB1_0_SUB1_0_0 = "subproject:#sub1#sub1-0#sub1-0-0";
+	protected static final String PATH_SUB1_0_0 = "path:sub1-0-0";
+	protected static final String ANYREVLABELLIKE_LABEL2 = "anyrevlabellike:Label2";
+	protected static final String MEMBERREVLABELLIKE_MY_LABEL = "memberrevlabellike:MyLabel";
+	protected static final String NAME_MBR_1_0_0_0_TXT = "name:mbr-1-0-0-0.txt";
+	protected static final String TYPE_TEXT = "type:text";
+	protected static final String EMPTY_STRING = "";
+	protected static final String SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT = "sub1\\sub1-0\\sub1-0-0\\mbr-1-0-0-0.txt";
+	protected static final String SUB0_MBR_0_0_TXT = "sub0\\mbr-0-0.txt";
+	protected static final String JAVA_FILE_JAVA = "JavaFile.java";
+	protected static final String SUB0_MBR_0_1_TXT = "sub0\\mbr-0-1.txt";
+	protected static final String SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_1_TXT = "sub1\\sub1-0\\sub1-0-0\\mbr-1-0-0-1.txt";
+	protected static final String NAME_MBR_1_0_0_1_TXT = "name:mbr-1-0-0-1.txt";
+	protected static final String MULTIPLE_PROJECTS = "subproject:#sub1#sub1-0#sub1-0-0,subproject:#sub1-2-2#sub1-2-2-0";
+	protected static final String SUB1_SUB1_0_SUB1_0_1_MBR_1_0_1_0_TXT = "sub1\\sub1-0\\sub1-0-1\\mbr-1-0-1-0.txt";
+	protected static final String WAILDCARD_SCOPE_ATTR = "path:*sub1-0-1";
+	protected static final String SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT2 = "sub1\\sub1-0\\sub1-0-0\\mbr-1-0-0-0.txt";
+	protected static final String SCOPE_WITH_AND_OPERATOR = "memberrevlabellike:QQQQ && name:mbr-1-0-0-0.txt";
+	protected static final String NAME_MBR_1_2_4_0_TXT = "name:mbr-1-2-4-0.txt";
+	protected static final String SUB1_2_4_MBR_1_2_4_0_TXT = "sub1-2-4\\mbr-1-2-4-0.txt";
+	protected static final String MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT = "memberrevlabellike:QQQQ && name:mbr-1-2-2-1-0.txt";
+	protected static final String SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
 
     @BeforeClass
     public static void setupClass() throws Exception
@@ -348,5 +381,15 @@ public class IntegritySCMTest
 	    }
 	};
 	return singleThreadExecutor.submit(callable);
+    }
+    
+    protected void addLabel(String label, String projectConfgPath) throws APIException
+    {
+	assert session != null;
+	cmd = new Command(Command.SI, "addlabel");
+	cmd.addOption(new Option("label", label));
+	cmd.addOption(new Option("project", projectConfgPath));
+	response = session.runCommand(cmd);
+	assertEquals("Successfully added Label: "+label, response.getExitCode(),0);
     }
 }
