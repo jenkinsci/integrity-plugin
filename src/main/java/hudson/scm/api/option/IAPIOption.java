@@ -64,4 +64,5 @@ public interface IAPIOption
   public static final String TIMESTAMP_PREFIX = "ts=";
   public static final String SANDBOX = "sandbox";
   public static final String DEVPATH = "devpath";
+  public static final String SCOPE = "scope";
 }

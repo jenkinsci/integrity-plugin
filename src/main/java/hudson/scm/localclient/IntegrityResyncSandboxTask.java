@@ -25,13 +25,14 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
     private final String includeList;
     private final boolean restoreTimestamp;
     private final boolean deleteNonMembers;
+    private final String sandboxScope;
 
     public IntegrityResyncSandboxTask(SandboxUtils sboxUtil,
 		    boolean cleanCopy, boolean deleteNonMembers,
 		    boolean restoreTimestamp, File changeLogFile,
 		    String alternateWorkspace,
 		    String includeList, String excludeList,
-		    TaskListener listener)
+		    TaskListener listener, String sandboxScope)
     {
         this.alternateWorkspaceDir = alternateWorkspace;
         this.listener = listener;
@@ -42,6 +43,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         this.excludeList = excludeList;
         this.deleteNonMembers = deleteNonMembers;
         this.restoreTimestamp = restoreTimestamp;
+        this.sandboxScope = sandboxScope;
     }
 
     @Override
@@ -52,7 +54,7 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try (ISession session = sandboxUtil.getLocalAPISession()){
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
-            return sandboxUtil.resyncSandbox(session, workspace, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, includeList, excludeList);
+            return sandboxUtil.resyncSandbox(session, workspace, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, includeList, excludeList, sandboxScope);
         } catch (Exception e) {
 
             listener.getLogger()

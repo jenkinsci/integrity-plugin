@@ -126,4 +126,48 @@ public class IntegrityPipelineTest extends IntegritySCMTest
 	jenkinsRule.assertBuildStatusSuccess(build11.get());
 
     }
+    
+    @Test(timeout=60000000)
+    @WithTimeout(60000000)
+    public void testConcurrentPipelineBuildsWithScope() throws Exception
+    {
+	jenkinsRule.getInstance().getScm("IntegritySCM");
+	WorkflowJob wfJob= jenkinsRule.getInstance().createProject(WorkflowJob.class, "demo");
+	wfJob.setDefinition(new CpsFlowDefinition(
+			"node {\n" +
+					"    checkout(" +
+					"[$class: 'IntegritySCM', checkpointBeforeBuild: false, " +
+					"configPath: '"+successConfigPath+"', configurationName: 'test', " +
+					"serverConfig: 'test', localClient: true, sandboxScope:'"+NAME_MBR_1_0_0_0_TXT+"'])" +
+					"}"));
+
+	QueueTaskFuture<WorkflowRun> build1 = wfJob.scheduleBuild2(0);
+	build1.waitForStart();
+	QueueTaskFuture<WorkflowRun> build2 = wfJob.scheduleBuild2(0);
+	build2.waitForStart();
+	QueueTaskFuture<WorkflowRun> build3 = wfJob.scheduleBuild2(0);
+	build3.waitForStart();
+	QueueTaskFuture<WorkflowRun> build4 = wfJob.scheduleBuild2(0);
+	build4.waitForStart();
+	QueueTaskFuture<WorkflowRun> build5 = wfJob.scheduleBuild2(0);
+	build5.waitForStart();
+	QueueTaskFuture<WorkflowRun> build6 = wfJob.scheduleBuild2(0);
+	build6.waitForStart();
+	QueueTaskFuture<WorkflowRun> build7 = wfJob.scheduleBuild2(0);
+	build7.waitForStart();
+	QueueTaskFuture<WorkflowRun> build8 = wfJob.scheduleBuild2(0);
+	build8.waitForStart();
+	QueueTaskFuture<WorkflowRun> build9 = wfJob.scheduleBuild2(0);
+	build9.waitForStart();
+	QueueTaskFuture<WorkflowRun> build10 = wfJob.scheduleBuild2(0);
+	build10.waitForStart();
+	QueueTaskFuture<WorkflowRun> build11 = wfJob.scheduleBuild2(0);
+	build11.waitForStart();
+
+
+	jenkinsRule.assertBuildStatusSuccess(build1.get());
+	jenkinsRule.assertBuildStatusSuccess(build2.get());
+	jenkinsRule.assertBuildStatusSuccess(build3.get());
+	jenkinsRule.assertBuildStatusSuccess(build4.get());
+    }
 }
