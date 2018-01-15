@@ -22,18 +22,20 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
     private final SandboxUtils sandboxUtil;
     private final TaskListener listener;
     private final String lineTerminator;
+    private final String sandboxScope;
 
     public IntegrityCreateSandboxTask(
 		    SandboxUtils sboxUtil,
 		    IntegrityCMProject siProject,
 		    String alternateWorkspace,
-		    TaskListener listener, String lineTerminator)
+		    TaskListener listener, String lineTerminator, String sandboxScope)
     {
 	this.siProject = siProject;
 	this.alternateWorkspaceDir = alternateWorkspace;
 	this.listener = listener;
 	this.lineTerminator = lineTerminator;
 	this.sandboxUtil = sboxUtil;
+	this.sandboxScope = sandboxScope;
     }
 
     @Override
@@ -43,10 +45,10 @@ public class IntegrityCreateSandboxTask implements FilePath.FileCallable<Boolean
 	FilePath workspace = sandboxUtil.getFilePath(workspaceFile, alternateWorkspaceDir);
 	try (ISession session = sandboxUtil.getLocalAPISession()){
 	    return sandboxUtil.verifyCreateSandbox(session, siProject, workspace,
-			    lineTerminator);
+			    lineTerminator, sandboxScope);
 	} catch (Exception e) {
 	    listener.getLogger()
-			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getLocalizedMessage());
+			    .println("[LocalClient] IntegrityCreateSandboxTask Exception Caught : "+ e.getMessage());
 	    e.printStackTrace(listener.getLogger());
 	    return false;
 	}

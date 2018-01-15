@@ -64,6 +64,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
   protected int checkoutThreadPoolSize = DEFAULT_THREAD_POOL_SIZE;
   protected int checkoutThreadTimeout = DEFAULT_CHECKOUT_THREAD_TIMEOUT;
   protected boolean localClient;
+  protected String sandboxScope;
   protected static final String RETURNED_EXIT_CODE = " returned exit code ";
   protected static final String SQL_EXCEPTION_CAUGHT = "A SQL Exception caught.";
 
@@ -275,7 +276,17 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
     return configurationName;
   }
 
-  /**
+  public String getSandboxScope() {
+	return sandboxScope;
+  }
+
+  @DataBoundSetter
+  public void setSandboxScope(String sandboxScope) {
+	this.sandboxScope = sandboxScope;
+  }
+
+
+/**
    * Sets the Integrity SCM web browser
    * 
    * @param browser
