@@ -7,6 +7,7 @@ package hudson.scm;
 import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertNotNull;
 import static org.junit.Assert.assertTrue;
+import hudson.FilePath;
 import hudson.Functions;
 import hudson.model.FreeStyleBuild;
 import hudson.model.Result;
@@ -16,6 +17,7 @@ import hudson.model.Computer;
 import hudson.model.FreeStyleProject;
 import hudson.model.Label;
 import hudson.remoting.VirtualChannel;
+import hudson.scm.api.option.APIOption;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 import hudson.slaves.DumbSlave;
@@ -36,7 +38,6 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
 import org.junit.Test;
-import org.junit.rules.ExpectedException;
 import org.junit.rules.TemporaryFolder;
 import org.jvnet.hudson.test.JenkinsRule;
 import org.jvnet.hudson.test.TestEnvironment;
@@ -151,6 +152,7 @@ public class IntegritySCMTest
 	protected static final String SUB1_2_4_MBR_1_2_4_0_TXT = "sub1-2-4\\mbr-1-2-4-0.txt";
 	protected static final String MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT = "memberrevlabellike:QQQQ && name:mbr-1-2-2-1-0.txt";
 	protected static final String SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
+	protected static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
 
     @BeforeClass
     public static void setupClass() throws Exception
@@ -391,5 +393,44 @@ public class IntegritySCMTest
 	cmd.addOption(new Option("project", projectConfgPath));
 	response = session.runCommand(cmd);
 	assertEquals("Successfully added Label: "+label, response.getExitCode(),0);
+    }
+    
+    protected void dropSandbox(FilePath sandboxLocation) throws APIException
+    {
+	assert session != null;
+	cmd = new Command(Command.SI, "dropsandbox");
+	cmd.addOption(new Option("confirm"));
+	cmd.addOption(new APIOption("forceConfirm","yes"));
+	cmd.addOption(new Option("delete", "all"));
+	cmd.addSelection(getQualifiedWorkspaceName(sandboxLocation).replace("\\", "/").concat(PROJECT_PJ));
+	response = session.runCommand(cmd);
+    }
+    
+    static final class OsUtils
+    {
+	private static String OS = null;
+	public static String getOsName()
+	{
+	    if(OS == null) { OS = System.getProperty("os.name"); }
+	    return OS;
+	}
+	public static boolean isWindows()
+	{
+	    return getOsName().contains("Windows");
+	}
+
+	public static boolean isUnix() {
+	    return getOsName().contains("linux");
+	}
+
+	public static boolean isSolaris() {
+	    return getOsName().contains("solaris");
+	}
+    }
+    
+    private String getQualifiedWorkspaceName(FilePath workspace)
+    {
+	StringBuilder sbr = new StringBuilder(workspace.getRemote());
+	return sbr.toString();
     }
 }
