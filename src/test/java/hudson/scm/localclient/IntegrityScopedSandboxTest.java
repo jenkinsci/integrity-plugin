@@ -9,9 +9,19 @@ import hudson.scm.IntegritySCMTest;
 import java.io.File;
 import java.util.List;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
 
+import com.mks.api.response.APIException;
+
+/**
+ * Created by asen on 05-01-2018.
+ * Unit tests for scoped sandbox.
+ * 
+ * Note - You need to create a project structure using script file - /src/main/resources/hudson/scm/ProjectSetup/create_Project_WithSubsAnd_MembersCopy.ksh.
+ * Also need to create a Development Path named as DP_0.3813840334796077 on the project created using steps.
+ */
 public class IntegrityScopedSandboxTest extends IntegritySCMTest
 {
 
@@ -21,6 +31,12 @@ public class IntegrityScopedSandboxTest extends IntegritySCMTest
 	localClientProject = setupIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
 	localClientProjectCleanCopy = setupIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
+	
+	@After
+	public void cleanUp() throws APIException{
+		if(build != null)
+			dropSandbox(build.getWorkspace());
+	}
 
     @Test
     public void testCreateScopedSandboxForFileType() throws Exception

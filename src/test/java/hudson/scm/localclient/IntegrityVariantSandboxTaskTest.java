@@ -8,8 +8,11 @@ import hudson.scm.PollingResult;
 import hudson.triggers.SCMTrigger;
 
 import org.apache.commons.io.FileUtils;
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.mks.api.response.APIException;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -23,6 +26,9 @@ import static org.junit.Assert.*;
 
 /**
  * Created by asen on 20-06-2017.
+ * 
+ * Note - You need to create a project structure using script file - /src/main/resources/hudson/scm/ProjectSetup/create_Project_WithSubsAnd_MembersCopy.ksh.
+ * Also need to create a Development Path named as DP_0.3813840334796077 on the project created using steps.
  */
 public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
 {
@@ -35,6 +41,12 @@ public class IntegrityVariantSandboxTaskTest extends IntegritySCMTest
 	localClientVariantProjectCleanCopy = setupVariantIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
 
+	@After
+	public void cleanUp() throws APIException{
+		if(build != null)
+			dropSandbox(build.getWorkspace());
+	}
+	
     @Test
     public void testVariantSandboxCreateSuccessResync() throws Exception
     {
