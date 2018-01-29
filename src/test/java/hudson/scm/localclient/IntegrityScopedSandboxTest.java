@@ -65,6 +65,19 @@ public class IntegrityScopedSandboxTest extends IntegritySCMTest
     }
     
     @Test
+    public void testCreateScopedSandboxForExcludeSpecificMember() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localClientProject.getScm()).setSandboxScope("!name:mbr-1-0-0-0.txt");
+	localClientProject.save();
+	build = build(localClientProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
+    }
+    
+    @Test
     public void testCreateScopedSandboxForWildCard() throws Exception
     {
 	// Change the sandbox Scope

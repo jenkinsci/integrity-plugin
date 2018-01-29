@@ -149,6 +149,8 @@ public class SandboxUtils implements Serializable
     }
 
 	private void setSandboxScope(String sandboxScope, Command cmd) {
+		listener.getLogger().println(
+				"[LocalClient] Scoped Sandbox Attributes:" + sandboxScope);
 		String[] sandboxScopeAttributes = sandboxScope.split(" && ");
 		if(sandboxScopeAttributes.length == 1){
 			cmd.addOption(new Option(IAPIOption.SCOPE,sandboxScope));
