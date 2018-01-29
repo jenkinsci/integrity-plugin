@@ -90,7 +90,7 @@
         		checkUrl="'${rootURL}/scm/IntegritySCM/validCheckoutThreadTimeoutCheck?value='+escape(this.value)" default="10"/>
     	</f:entry>
     	
-    	<f:entry title="Scoped Sandbox" field="sandboxScope" help="/plugin/integrity-plugin/help-scopedSandbox.html">
+    	<f:entry title="Sandbox Scope" field="sandboxScope" help="/plugin/integrity-plugin/help-scopedSandbox.html">
             <f:textbox name="sandboxScope" value="${scm.sandboxScope}"/>
         </f:entry>
                 

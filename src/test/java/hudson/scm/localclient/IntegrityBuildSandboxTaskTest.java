@@ -13,12 +13,18 @@ import hudson.model.queue.QueueTaskFuture;
 import hudson.scm.IntegritySCM;
 import hudson.scm.IntegritySCMTest;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
+
+import com.mks.api.response.APIException;
 
 /**
  * Created by asen on 06-06-2017.
  * Integration Tests for Local Client Testing
+ * 
+ * Note - You need to create a project structure using script file - /src/main/resources/hudson/scm/ProjectSetup/create_Project_WithSubsAnd_MembersCopy.ksh.
+ * Also need to create a Development Path named as DP_0.3813840334796077 on the project created using steps.
  */
 public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
 {
@@ -29,6 +35,12 @@ public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
         localBuildClientProject = setupBuildIntegrityProjectWithLocalClientWithCheckpointOff(successConfigPath);
         localBuildClientProjectCleanCopy = setupBuildIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
+	
+	@After
+	public void cleanUp() throws APIException{
+		if(build != null)
+			dropSandbox(build.getWorkspace());
+	}
 
     @Test
     public void testSandboxWithMultipleBuilds() throws Exception
@@ -109,6 +121,19 @@ public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
             String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
 	assertFalse("File does not Exist in workspace!", new File(
             String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
+    }
+    
+    @Test
+    public void testCreateScopedSandboxForExcludeSpecificMember() throws Exception
+    {
+	// Change the sandbox Scope
+	((IntegritySCM)localBuildClientProject.getScm()).setSandboxScope("!name:mbr-1-0-0-0.txt");
+	localBuildClientProject.save();
+	build = build(localBuildClientProject, Result.SUCCESS);
+	assertTrue("File Exists in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_1_TXT))).isFile());
+	assertFalse("File does not Exist in workspace!", new File(
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT))).isFile());
     }
     
     @Test
