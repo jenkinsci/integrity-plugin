@@ -899,7 +899,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   {
     @Extension
     public static final DescriptorImpl INTEGRITY_DESCRIPTOR = new DescriptorImpl();
-    private ConnectionPoolDataSource dataSource;
+    private transient ConnectionPoolDataSource connectionPoolDataSource;
     private List<IntegrityConfigurable> configurations;
 
     public DescriptorImpl()
@@ -907,16 +907,21 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       super(IntegritySCM.class, IntegrityWebUI.class);
       configurations = new ArrayList<IntegrityConfigurable>();
       load();
+    }
+    
+    @Override
+    public void load() {
+      super.load();
 
       // Initialize our derby environment
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
           Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
       LOGGER.info("Creating Integrity SCM cache db connection...");
-      dataSource = DerbyUtils
+      connectionPoolDataSource = DerbyUtils
           .createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
       LOGGER.info("Creating Integrity SCM cache registry...");
-      DerbyUtils.createRegistry(dataSource);
+      DerbyUtils.createRegistry(connectionPoolDataSource);
 
       // Log the construction...
       LOGGER.fine("IntegritySCM DescriptorImpl() constructed!");
@@ -977,7 +982,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      */
     public ConnectionPoolDataSource getDataSource()
     {
-      return dataSource;
+      return connectionPoolDataSource;
     }
 
     /**
