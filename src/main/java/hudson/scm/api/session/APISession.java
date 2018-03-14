@@ -24,11 +24,12 @@ public class APISession implements ISession
   private static final Logger LOGGER = Logger
                   .getLogger(IntegritySCM.class.getSimpleName());
   // Store the API Version
-  public static final String VERSION = "4.13";
+  public static final String VERSION = "4.16";
   public static final int MAJOR_VERSION = 4;
-  public static final int MINOR_VERSION = 13;
+  public static final int MINOR_VERSION = 16;
   private static final String RETURNED_EXIT_CODE = " returned exit code ";
   private static final String API_EXCEPTION = "APIException";
+  public static final String PLUGIN_VERSION_PREFIX = "Jenkin_Plugin_";
   // Class variables used to create an API Session
   private String ipHostName;
   private int ipPort = 0;
@@ -142,7 +143,8 @@ public class APISession implements ISession
                                       MAJOR_VERSION, MINOR_VERSION);
     }
     // Create the Session
-    session = ip.createSession(userName, password);
+    String implementationVersion = getClass().getPackage().getImplementationVersion();
+    session = ip.createNamedSession(PLUGIN_VERSION_PREFIX + implementationVersion, null, userName, password);
     session.setTimeout(300000); // 15 Minutes
     session.setAutoReconnect(true);
   }

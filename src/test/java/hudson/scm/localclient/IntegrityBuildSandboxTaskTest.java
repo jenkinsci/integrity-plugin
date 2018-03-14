@@ -36,12 +36,6 @@ public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
         localBuildClientProjectCleanCopy = setupBuildIntegrityProjectWithLocalClientCleanCopyCheckpointOff(successConfigPath);
     }
 	
-	@After
-	public void cleanUp() throws APIException{
-		if(build != null)
-			dropSandbox(build.getWorkspace());
-	}
-
     @Test
     public void testSandboxWithMultipleBuilds() throws Exception
     {
@@ -346,7 +340,7 @@ public class IntegrityBuildSandboxTaskTest extends IntegritySCMTest
 	localBuildClientProject.save();
 	build = build(localBuildClientProject, Result.SUCCESS);
 	assertTrue("File Exists in workspace!", new File(
-            String.valueOf(build.getWorkspace().child(SUB1_2_4_MBR_1_2_4_0_TXT))).isFile());
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_2_SUB1_2_4_MBR_1_2_4_0_TXT))).isFile());
 	assertFalse("File does not Exist in workspace!", new File(
             String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
 	
