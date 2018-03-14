@@ -34,6 +34,7 @@ import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 
+import org.junit.After;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Rule;
@@ -149,7 +150,7 @@ public class IntegritySCMTest
 	protected static final String SUB1_SUB1_0_SUB1_0_0_MBR_1_0_0_0_TXT2 = "sub1\\sub1-0\\sub1-0-0\\mbr-1-0-0-0.txt";
 	protected static final String SCOPE_WITH_AND_OPERATOR = "memberrevlabellike:QQQQ && name:mbr-1-0-0-0.txt";
 	protected static final String NAME_MBR_1_2_4_0_TXT = "name:mbr-1-2-4-0.txt";
-	protected static final String SUB1_2_4_MBR_1_2_4_0_TXT = "sub1-2-4\\mbr-1-2-4-0.txt";
+	protected static final String SUB1_SUB1_2_SUB1_2_4_MBR_1_2_4_0_TXT = "sub1\\sub1-2\\sub1-2-4\\mbr-1-2-4-0.txt";
 	protected static final String MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT = "memberrevlabellike:QQQQ && name:mbr-1-2-2-1-0.txt";
 	protected static final String SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
 	protected static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
@@ -433,4 +434,10 @@ public class IntegritySCMTest
 	StringBuilder sbr = new StringBuilder(workspace.getRemote());
 	return sbr.toString();
     }
+
+    @After
+	public void cleanUp() throws APIException{
+		if(build != null && build.getResult().equals(Result.SUCCESS))
+			dropSandbox(build.getWorkspace());
+	}
 }
