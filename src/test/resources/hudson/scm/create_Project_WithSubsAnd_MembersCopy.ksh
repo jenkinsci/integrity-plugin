@@ -70,3 +70,6 @@ cd sub$s1
 cd ..
 let s1=$s1+1   
 done
+
+si checkpoint --checkpointUnchangedSubprojects --label=Create_DP --description=Create_DP --project=/$name/project.pj
+si createdevpath --devpath=DP_0.3813840334796077 --projectRevision=Create_DP -P /$name/project.pj
