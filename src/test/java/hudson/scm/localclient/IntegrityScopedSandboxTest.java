@@ -290,13 +290,13 @@ public class IntegrityScopedSandboxTest extends IntegritySCMTest
 	assertFalse("File does not Exist in workspace!", new File(
             String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
 	
-	addLabel("QQQQ", "#/JenkinsBulkProject1#sub1-2-2/sub1-2-2-1");
+	addLabel("QQQQ", "#/JenkinsBulkProject1#sub1/sub1-2/sub1-2-2/sub1-2-2-1");
 	// Change the sandbox Scope
 	((IntegritySCM)localClientProject.getScm()).setSandboxScope(MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT);
 	localClientProject.save();
 	build = build(localClientProject, Result.SUCCESS);
 	assertTrue("File Exists in workspace!", new File(
-            String.valueOf(build.getWorkspace().child(SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT))).isFile());
+            String.valueOf(build.getWorkspace().child(SUB1_SUB1_2_SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT))).isFile());
 	assertFalse("File does not Exist in workspace!", new File(
             String.valueOf(build.getWorkspace().child(JAVA_FILE_JAVA))).isFile());
 	

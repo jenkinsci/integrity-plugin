@@ -152,7 +152,7 @@ public class IntegritySCMTest
 	protected static final String NAME_MBR_1_2_4_0_TXT = "name:mbr-1-2-4-0.txt";
 	protected static final String SUB1_SUB1_2_SUB1_2_4_MBR_1_2_4_0_TXT = "sub1\\sub1-2\\sub1-2-4\\mbr-1-2-4-0.txt";
 	protected static final String MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT = "memberrevlabellike:QQQQ && name:mbr-1-2-2-1-0.txt";
-	protected static final String SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
+	protected static final String SUB1_SUB1_2_SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1\\sub1-2\\sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
 	protected static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
 
     @BeforeClass
