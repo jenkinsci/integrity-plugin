@@ -154,6 +154,7 @@ public class IntegritySCMTest
 	protected static final String MEMBERREVLABELLIKE_QQQQ_NAME_MBR_1_2_2_1_0_TXT = "memberrevlabellike:QQQQ && name:mbr-1-2-2-1-0.txt";
 	protected static final String SUB1_SUB1_2_SUB1_2_2_SUB1_2_2_1_MBR_1_2_2_1_0_TXT = "sub1\\sub1-2\\sub1-2-2\\sub1-2-2-1\\mbr-1-2-2-1-0.txt";
 	protected static final String PROJECT_PJ = OsUtils.isWindows()?"\\project.pj":"/project.pj"; // Solaris not considered here!
+	protected static boolean is_Secure_ILM_connection = false;
 
     @BeforeClass
     public static void setupClass() throws Exception
@@ -165,7 +166,7 @@ public class IntegritySCMTest
     @Before
     public void setUp() throws Exception {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
-			7001, "localhost",7001, false,
+			7001, "localhost",7001, is_Secure_ILM_connection,
 			"Administrator", "password");
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
 	slave0 = jenkinsRule.createOnlineSlave(Label.get("slave0"));
@@ -266,7 +267,7 @@ public class IntegritySCMTest
     protected static void setupIntegrityConfigurable()
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
-			7001, "localhost",7001, false,
+			7001, "localhost",7001, is_Secure_ILM_connection,
 			"Administrator", "password");
 	List<IntegrityConfigurable> configurations = new ArrayList<IntegrityConfigurable>();
 	configurations.add(integrityConfigurable);
