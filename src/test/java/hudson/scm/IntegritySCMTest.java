@@ -165,7 +165,7 @@ public class IntegritySCMTest
 
     @Before
     public void setUp() throws Exception {
-	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "amhaske2l.ptcnet.ptc.com",
+	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, is_Secure_ILM_connection,
 			"Administrator", "password");
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
@@ -266,7 +266,7 @@ public class IntegritySCMTest
 
     protected static void setupIntegrityConfigurable()
     {
-	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "amhaske2l.ptcnet.ptc.com",
+	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, is_Secure_ILM_connection,
 			"Administrator", "password");
 	List<IntegrityConfigurable> configurations = new ArrayList<IntegrityConfigurable>();
