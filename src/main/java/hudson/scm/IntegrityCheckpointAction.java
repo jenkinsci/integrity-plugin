@@ -16,8 +16,6 @@ import java.util.logging.Logger;
 
 import javax.servlet.ServletException;
 
-import org.apache.commons.logging.Log;
-import org.apache.commons.logging.LogFactory;
 import org.codehaus.groovy.control.CompilationFailedException;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.RejectedAccessException;
 import org.jenkinsci.plugins.scriptsecurity.sandbox.groovy.GroovySandbox;
@@ -59,7 +57,6 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
   private static final long serialVersionUID = 3344676447487492553L;
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
   private String checkpointLabel;
-  private final Log logger = LogFactory.getLog(getClass());
   private String serverConfig;
   private String configurationName;
 
@@ -219,7 +216,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     listener.getLogger().println("Preparing to execute si addprojectlabel for " + fullConfigPath);
     listener.getLogger().println(" (" + projectName + ", " + revision + ")");
     Response res = siProject.addProjectLabel(serverConf, chkptLabel, projectName, revision);
-    logger.debug(res.getCommandString() + " returned " + res.getExitCode());
+    LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());
     listener.getLogger()
         .println("Successfully added label '" + chkptLabel + "' to revision " + revision);
 
@@ -274,7 +271,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
           listener.getLogger().println(
               "Preparing to execute si checkpoint for " + siProject.getConfigurationPath());
           Response res = siProject.checkpoint(serverConf, chkptLabel);
-          logger.debug(res.getCommandString() + " returned " + res.getExitCode());
+          LOGGER.fine(res.getCommandString() + " returned " + res.getExitCode());
           WorkItem wi = res.getWorkItem(siProject.getConfigurationPath());
           String chkpt = wi.getResult().getField(IAPIFields.RESULTANT).getItem().getId();
           listener.getLogger()
