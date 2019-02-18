@@ -32,8 +32,9 @@
   <properties>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <workflow.version>1.14.2</workflow.version>
-    <findbugs-maven-plugin.version>3.0.1</findbugs-maven-plugin.version>
+    <findbugs-maven-plugin.version>3.0.4</findbugs-maven-plugin.version>
 	<findbugs.failOnError>false</findbugs.failOnError>
+		<jenkins.version>1.625.3</jenkins.version>
   </properties>
   
   <dependencies>
@@ -131,9 +132,13 @@
   
   <distributionManagement>
     <repository>
-      <id>maven.jenkins-ci.org</id>
-      <url>https://repo.jenkins-ci.org/releases</url>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/releases</url>
     </repository>
+	<snapshotRepository>
+      <id>repo.jenkins-ci.org</id>
+      <url>http://repo.jenkins-ci.org/snapshots</url>
+    </snapshotRepository>
   </distributionManagement>
   
   <build>
@@ -192,14 +197,14 @@
   <repositories>
 	<repository>
 		<id>repo.jenkins-ci.org</id>
-		<url>http://repo.jenkins-ci.org/public/</url>
+		<url>http://repo.jenkins-ci.org/</url>
 	</repository>
   </repositories>
 
   <pluginRepositories>
 	<pluginRepository>
 		<id>repo.jenkins-ci.org</id>
-		<url>http://repo.jenkins-ci.org/public/</url>
+		<url>http://repo.jenkins-ci.org/</url>
 	</pluginRepository>
   </pluginRepositories>
 </project>
