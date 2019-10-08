@@ -133,11 +133,11 @@
   <distributionManagement>
     <repository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/releases</url>
+      <url>https://repo.jenkins-ci.org/releases</url>
     </repository>
 	<snapshotRepository>
       <id>repo.jenkins-ci.org</id>
-      <url>http://repo.jenkins-ci.org/snapshots</url>
+      <url>https://repo.jenkins-ci.org/snapshots</url>
     </snapshotRepository>
   </distributionManagement>
   
@@ -197,14 +197,14 @@
   <repositories>
 	<repository>
 		<id>repo.jenkins-ci.org</id>
-		<url>http://repo.jenkins-ci.org/</url>
+		<url>https://repo.jenkins-ci.org/</url>
 	</repository>
   </repositories>
 
   <pluginRepositories>
 	<pluginRepository>
 		<id>repo.jenkins-ci.org</id>
-		<url>http://repo.jenkins-ci.org/</url>
+		<url>https://repo.jenkins-ci.org/</url>
 	</pluginRepository>
   </pluginRepositories>
 </project>
