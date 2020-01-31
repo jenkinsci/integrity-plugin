@@ -1369,12 +1369,14 @@ public class DerbyUtils
       // Create the select statement for the current project
       checksumSelect = db.prepareStatement(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
       rs = checksumSelect.executeQuery();
+      LOGGER.finer(String.format("Updating checksums for table: %s", rs.toString()));
       while (rs.next())
       {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         String newChecksum = checksumHash.get(rowHash.get(CM_PROJECT.NAME).toString());
         if (null != newChecksum && newChecksum.length() > 0)
         {
+          LOGGER.finer(String.format("Updating checksum for rowHash: %s newChecksum: %s", rowHash.toString(), newChecksum));
           rs.updateString(CM_PROJECT.CHECKSUM.toString(), newChecksum);
           rs.updateRow();
         }

@@ -513,6 +513,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       String prevProjectCache = null;
       if (null != baseline && baseline instanceof IntegrityRevisionState)
       {
+        LOGGER.info(String.format("Checking previous project state. Baseline name: %s", baseline.getDisplayName()));
+        listener.getLogger().println(String.format("Checking previous project state. Baseline %s", baseline.getDisplayName()));
         IntegrityRevisionState irs = (IntegrityRevisionState) baseline;
         prevProjectCache = irs.getProjectCache();
 
@@ -532,14 +534,20 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           }
 
           // Compare the current project with the old revision state
+          listener.getLogger().println("Found previous project state");
           LOGGER.fine("Found previous project state " + prevProjectCache);
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
                           skipAuthorInfo, CPBasedMode);
         }
+        else {
+          listener.getLogger().println("No previous project cache.");
+          LOGGER.fine("No previous project cache.");
+        }
       } else
       {
         // We don't have the previous Integrity Revision State!
-        LOGGER.fine("Cannot construct previous Integrity Revision State!");
+        listener.getLogger().println("Cannot construct previous Integrity Revision State! null baseline");
+        LOGGER.warning("Cannot construct previous Integrity Revision State! null baseline");
         // Prime the author information for the current build as this could be the first build
         if (!skipAuthorInfo)
         {
@@ -556,14 +564,30 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
-      // If we we were not able to establish the previous project state, then always do full
-      // checkout. cleanCopy = true
-      // Otherwise, update the workspace in accordance with the user's cleanCopy option
 
-      IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList,
-                      resolvedAltWkspace, lineTerminator, restoreTimestamp,
-                      ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
-                      fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
+      boolean checkoutCleanCopy = false;
+      if (cleanCopy) {
+        LOGGER.info("User requested a clean copy via 'cleanCopy'.");
+        listener.getLogger().println("User requested a clean copy via 'cleanCopy'.");
+        checkoutCleanCopy = true;
+      } else {
+        // If we we were not able to establish the previous project state, then always
+        // do full
+        // checkout. cleanCopy = true
+        if (null == prevProjectCache) {
+          LOGGER.warning("Couldn't find previous project cache. Requesting 'cleanCopy'.");
+          listener.getLogger().println("Couldn't find previous project cache. Requesting 'cleanCopy'.");
+          checkoutCleanCopy = true;
+        } else if (prevProjectCache.length() == 0) {
+          LOGGER.warning("Previous project cache is empty. Requesting 'cleanCopy'.");
+          listener.getLogger().println("Previous project cache is empty. Requesting 'cleanCopy'.");
+          checkoutCleanCopy = true;
+        }
+      }
+
+      IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace,
+          lineTerminator, restoreTimestamp, checkoutCleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize,
+          checkoutThreadTimeout, listener, coSettings);
 
       // Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
       if (workspace.act(coTask))
