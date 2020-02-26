@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
@@ -904,7 +905,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   }
 
   private String getSource(EnvVars env) {
-      return env.expand(configPath);
+    // pattern for #b=<build> and #d=<devpath> as they are some variant of a project
+    Pattern variant_pattern = Pattern.compile("(#b=[a-zA-Z_0-9\\.]+|#d=[^#]+)");
+    // demystify source by removing the labels/checkpoints/variants as long as path is the same we can be
+    // pretty sure it's still the same project.
+    return String.join("", variant_pattern.split(env.expand(configPath)));
   }
 
   @Override public String getKey() {
