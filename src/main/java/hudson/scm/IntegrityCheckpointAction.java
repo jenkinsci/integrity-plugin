@@ -250,7 +250,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 
     if (!Result.SUCCESS.equals(build.getResult()))
     {
-      listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
+      listener.getLogger().println("Build failed!  Skipping Windchill RV&S Checkpoint step!");
       return true;
     }
 
@@ -392,7 +392,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity - CM Checkpoint";
+      return "Windchill RV&S - CM Checkpoint";
     }
 
     @Override

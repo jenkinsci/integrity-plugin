@@ -539,7 +539,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       } else
       {
         // We don't have the previous Integrity Revision State!
-        LOGGER.fine("Cannot construct previous Integrity Revision State!");
+        LOGGER.fine("Cannot construct previous Windchill RV&S Revision State!");
         // Prime the author information for the current build as this could be the first build
         if (!skipAuthorInfo)
         {
@@ -570,7 +570,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       {
         // Now that the workspace is updated, lets save the current project state for future
         // comparisons
-        listener.getLogger().println("Saving current Integrity Project configuration...");
+        listener.getLogger().println("Saving current Windchill RV&S Project configuration...");
         if (fetchChangedWorkspaceFiles)
         {
           DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates());
@@ -869,12 +869,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	}
       } else {
 	// We've got no previous builds, build now!
-	LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+	LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
 	return BUILD_NOW;
       }
     } else {
       // We've got no previous builds, build now!
-      LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+      LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
       return BUILD_NOW;
     }
   }
@@ -912,10 +912,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
           Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
-      LOGGER.info("Creating Integrity SCM cache db connection...");
+      LOGGER.info("Creating Windchill RV&S SCM cache db connection...");
       dataSource = DerbyUtils
           .createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
-      LOGGER.info("Creating Integrity SCM cache registry...");
+      LOGGER.info("Creating Windchill RV&S SCM cache registry...");
       DerbyUtils.createRegistry(dataSource);
 
       // Log the construction...
@@ -944,7 +944,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity";
+      return "Windchill RV&S";
     }
 
     /**
@@ -1109,7 +1109,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         @QueryParameter("serverConfig.ipPort") final int ipPort)
             throws IOException, ServletException, APIException
     {
-      LOGGER.fine("Testing Integrity API Connection...");
+      LOGGER.fine("Testing Windchill RV&S API Connection...");
       LOGGER.fine("hostName: " + hostName);
       LOGGER.fine("port: " + port);
       LOGGER.fine("userName: " + userName);
@@ -1133,7 +1133,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     		String versions[] = version.split("\\.");
     		int majorVer = Integer.parseInt(versions[0]);
     		int minorVer = Integer.parseInt(versions[1]);
-    		String strVerMsg = "Integrity server version: " + version;
+    		String strVerMsg = "Windchill RV&S server version: " + version;
     		LOGGER.fine(strVerMsg);
     		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
    			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
