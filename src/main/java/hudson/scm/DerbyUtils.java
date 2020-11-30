@@ -329,7 +329,7 @@ public class DerbyUtils
       }
     } catch (SQLException sqlex)
     {
-      LOGGER.fine(String.format("Failed to create Integrity SCM cache registry entry for %s/%s/%d!",
+      LOGGER.fine(String.format("Failed to create Windchill RV&S SCM cache registry entry for %s/%s/%d!",
           jobName, configurationName, buildNumber));
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     } finally

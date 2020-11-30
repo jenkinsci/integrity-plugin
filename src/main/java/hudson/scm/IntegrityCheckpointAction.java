@@ -304,10 +304,10 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
         }
       } else
       {
-        LOGGER.severe("Cannot find Integrity CM Project information for configuration '"
+        LOGGER.severe("Cannot find Windchill RV&S CM Project information for configuration '"
             + getConfigurationName() + "'");
         listener.getLogger()
-            .println("ERROR: Cannot find Integrity CM Project information for configuration '"
+            .println("ERROR: Cannot find Windchill RV&S CM Project information for configuration '"
                 + getConfigurationName() + "'!");
       }
     } catch (APIException aex)
