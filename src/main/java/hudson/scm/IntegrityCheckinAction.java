@@ -275,7 +275,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity - CM Checkin";
+      return "Windchill RV&S - CM Checkin";
     }
 
     @Override

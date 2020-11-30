@@ -149,7 +149,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
         } else
         {
           listener.getLogger().println("Deleting file " + workspaceMember
-              + " because the member does not exist in the Integrity project");
+              + " because the member does not exist in the Windchill RV&S project");
           workspaceMember.delete();
         }
       } else

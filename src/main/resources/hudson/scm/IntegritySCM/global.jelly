@@ -1,8 +1,8 @@
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
-  <f:section title="Integrity">
+  <f:section title="Windchill RV&amp;S">
   
-	<f:entry title="Integrity Server Configurations">
+	<f:entry title="Windchill RV&amp;S Server Configurations">
 	
 		<f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
 			<table width="100%">

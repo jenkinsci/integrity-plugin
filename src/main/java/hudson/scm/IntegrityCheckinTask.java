@@ -61,7 +61,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
     this.ciExcludes = ciExcludes;
     this.listener = listener;
     this.integrityConfig = integrityConfig;
-    LOGGER.fine("Integrity Checkin Task Created!");
+    LOGGER.fine("Windchill RV&S Checkin Task Created!");
   }
 
   /**

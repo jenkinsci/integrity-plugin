@@ -41,7 +41,7 @@ public abstract class BasicAPICommand implements IAPICommand
   protected final IntegrityConfigurable serverConfig;
   private ISession api = null;
   private static final String SESSION_INVALID_FAILED = "Failed to invalidate Session Pool Object :";
-  private static final String SESSION_NOT_ESTABLISHED_TO = "An Integrity API Session could not be established to ";
+  private static final String SESSION_NOT_ESTABLISHED_TO = "An Windchill RV&S API Session could not be established to ";
   private static final String CANNOT_PERFORM = "!  Cannot perform ";
   private static final String OPERATION = " operation : ";
   private final KeyedObjectPool<IntegrityConfigurable, ISession> pool;
