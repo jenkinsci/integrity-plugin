@@ -8,8 +8,8 @@
   </parent>  
   
   <artifactId>integrity-plugin</artifactId>
-  <name>PTC Integrity CM - Jenkins Plugin</name>
-  <description>Integrates Jenkins with PTC Integrity</description>
+  <name>PTC Windchill RV&amp;S CM - Jenkins Plugin</name>
+  <description>Integrates Jenkins with PTC Windchill RV&amp;S</description>
   <version>2.4-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>
@@ -33,8 +33,8 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <workflow.version>1.14.2</workflow.version>
     <findbugs-maven-plugin.version>3.0.4</findbugs-maven-plugin.version>
-	<findbugs.failOnError>false</findbugs.failOnError>
-		<jenkins.version>1.625.3</jenkins.version>
+    <findbugs.failOnError>false</findbugs.failOnError>
+    <jenkins.version>1.628</jenkins.version>
   </properties>
   
   <dependencies>

@@ -90,7 +90,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
         : new File(workspaceFile.getAbsolutePath() + IntegritySCM.FS + checkinDir.getPath()));
 
     listener.getLogger().println(
-        "Integrity project '" + ciConfigPath + "' will be updated from directory " + workspace);
+        "Windchill RV&S project '" + ciConfigPath + "' will be updated from directory " + workspace);
 
     try
     {
@@ -124,7 +124,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
         }
 
         // Log the success
-        listener.getLogger().println("Successfully updated Integrity project '" + ciConfigPath
+        listener.getLogger().println("Successfully updated Windchill RV&S project '" + ciConfigPath
             + "' with contents of workspace (" + workspace + ")!");
       }
 
@@ -134,7 +134,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
       listener.getLogger().println("An Interrupted Exception was caught!");
       LOGGER.log(Level.SEVERE, "InterruptedException", iex);
       listener.getLogger().println(iex.getMessage());
-      listener.getLogger().println("Failed to update Integrity project '" + ciConfigPath
+      listener.getLogger().println("Failed to update Windchill RV&S project '" + ciConfigPath
           + "' with contents of workspace (" + workspace + ")!");
       return false;
     } catch (APIException aex)
@@ -144,7 +144,7 @@ public class IntegrityCheckinTask implements FileCallable<Boolean>
       ExceptionHandler eh = new ExceptionHandler(aex);
       LOGGER.severe(eh.getMessage());
       listener.getLogger().println(eh.getMessage());
-      listener.getLogger().println("Failed to update Integrity project '" + ciConfigPath
+      listener.getLogger().println("Failed to update Windchill RV&S project '" + ciConfigPath
           + "' with contents of workspace (" + workspace + ")!");
       LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
       LOGGER.log(Level.SEVERE, "APIException", aex);

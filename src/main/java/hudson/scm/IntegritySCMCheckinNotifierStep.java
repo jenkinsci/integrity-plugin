@@ -50,7 +50,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
       throws InterruptedException, IOException
   {
     listener.getLogger().println(
-        "Integrity project '" + configPath + "' will be updated from directory " + workspace);
+        "Windchill RV&S project '" + configPath + "' will be updated from directory " + workspace);
     listener.getLogger()
         .println("Change Package ID will be derived from '" + itemID + "' supplied...");
     String buildID = run.getFullDisplayName();
@@ -90,7 +90,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
             }
 
             // Log the success
-            listener.getLogger().println("Successfully updated Integrity project '" + configPath
+            listener.getLogger().println("Successfully updated Windchill RV&S project '" + configPath
                 + WITH_CONTENTS_OF_WS + workspace + ")!");
           }
 
@@ -100,7 +100,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
           listener.getLogger().println("An Interrupted Exception was caught!");
           LOGGER.log(Level.SEVERE, "InterruptedException", iex);
           listener.getLogger().println(iex.getMessage());
-          listener.getLogger().println("Failed to update Integrity project '" + configPath
+          listener.getLogger().println("Failed to update Windchill RV&S project '" + configPath
               + WITH_CONTENTS_OF_WS + workspace + ")!");
           throw iex;
         } catch (APIException aex)
@@ -110,7 +110,7 @@ public class IntegritySCMCheckinNotifierStep extends Notifier implements SimpleB
           ExceptionHandler eh = new ExceptionHandler(aex);
           LOGGER.severe(eh.getMessage());
           listener.getLogger().println(eh.getMessage());
-          listener.getLogger().println("Failed to update Integrity project '" + configPath
+          listener.getLogger().println("Failed to update Windchill RV&S project '" + configPath
               + WITH_CONTENTS_OF_WS + workspace + ")!");
           LOGGER.fine(eh.getCommand() + " returned exit code " + eh.getExitCode());
           LOGGER.log(Level.SEVERE, "APIException", aex);    
