@@ -54,6 +54,11 @@ public class IntegrityResyncSandboxTask implements FilePath.FileCallable<Boolean
         try (ISession session = sandboxUtil.getLocalAPISession()){
             listener.getLogger()
                             .println("[LocalClient] Executing IntegrityResyncSandboxTask :"+ workspaceFile);
+            if (cleanCopy)
+            {
+              workspace.deleteContents();
+              listener.getLogger().println("[LocalClient] Populating clean workspace...");
+            }
             return sandboxUtil.resyncSandbox(session, workspace, cleanCopy, deleteNonMembers, restoreTimestamp, changeLogFile, includeList, excludeList, sandboxScope);
         } catch (Exception e) {
 
