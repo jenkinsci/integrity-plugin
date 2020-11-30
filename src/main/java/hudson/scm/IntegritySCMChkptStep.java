@@ -150,7 +150,7 @@ public class IntegritySCMChkptStep extends AbstractStepImpl
     @Override
     public String getDisplayName()
     {
-      return "Integrity SCM Checkpoint";
+      return "Windchill RV&S SCM Checkpoint";
     }
 
     /**

@@ -8,8 +8,8 @@
   </parent>  
   
   <artifactId>integrity-plugin</artifactId>
-  <name>PTC Integrity CM - Jenkins Plugin</name>
-  <description>Integrates Jenkins with PTC Integrity</description>
+  <name>PTC Windchill RV&amp;S CM - Jenkins Plugin</name>
+  <description>Integrates Jenkins with PTC Windchill RV&amp;S</description>
   <version>2.3-SNAPSHOT</version>
   <packaging>hpi</packaging>
   <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>

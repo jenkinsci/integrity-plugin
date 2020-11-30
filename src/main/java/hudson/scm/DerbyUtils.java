@@ -268,7 +268,7 @@ public class DerbyUtils
     {
       if (executeStmt(dataSource, SELECT_REGISTRY_1))
       {
-        LOGGER.fine("Integrity SCM cache registry table exists...");
+        LOGGER.fine("Windchill RV&S SCM cache registry table exists...");
         tableCreated = true;
       }
     } catch (SQLException ex)
@@ -276,11 +276,11 @@ public class DerbyUtils
       LOGGER.fine(ex.getMessage());
       try
       {
-        LOGGER.fine("Integrity SCM cache registry doesn't exist, creating...");
+        LOGGER.fine("Windchill RV&S SCM cache registry doesn't exist, creating...");
         tableCreated = executeStmt(dataSource, CREATE_INTEGRITY_SCM_REGISTRY);
       } catch (SQLException sqlex)
       {
-        LOGGER.fine("Failed to create Integrity SCM cache registry table!");
+        LOGGER.fine("Failed to create Windchill RV&S SCM cache registry table!");
         LOGGER.log(Level.SEVERE, "SQLException", sqlex);
         tableCreated = false;
       }
@@ -391,7 +391,7 @@ public class DerbyUtils
       }
     } catch (SQLException sqlex)
     {
-      LOGGER.fine(String.format("Failed to get Integrity SCM cache registry entry for %s/%s/%d!",
+      LOGGER.fine(String.format("Failed to get Windchill RV&S SCM cache registry entry for %s/%s/%d!",
           jobName, configurationName, buildNumber));
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     } finally
@@ -516,7 +516,7 @@ public class DerbyUtils
       }
     } catch (SQLException sqlex)
     {
-      LOGGER.fine("Failed to purge project '" + jobName + "' from Integrity SCM cache registry!");
+      LOGGER.fine("Failed to purge project '" + jobName + "' from Windchill RV&S SCM cache registry!");
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     } finally
     {
@@ -581,7 +581,7 @@ public class DerbyUtils
         } catch (SQLException sqlex)
         {
           // If this fails, then we'll have to investigate later...
-          LOGGER.fine(String.format("Failed to drop table '%s' from Integrity SCM cache registry!",
+          LOGGER.fine(String.format("Failed to drop table '%s' from Windchill RV&S SCM cache registry!",
               cacheTableName));
           LOGGER.log(Level.SEVERE, "SQLException", sqlex);
         }
@@ -600,7 +600,7 @@ public class DerbyUtils
     } catch (SQLException sqlex)
     {
       LOGGER.fine(String.format(
-          "Failed to clear old cache for project '%s' from Integrity SCM cache registry!",
+          "Failed to clear old cache for project '%s' from Windchill RV&S SCM cache registry!",
           jobName));
       LOGGER.log(Level.SEVERE, "SQLException", sqlex);
     } finally
@@ -640,16 +640,16 @@ public class DerbyUtils
       {
         try
         {
-          LOGGER.fine("A prior set of Integrity SCM cache tables detected, dropping...");
+          LOGGER.fine("A prior set of Windchill RV&S SCM cache tables detected, dropping...");
           tableCreated =
               executeStmt(dataSource, DROP_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
-          LOGGER.fine("Recreating a fresh set of Integrity SCM cache tables...");
+          LOGGER.fine("Recreating a fresh set of Windchill RV&S SCM cache tables...");
           tableCreated =
               executeStmt(dataSource, CREATE_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
         } catch (SQLException ex)
         {
           LOGGER.fine(
-              String.format("Failed to create Integrity SCM project cache table '%s'", tableName));
+              String.format("Failed to create Windchill RV&S SCM project cache table '%s'", tableName));
           LOGGER.log(Level.SEVERE, "SQLException", ex);
           tableCreated = false;
         }
@@ -660,13 +660,13 @@ public class DerbyUtils
       try
       {
         LOGGER.fine(
-            String.format("Integrity SCM cache table '%s' does not exist, creating...", tableName));
+            String.format("Windchill RV&S SCM cache table '%s' does not exist, creating...", tableName));
         tableCreated =
             executeStmt(dataSource, CREATE_PROJECT_TABLE.replaceFirst("CM_PROJECT", tableName));
       } catch (SQLException sqlex)
       {
         LOGGER.fine(
-            String.format("Failed to create Integrity SCM project cache table '%s'", tableName));
+            String.format("Failed to create Windchill RV&S SCM project cache table '%s'", tableName));
         LOGGER.log(Level.SEVERE, "SQLException", sqlex);
         tableCreated = false;
       }
@@ -692,20 +692,20 @@ public class DerbyUtils
     {
       if (executeStmt(dataSource, SELECT_CP_1.replaceFirst("CM_PROJECT_CP", cpCacheTableName)))
       {
-        LOGGER.fine("A prior set of Integrity SCM CP cache table for this job detected.");
+        LOGGER.fine("A prior set of Windchill RV&S SCM CP cache table for this job detected.");
       }
     } catch (SQLException ex)
     {
       LOGGER.fine(ex.getMessage());
       try
       {
-        LOGGER.fine(String.format("Integrity SCM CP cache table '%s' does not exist, creating...",
+        LOGGER.fine(String.format("Windchill RV&S SCM CP cache table '%s' does not exist, creating...",
             cpCacheTableName));
         tableCreated = executeStmt(dataSource,
             CREATE_PROJECT_CP_TABLE.replaceFirst("CM_PROJECT_CP", cpCacheTableName));
       } catch (SQLException sqlex)
       {
-        LOGGER.fine(String.format("Failed to create Integrity SCM project CP cache table '%s'",
+        LOGGER.fine(String.format("Failed to create Windchill RV&S SCM project CP cache table '%s'",
             cpCacheTableName));
         LOGGER.log(Level.SEVERE, "SQLException", sqlex);
         tableCreated = false;

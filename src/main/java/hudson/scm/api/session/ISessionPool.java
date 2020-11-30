@@ -59,7 +59,7 @@ public class ISessionPool
 
   private ISessionPool()
   {
-    LOGGER.log(Level.FINE, "Starting Integrity Session Pool");
+    LOGGER.log(Level.FINE, "Starting Windchill RV&S Session Pool");
     startPool();
   }
 
@@ -113,14 +113,14 @@ public class ISessionPool
     @Override
     public ISession create(IntegrityConfigurable settings) throws Exception
     {
-      LOGGER.log(Level.FINE, "Creating a new Integrity Session for the Session Pool :"
+      LOGGER.log(Level.FINE, "Creating a new Windchill RV&S Session for the Session Pool :"
           + settings.getConfigId() + " :: " + settings.toString());
       ISession api = APISession.create(settings);
       if (null == api)
       {
-        LOGGER.log(Level.SEVERE, "An Integrity API Session could not be established :"
+        LOGGER.log(Level.SEVERE, "An Windchill RV&S API Session could not be established :"
             + settings.getConfigId() + " :: " + settings.toString());
-        throw new AbortException("An Integrity API Session could not be established :"
+        throw new AbortException("An Windchill RV&S API Session could not be established :"
             + settings.getConfigId() + " :: " + settings.toString());
       }
       return api;
@@ -146,7 +146,7 @@ public class ISessionPool
     @Override
     public void destroyObject(IntegrityConfigurable key, PooledObject<ISession> p) throws Exception
     {
-      LOGGER.log(Level.FINEST, "Terminating Integrity Session Pool object : " + key.getConfigId()
+      LOGGER.log(Level.FINEST, "Terminating Windchill RV&S Session Pool object : " + key.getConfigId()
           + " :: " + key.toString());
       p.getObject().terminate();
     }
@@ -160,7 +160,7 @@ public class ISessionPool
     @Override
     public boolean validateObject(IntegrityConfigurable key, PooledObject<ISession> p)
     {
-      LOGGER.log(Level.FINEST, "Validating Integrity Session Pool object : " + key.getConfigId()
+      LOGGER.log(Level.FINEST, "Validating Windchill RV&S Session Pool object : " + key.getConfigId()
           + " :: " + key.toString());
       ISession session = p.getObject();
 
@@ -174,12 +174,12 @@ public class ISessionPool
         session.ping();
       } catch (InterruptedException e)
       {
-        LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+        LOGGER.log(Level.FINEST, "Failed to ping Windchill RV&S Session Pool object : "
             + key.getConfigId() + " :: " + key.toString(), e);
         return false;
       } catch (APIException e)
       {
-        LOGGER.log(Level.FINEST, "Failed to ping Integrity Session Pool object : "
+        LOGGER.log(Level.FINEST, "Failed to ping Windchill RV&S Session Pool object : "
             + key.getConfigId() + " :: " + key.toString(), e);
         return false;
       }

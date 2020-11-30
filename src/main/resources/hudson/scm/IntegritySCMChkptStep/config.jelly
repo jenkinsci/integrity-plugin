@@ -4,8 +4,8 @@
 		<f:select />
 	</f:entry>
 	
-	<f:entry title="Integrity Project" field="configPath" help="/plugin/integrity-plugin/help-configPath.html">
-		<f:textbox clazz="required" checkMessage="'Integrity Project' is a required field!" />        
+	<f:entry title="Windchill RV&amp;S Project" field="configPath" help="/plugin/integrity-plugin/help-configPath.html">
+		<f:textbox clazz="required" checkMessage="'Windchill RV&amp;S Project' is a required field!" />        
 	</f:entry>
 
 	<f:entry title="Project Specific Username" field="userName" help="/plugin/integrity-plugin/help-userName.html">
