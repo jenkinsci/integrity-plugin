@@ -52,7 +52,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
     {
       this.date = IntegritySCM.SDF.format(new Date());
     }
-    this.msg = "Integrity Change Log";
+    this.msg = "Windhchill RV&S Change Log";
     for (IntegrityChangeLog log : logs)
     {
       log.setParent(this);
@@ -73,7 +73,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
   @Override
   public String getKind()
   {
-    return "integrity";
+    return "Windchill RV&S";
   }
 
   /**

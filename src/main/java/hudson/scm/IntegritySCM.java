@@ -53,6 +53,7 @@ import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ExecutionException;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
@@ -513,6 +514,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       String prevProjectCache = null;
       if (null != baseline && baseline instanceof IntegrityRevisionState)
       {
+        LOGGER.info(String.format("Checking previous project state. Baseline name: %s", baseline.getDisplayName()));
+        listener.getLogger().println(String.format("Checking previous project state. Baseline %s", baseline.getDisplayName()));
         IntegrityRevisionState irs = (IntegrityRevisionState) baseline;
         prevProjectCache = irs.getProjectCache();
 
@@ -532,14 +535,20 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           }
 
           // Compare the current project with the old revision state
+          listener.getLogger().println("Found previous project state");
           LOGGER.fine("Found previous project state " + prevProjectCache);
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
                           skipAuthorInfo, CPBasedMode);
         }
+        else {
+          listener.getLogger().println("No previous project cache.");
+          LOGGER.fine("No previous project cache.");
+        }
       } else
       {
         // We don't have the previous Integrity Revision State!
-        LOGGER.fine("Cannot construct previous Integrity Revision State!");
+        listener.getLogger().println("Cannot construct previous Windchill RV&S Revision State! null baseline");
+        LOGGER.warning("Cannot construct previous Windchill RV&S Revision State! null baseline");
         // Prime the author information for the current build as this could be the first build
         if (!skipAuthorInfo)
         {
@@ -556,21 +565,37 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
-      // If we we were not able to establish the previous project state, then always do full
-      // checkout. cleanCopy = true
-      // Otherwise, update the workspace in accordance with the user's cleanCopy option
 
-      IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList,
-                      resolvedAltWkspace, lineTerminator, restoreTimestamp,
-                      ((null == prevProjectCache || prevProjectCache.length() == 0) ? true : cleanCopy),
-                      fetchChangedWorkspaceFiles, checkoutThreadPoolSize, checkoutThreadTimeout, listener, coSettings);
+      boolean checkoutCleanCopy = false;
+      if (cleanCopy) {
+        LOGGER.info("User requested a clean copy via 'cleanCopy'.");
+        listener.getLogger().println("User requested a clean copy via 'cleanCopy'.");
+        checkoutCleanCopy = true;
+      } else {
+        // If we we were not able to establish the previous project state, then always
+        // do full
+        // checkout. cleanCopy = true
+        if (null == prevProjectCache) {
+          LOGGER.warning("Couldn't find previous project cache. Requesting 'cleanCopy'.");
+          listener.getLogger().println("Couldn't find previous project cache. Requesting 'cleanCopy'.");
+          checkoutCleanCopy = true;
+        } else if (prevProjectCache.length() == 0) {
+          LOGGER.warning("Previous project cache is empty. Requesting 'cleanCopy'.");
+          listener.getLogger().println("Previous project cache is empty. Requesting 'cleanCopy'.");
+          checkoutCleanCopy = true;
+        }
+      }
+
+      IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace,
+          lineTerminator, restoreTimestamp, checkoutCleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize,
+          checkoutThreadTimeout, listener, coSettings);
 
       // Execute the IntegrityCheckoutTask.invoke() method to do the actual synchronization...
       if (workspace.act(coTask))
       {
         // Now that the workspace is updated, lets save the current project state for future
         // comparisons
-        listener.getLogger().println("Saving current Integrity Project configuration...");
+        listener.getLogger().println("Saving current Windchill RV&S Project configuration...");
         if (fetchChangedWorkspaceFiles)
         {
           DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates());
@@ -603,7 +628,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(eh.getMessage());
       LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
       listener.getLogger().println(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
-      throw new AbortException("Caught Integrity APIException!");
+      throw new AbortException("Caught Windchill RV&S APIException!");
     } catch (SQLException sqlex)
     {
       LOGGER.severe(SQL_EXCEPTION_CAUGHT);
@@ -869,22 +894,26 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	}
       } else {
 	// We've got no previous builds, build now!
-	LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+	LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
 	return BUILD_NOW;
       }
     } else {
       // We've got no previous builds, build now!
-      LOGGER.fine("No prior Integrity Project state can be found!  Advice to build now!");
+      LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
       return BUILD_NOW;
     }
   }
 
   private String getSource(EnvVars env) {
-      return env.expand(configPath);
+    // pattern for #b=<build> and #d=<devpath> as they are some variant of a project
+    Pattern variant_pattern = Pattern.compile("(#b=[a-zA-Z_0-9\\.]+|#d=[^#]+)");
+    // demystify source by removing the labels/checkpoints/variants as long as path is the same we can be
+    // pretty sure it's still the same project.
+    return String.join("", variant_pattern.split(env.expand(configPath)));
   }
 
   @Override public String getKey() {
-      return "integrity " + getSource(new EnvVars());
+      return "Windchill RV&S " + getSource(new EnvVars());
   }
 
   /**
@@ -917,10 +946,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
           Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
-      LOGGER.info("Creating Integrity SCM cache db connection...");
+      LOGGER.info("Creating Windchill RV&S SCM cache db connection...");
       connectionPoolDataSource = DerbyUtils
           .createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
-      LOGGER.info("Creating Integrity SCM cache registry...");
+      LOGGER.info("Creating Windchill RV&S SCM cache registry...");
       DerbyUtils.createRegistry(connectionPoolDataSource);
 
       // Log the construction...
@@ -949,7 +978,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity";
+      return "Windchill RV&S";
     }
 
     /**
@@ -1114,7 +1143,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         @QueryParameter("serverConfig.ipPort") final int ipPort)
             throws IOException, ServletException, APIException
     {
-      LOGGER.fine("Testing Integrity API Connection...");
+      LOGGER.fine("Testing Windchill RV&S API Connection...");
       LOGGER.fine("hostName: " + hostName);
       LOGGER.fine("port: " + port);
       LOGGER.fine("userName: " + userName);
@@ -1138,7 +1167,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     		String versions[] = version.split("\\.");
     		int majorVer = Integer.parseInt(versions[0]);
     		int minorVer = Integer.parseInt(versions[1]);
-    		String strVerMsg = "Integrity server version: " + version;
+    		String strVerMsg = "Windchill RV&S server version: " + version;
     		LOGGER.fine(strVerMsg);
     		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
    			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);

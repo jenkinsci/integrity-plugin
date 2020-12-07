@@ -250,7 +250,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
 
     if (!Result.SUCCESS.equals(build.getResult()))
     {
-      listener.getLogger().println("Build failed!  Skipping Integrity Checkpoint step!");
+      listener.getLogger().println("Build failed!  Skipping Windchill RV&S Checkpoint step!");
       return true;
     }
 
@@ -304,10 +304,10 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
         }
       } else
       {
-        LOGGER.severe("Cannot find Integrity CM Project information for configuration '"
+        LOGGER.severe("Cannot find Windchill RV&S CM Project information for configuration '"
             + getConfigurationName() + "'");
         listener.getLogger()
-            .println("ERROR: Cannot find Integrity CM Project information for configuration '"
+            .println("ERROR: Cannot find Windchill RV&S CM Project information for configuration '"
                 + getConfigurationName() + "'!");
       }
     } catch (APIException aex)
@@ -392,7 +392,7 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity - CM Checkpoint";
+      return "Windchill RV&S - CM Checkpoint";
     }
 
     @Override

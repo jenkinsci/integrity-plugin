@@ -201,8 +201,8 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
   {
     if (!Result.SUCCESS.equals(build.getResult()))
     {
-      LOGGER.fine("Build failed!  Skipping Integrity Checkin step!");
-      listener.getLogger().println("Build failed!  Skipping Integrity Checkin step!");
+      LOGGER.fine("Build failed!  Skipping Windchill RV&S Checkin step!");
+      listener.getLogger().println("Build failed!  Skipping Windchill RV&S Checkin step!");
       return true;
     }
 
@@ -212,8 +212,8 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
 		ciTask = new IntegrityCheckinTask(ciConfigPath, ciWorkspaceDir, includes,
 		    excludes, build, listener, getProjectSettings(build));
 	} catch (Exception e) {
-		LOGGER.fine("Exception Caught!  Skipping Integrity Checkin step! :"+ e.getMessage());
-	    listener.getLogger().println("Exception Caught!  Skipping Integrity Checkin step!"+ e.getMessage());
+		LOGGER.fine("Exception Caught!  Skipping Windchill RV&S Checkin step! :"+ e.getMessage());
+	    listener.getLogger().println("Exception Caught!  Skipping Windchill RV&S Checkin step!"+ e.getMessage());
 	    return true;
 	}
 
@@ -275,7 +275,7 @@ public class IntegrityCheckinAction extends Notifier implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Integrity - CM Checkin";
+      return "Windchill RV&S - CM Checkin";
     }
 
     @Override

@@ -104,7 +104,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     this.checkoutThreadPoolSize = checkoutThreadPoolSize;
     this.checkoutThreadTimeout = checkoutThreadTimeout;
     this.checksumHash = new ConcurrentHashMap<String, String>();
-    LOGGER.fine("Integrity Checkout Task Created!");
+    LOGGER.fine("Windchill RV&S Checkout Task Created!");
   }
 
   /**
@@ -214,6 +214,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
           {
             LOGGER.fine("Attempting to restore changed workspace file: "
                 + targetFile.getAbsolutePath() + " to revision " + memberRev);
+            listener.getLogger().println("Attempting to restore changed workspace file: "
+                + targetFile.getAbsolutePath() + " to revision " + memberRev);
             coThreads.add(executor.submit(new CheckOutTask(generateAPISession, openFileHandler,
                 memberName, configPath, memberID, memberRev, memberTimestamp, targetFile, false)));
             fetchCount++;
@@ -245,6 +247,10 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                 .println("Failed to clean up workspace file " + targetFile.getAbsolutePath() + "!");
             return false;
           }
+        }
+        else {
+          LOGGER.warning(String.format("Unexpected deltaFlag %d for file %s and revision %s", deltaFlag,
+              targetFile.getAbsolutePath(), memberRev));
         }
       }
 
@@ -487,6 +493,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         openFileHandler.set(openFileHandler.get() + 1);
         if (calculateChecksum)
         {
+          LOGGER.finer(String.format("Put checksum for memberName: %s", memberName));
           checksumHash.put(memberName, IntegrityCMMember.getMD5Checksum(targetFile));
         }
       } else

@@ -324,12 +324,12 @@ public final class IntegrityCMMember
       int intItemID = Integer.parseInt(itemID);
       if (intItemID <= 0)
       {
-        LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
+        LOGGER.fine("Couldn't determine Windchill RV&S Item ID, defaulting cpid to ':none'!");
         return cpid;
       }
     } catch (NumberFormatException nfe)
     {
-      LOGGER.fine("Couldn't determine Integrity Item ID, defaulting cpid to ':none'!");
+      LOGGER.fine("Couldn't determine Windchill RV&S Item ID, defaulting cpid to ':none'!");
       return cpid;
     }
 
