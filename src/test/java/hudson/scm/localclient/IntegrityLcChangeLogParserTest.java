@@ -22,9 +22,43 @@ public class IntegrityLcChangeLogParserTest
     private String changeLogFileName = "test.xml";
     private File changeLogFile;
     private String lineMsgFile = ("msg: checked out revision 1.1, file: a.txt");
-    private String lineMsg = ("msg: Test Commit");
-    private String lineMsgWithComma = ("msg: Test Commit,");
-    private String lineInvalidToken = ("invalid: Test Commit");
+
+   	private String dummyData = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"+
+			"<changelog>"+
+			"<items>"+
+			"<item>"+
+			"<file>src/22.txt</file>"+
+			"<msg>checked out revision 1.1</msg>"+
+			"<context>/p1/project.pj</context>"+
+			"</item>"+
+			"</items>"+
+			"</changelog>";
+   	private String dummyDataWithOnlyMsg = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"+
+			"<changelog>"+
+			"<items>"+
+			"<item>"+
+			"<msg>checked out revision 1.1</msg>"+
+			"</item>"+
+			"</items>"+
+			"</changelog>";
+   	private String dummyDataWithComma = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"+
+			"<changelog>"+
+			"<items>"+
+			"<item>"+
+			"<file>src/22.txt</file>"+
+			"<msg>checked out revision 1.1,</msg>"+
+			"<context>/p1/project.pj</context>"+
+			"</item>"+
+			"</items>"+
+			"</changelog>";
+ 	private String invalidData = "<?xml version=\"1.0\" encoding=\"UTF-8\" standalone=\"no\"?>"+
+			"<changelog>"+
+			"<items>"+
+			"<item>"+
+			"<invalid>Invalid data</invalid>" +
+			"</item>"+
+			"</items>"+
+			"</changelog>";
 
     @Before
     public void setUp() throws Exception {
@@ -41,14 +75,15 @@ public class IntegrityLcChangeLogParserTest
     @Test
     public void parseCorrectChangeLogMsgFile() throws Exception
     {
+ 
         try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
-            writer.print(lineMsgFile);
+        	writer.print(dummyData);
         }
         IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
         IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
         for(IntegrityLcChangeSet set : list){
             assertEquals("checked out revision 1.1", set.getMsg());
-            assertEquals("a.txt", set.getFile());
+            assertEquals("src/22.txt", set.getFile());
         }
     }
 
@@ -56,12 +91,12 @@ public class IntegrityLcChangeLogParserTest
     public void parseCorrectChangeLogMsg() throws Exception
     {
         try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
-            writer.print(lineMsg);
+            writer.print(dummyDataWithOnlyMsg);
         }
         IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
         IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
         for(IntegrityLcChangeSet set : list){
-            assertEquals("Test Commit", set.getMsg());
+            assertEquals("checked out revision 1.1", set.getMsg());
         }
     }
 
@@ -69,12 +104,12 @@ public class IntegrityLcChangeLogParserTest
     public void parseCorrectChangeLogMsgWithComma() throws Exception
     {
         try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
-            writer.print(lineMsgWithComma);
+            writer.print(dummyDataWithComma);
         }
         IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
         IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
         for(IntegrityLcChangeSet set : list){
-            assertEquals("Test Commit", set.getMsg());
+            assertEquals("checked out revision 1.1", set.getMsg());
         }
     }
 
@@ -82,12 +117,12 @@ public class IntegrityLcChangeLogParserTest
     public void parseInvalidChangeLogToken() throws Exception
     {
         try(PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
-            writer.print(lineInvalidToken);
+            writer.print(invalidData);
         }
         IntegrityLcChangeLogParser parser = new IntegrityLcChangeLogParser("");
         IntegrityLcChangeSetList list = parser.parse(null, null, changeLogFile);
         for(IntegrityLcChangeSet set : list){
-            assertEquals("Invalid Field Found in Change Log : invalid: Test Commit", set.getMsg());
+            assertEquals(null, set.getMsg());
         }
     }
 }

@@ -14,11 +14,26 @@ import hudson.scm.api.session.ISession;
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
+import java.io.IOException;
 import java.io.OutputStreamWriter;
 import java.io.PrintWriter;
 import java.io.Serializable;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.util.Objects;
+
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 
 import com.mks.api.Command;
 import com.mks.api.Option;
@@ -317,29 +332,85 @@ public class SandboxUtils implements Serializable
 	return false;
     }
 
-    private boolean generateChangeLogFile(Response response,
-		    File changeLogFile)
-		    throws APIException, FileNotFoundException,
-		    UnsupportedEncodingException
-   {
-       try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(
-		       new FileOutputStream(changeLogFile), "UTF-8"))) {
-	   WorkItemIterator workItemIterator = response.getWorkItems();
-	   while (workItemIterator.hasNext()) {
-	       WorkItem wit = workItemIterator.next();
-	       writer.print("msg:" + wit.getResult().getMessage().trim());
-	       writer.print(",");
-	       writer.print("file:" + wit.getId());
-	       writer.print(",");
-	       writer.print("context:" + wit.getContext());
-	       writer.print(AbstractIntegritySCM.NL);
-	   }
-       }
-       listener.getLogger()
-		       .println("[LocalClient] Change log successfully generated: " +
-				       changeLogFile.getAbsolutePath());
-       return true;
-   }
+	private boolean generateChangeLogFile(Response response, File changeLogFile)
+			throws APIException, FileNotFoundException, UnsupportedEncodingException {
+		try (PrintWriter writer = new PrintWriter(
+				new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
+			String changeLog = getChangeLog(response.getWorkItems());
+			writer.println(changeLog);
+		}
+		listener.getLogger()
+				.println("[LocalClient] Change log successfully generated: " + changeLogFile.getAbsolutePath());
+		return true;
+	}
+
+	public String getChangeLog(WorkItemIterator itWrokItem) throws APIException {
+		StringBuffer changeLog = new StringBuffer();
+		try {
+			// Initialize the XML document builder
+			DocumentBuilder docBuilder = DocumentBuilderFactory.newInstance().newDocumentBuilder();
+			// Initialize the XML Document and change log
+			Document xmlDoc = docBuilder.newDocument();
+
+			// Create the root <changelog> element
+			Element changeLogElem = xmlDoc.createElement("changelog");
+			// Add the <changelog> to the xmlDoc
+			xmlDoc.appendChild(changeLogElem);
+
+			// Create the <items> element
+			Element items = xmlDoc.createElement("items");
+
+			// Append the <items> to the root element <changelog>
+			changeLogElem.appendChild(items);
+
+			while (itWrokItem.hasNext()) {
+
+				Element item = xmlDoc.createElement("item");
+				WorkItem workItem = itWrokItem.next();
+
+				Element file = xmlDoc.createElement("file");
+				if (workItem.getId() != null) {
+					file.appendChild(xmlDoc.createTextNode(workItem.getId()));
+				}
+				item.appendChild(file);
+
+				Element message = xmlDoc.createElement("msg");
+				if (workItem.getResult().getMessage() != null) {
+					message.appendChild(xmlDoc.createTextNode(workItem.getResult().getMessage().trim()));
+				}
+				item.appendChild(message);
+
+				Element context = xmlDoc.createElement("context");
+				if (workItem.getContext() != null) {
+					context.appendChild(xmlDoc.createTextNode(workItem.getContext()));
+				}
+				item.appendChild(context);
+				items.appendChild(item);
+			}
+
+			// Write the content into a String
+			TransformerFactory tfactory = TransformerFactory.newInstance();
+			Transformer serializer = tfactory.newTransformer();
+			// Setup indenting for a readable output
+			serializer.setOutputProperty(OutputKeys.INDENT, "yes");
+			serializer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+			StringWriter sw = new StringWriter();
+			serializer.transform(new DOMSource(xmlDoc), new StreamResult(sw));
+			changeLog.append(sw.toString());
+			sw.close();
+		} catch (ParserConfigurationException pce) {
+			listener.getLogger().println("Caught Parser Configuration Exception while generating Change Log!");
+			listener.getLogger().println(pce.getMessage());
+		} catch (TransformerException tfe) {
+			listener.getLogger().println("Caught Transformer Exception while generating Change Log!");
+			listener.getLogger().println(tfe.getMessage());
+		} catch (IOException ioe) {
+			listener.getLogger().println("Caught IO Exception while generating Change Log!");
+			listener.getLogger().println(ioe.getMessage());
+		}
+
+		return changeLog.toString();
+	}
 
     /**
      * View the sandbox for any changes during Polling
