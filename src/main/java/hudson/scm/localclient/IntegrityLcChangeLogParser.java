@@ -9,8 +9,7 @@ import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.LineIterator;
+import org.apache.commons.digester3.Digester;
 import org.xml.sax.SAXException;
 
 import hudson.model.Run;
@@ -32,31 +31,60 @@ public class IntegrityLcChangeLogParser extends ChangeLogParser implements
         integrityUrl = url;
     }
 
-    @Override
-    public IntegrityLcChangeSetList parse(@SuppressWarnings("rawtypes") Run build,
-                    RepositoryBrowser<?> browser, File changelogFile)
-                    throws IOException, SAXException
+	@Override
+	public IntegrityLcChangeSetList parse(@SuppressWarnings("rawtypes") Run build, 
+    RepositoryBrowser<?> browser, File changelogFile) 
+            throws IOException, SAXException 
+    {	
+		List<IntegrityLcChangeSet> changeSetList = parseXML(build, browser, integrityUrl, changelogFile);
+		return new IntegrityLcChangeSetList(build, browser, integrityUrl, changeSetList);
+	}
+
+	private List<IntegrityLcChangeSet> parseXML(@SuppressWarnings("rawtypes") Run build, 
+    RepositoryBrowser<?> browser, String integrityUrl, File changelogFile) 
+            throws IOException 
     {
-        // Parse the log file into IntegrityLcChangeSetList items
-        LineIterator lineIterator = null;
-        try {
-            lineIterator = FileUtils.lineIterator(changelogFile,"UTF-8");
-            return new IntegrityLcChangeSetList(build, browser, integrityUrl, parse(lineIterator));
-        } finally {
-            LineIterator.closeQuietly(lineIterator);
-        }
-    }
+		List<IntegrityLcChangeSet> changeSetList = new ArrayList<IntegrityLcChangeSet>();
+		Digester digester = new Digester();
+		digester.push(changeSetList);
 
-    private List<IntegrityLcChangeSet> parse(Iterator<String> changelog) {
-        Set<IntegrityLcChangeSet> r = new LinkedHashSet<>();
-        while (changelog.hasNext()) {
-            String line = changelog.next();
-            r.add(parseLines(line));
-        }
-        return new ArrayList<>(r);
-    }
+		// When digester reads a {{<items>}} child node of {{<changelog>}} it will
+		// create a {{IntegrityChangeLog}} object
+		digester.addObjectCreate("*/items/item", IntegrityLcChangeSet.class);
+		digester.addSetProperties("*/items/item");
+		digester.addBeanPropertySetter("*/items/item/file");
+		digester.addBeanPropertySetter("*/items/item/msg");
+		digester.addBeanPropertySetter("*/items/item/context");
 
-    private IntegrityLcChangeSet parseLines(String line) {
-        return new IntegrityLcChangeSet(line);
-    }
+		// The digested node/item is added to the change set through
+		// {{java.util.List.add()}}
+		digester.addSetNext("*/items/item", "add");
+
+		// Do the actual parsing
+		try
+        {
+			digester.parse(changelogFile);
+		} catch (IOException e)
+        {
+			throw new IOException("Failed to parse " + changelogFile, e);
+		} catch (SAXException e)
+        {
+			throw new IOException("Failed to parse " + changelogFile, e);
+		}
+
+		return changeSetList;
+	}
+
+	private List<IntegrityLcChangeSet> parse(Iterator<String> changelog) {
+		Set<IntegrityLcChangeSet> r = new LinkedHashSet<>();
+		while (changelog.hasNext()) {
+			String line = changelog.next();
+			r.add(parseLines(line));
+		}
+		return new ArrayList<>(r);
+	}
+
+	private IntegrityLcChangeSet parseLines(String line) {
+		return new IntegrityLcChangeSet(line);
+	}
 }
