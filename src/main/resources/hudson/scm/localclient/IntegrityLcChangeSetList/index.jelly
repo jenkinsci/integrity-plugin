@@ -7,13 +7,16 @@
   <j:set var="browser" value="${it.build.parent.scm.effectiveBrowser}"/>
   <h2>${%Summary}</h2>
   <table class="pane" style="border:none">
+    <tr>
+  	<th class="changeset-message">Message</th>  
+  	<th class="changeset-message">Filename</th>
+  	<th class="changeset-message">Context</th>
+  </tr>
 	  <j:forEach var="cs" items="${it.logs}">
 		  <tr class="pane">
-			  <td colspan="2" class="changeset">
-				  <li>
-					  ${cs.date} ${cs.msg} - ${cs.file} - ${cs.context} 
-				  </li>
-			  </td>
+			  <td >${cs.msg}</td>
+			  <td >${cs.file}</td>
+			  <td>${cs.context}</td>
 		  </tr>
 	  </j:forEach>
   </table>
