@@ -339,10 +339,11 @@ plugin only checkpoints normal or variant configurations._
 Integrity CM checkpoint label. +
 The plugin validates the string defined in the *Checkpoint Label* field
 for invalid label characters. +
-[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image::https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Checkpoint_Label.png?version=1&modificationDate=1453898901000&api=v2[image,width=860,height=149]# +
+image::Jenkins_Checkpoint_Label.png[Build Scan link,width=60%,align="center"] +
+[.confluence-embedded-file-wrapper .confluence-embedded-manual-size]#image:https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Checkpoint_Label.png?version=1&modificationDate=1453898901000&api=v2[image,width=860,height=149]# +
 *Note* +
 
-image::Jenkins_Checkpoint_Label.png[Build Scan link,width=60%,align="center"]
+
 Jenkins administrators need to approve any potential unsecure groovy
 script before execution of the script defined in the *Checkpoint Label*
 field. For example, if you have a custom script evaluation in the above
