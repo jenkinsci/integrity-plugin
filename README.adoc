@@ -1,3 +1,5 @@
+:imagesdir: images
+
 [.conf-macro .output-inline]#This Jenkins plugin provides SCM
 integration capabilities to
 https://www.ptc.com/en/products/plm/plm-products/integrity-lifecycle-manager[Integrity
