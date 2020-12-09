@@ -41,7 +41,7 @@ Being an open source software, the plugin follows all standards for being an ope
 
 ### Assumptions
 
-This document assumes that you know how to use Integrity Lifecycle Manager and Jenkins. For more information on using Jenkins, refer the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Help_Button.png) next to the configuration fields in Jenkins for viewing the associated help.
+This document assumes that you know how to use Integrity Lifecycle Manager and Jenkins. For more information on using Jenkins, refer the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) next to the configuration fields in Jenkins for viewing the associated help.
 
 ### Installing PTC Integrity Plugin
 
@@ -71,7 +71,8 @@ Consider the following when attempting connection to an Integrity Lifecycle Man
 To install the PTC Integrity Plugin:
 
 1.  On the Jenkins dashboard, select **Jenkins \>** **Manage Jenkins \> Manage Plugins**.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Manage_Plugins_Access.png)
+    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Manage_Plugins_Access.png?version=1&modificationDate=1453894559000&api=v2){width="351"
+    height="586"}  
     The **Plugin Manager** page opens.
 2.  Select the **Available** tab.
 3.  Navigate to the **Source Code Management** section and select the **PTC Integrity CM – Jenkins Plugin** checkbox.
@@ -85,7 +86,8 @@ To install the PTC Integrity Plugin:
 Once you have installed the PTC Integrity Plugin, you can verify if the plugin installation was successful after restarting the Jenkins server.
 
 To verify the plugin installation, click **Jenkins \>** **Manage Jenkins** \> **Configure System** on the Jenkins dashboard.
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Manage_Plugins_Configure_System.png)
+![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Manage_Plugins_Configure_System.png?version=1&modificationDate=1453895051000&api=v2){width="382"
+height="643"}
 
 The presence of **Integrity** server configuration options validates the successful installation of the plugin.
 ![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
@@ -105,7 +107,8 @@ To configure a build:
 
 1.  On the Jenkins dashboard, select any existing build configuration or create a new build job (as per your requirement). See the Jenkins documentation on how to create a new build job.
 2.  Select **Configure**.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Configure_Build.png)
+    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Configure_Build.png?version=1&modificationDate=1453897563000&api=v2){width="326"
+    height="311"}
 3.  Navigate to the **Source Code Management** section.
 4.  Select **Integrity** to configure the settings for the PTC Integrity Plugin.
     ![](./images/Jenkins_SCM_Integrity.png)
@@ -154,11 +157,12 @@ To configure a build:
       _If you are running the Jenkins server on the same server as the Integrity Lifecycle Manager Server (not recommended), then you need to override the value in the_ **_URL_** _field or access Jenkins using a different URL. Integrity CM links do not work if Jenkins and Integrity Lifecycle Manager are running on the same server and/or are accessed with the same URL. However, you can access Jenkins with just the hostname, (for example,_ _[http://hostname:8080](http://hostname:8080/)\*\*) and Integrity Lifecycle Manager with the fully qualified DNS name (for example,_ _[http://hostname.domain.com:7001](http://hostname.domain.com:7001/)\*\*). PTC recommends running the Integrity Lifecycle Manager server and Jenkins on separate servers._
       ![](./images/Jenkins_Integrity_Settings_Advanced_2_2.png) 
       **Note**
-      _Click_ ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Help_Button.png) _next to the configuration fields for viewing the associated help._
+      _Click_ ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) _next to the configuration fields for viewing the associated help._
 
 7.  Optionally, if you want to poll Integrity CM for updates to your project, select the **Poll SCM** checkbox in the **Build Triggers** section and specify a schedule in the **Schedule** field.
     As shown in the following figure, Jenkins polls Integrity CM every five minutes.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_Triggers.png)
+    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Build_Triggers.png?version=1&modificationDate=1453898701000&api=v2){width="948"
+    height="239"}
 8.  At the bottom of the Jenkins job configuration page, select **Add post-build action** \> **Integrity - CM Checkpoint**.
     ![](./images/Jenkins_Post_Build_Action_Integrity_CM_Checkpoint.png)
     **Note**
