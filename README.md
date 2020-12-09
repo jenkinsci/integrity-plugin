@@ -1,3 +1,5 @@
+[![AppVeyor build status](https://ci.appveyor.com/api/projects/status/yfbf4w5ux7g8t6p0/branch/master?svg=true)](https://ci.appveyor.com/project/anuragsen/integrity-plugin)
+
 This Jenkins plugin provides SCM integration capabilities to [Integrity Lifecycle Manager](https://www.ptc.com/en/products/plm/plm-products/integrity-lifecycle-manager) for Configuration Management.
 
 ### Overview

@@ -12,7 +12,7 @@
   <description>Integrates Jenkins with PTC Windchill RV&amp;S</description>
   <version>2.4-SNAPSHOT</version>
   <packaging>hpi</packaging>
-  <url>http://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin</url>
+  <url>https://github.com/jenkinsci/integrity-plugin</url>
 
   <developers>
     <developer>
