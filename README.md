@@ -88,7 +88,7 @@ To verify the plugin installation, click **Jenkins \>** **Manage Jenkins** \> **
 ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Manage_Plugins_Configure_System.png)
 
 The presence of **Integrity** server configuration options validates the successful installation of the plugin.
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Integrity_Server_Configuration_Option.png)
+![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
 
 You can create a list of default Integrity Lifecycle Manager server connection profiles using the **Integrity** server configuration options. You can select an Integrity Lifecycle Manager server connection profile when you configure a build job or when you enable other post-build actions like **Integrity – Workflow Item**. See [Integrity Workflows and Documents Integration](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-IntegrityWorkflows%26DocumentsIntegration) for more information on the **Integrity – Workflow Item** post-build action.
 
@@ -108,7 +108,7 @@ To configure a build:
     ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Configure_Build.png)
 3.  Navigate to the **Source Code Management** section.
 4.  Select **Integrity** to configure the settings for the PTC Integrity Plugin.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_SCM_Integrity.png)
+    ![](./images/Jenkins_SCM_Integrity.png)
 5.  Define the following **Integrity** settings:
 
     - In the **Server Configuration** field, select a connection profile.
@@ -120,7 +120,7 @@ To configure a build:
     - Select the **Use Local Client** checkbox to enable local Integrity Lifecycle Manager client integration point. When this checkbox is selected, the plugin does not use remote connections to Integrity Lifecycle Manager server. For more information on integration with local Integrity Lifecycle Manager client, see [PTC Integrity Plugin Local Client Integration](https://wiki.jenkins.io/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-PTCIntegrityPluginLocalClientIntegration).
     - Clear the **Clean Workspace** checkbox (default setting) if you want to update an existing Jenkins workspace.
     - Select the **Use** **Change Package Mode** checkbox to enable the change package mode for the plugin. The **Change Package** mode enables the plugin to detect changes made using change packages on the Integrity Lifecycle Manager server repository for generating the builds. By default, the plugin is configured to work in file-based changes mode and considers the file changes for generating the build. For more information on the Change Package mode, see [Change Detection](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-ChangeDetection).
-      ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Integrity_Settings_2_1.png)
+      ![](./images/Jenkins_Integrity_Settings_2_1.png)
 
 6.  Click **Advanced** and define the following advance settings:
 
@@ -152,7 +152,7 @@ To configure a build:
       **Note**
       _By default, the plugin defines a URL based on the specified host/port/secure parameters in the_ **_URL_** _field. However, you can specify the URL if you want to provide a different link for viewing the_ **_Annotated Revision_** _and_ **_Differences_** _views._
       _If you are running the Jenkins server on the same server as the Integrity Lifecycle Manager Server (not recommended), then you need to override the value in the_ **_URL_** _field or access Jenkins using a different URL. Integrity CM links do not work if Jenkins and Integrity Lifecycle Manager are running on the same server and/or are accessed with the same URL. However, you can access Jenkins with just the hostname, (for example,_ _[http://hostname:8080](http://hostname:8080/)\*\*) and Integrity Lifecycle Manager with the fully qualified DNS name (for example,_ _[http://hostname.domain.com:7001](http://hostname.domain.com:7001/)\*\*). PTC recommends running the Integrity Lifecycle Manager server and Jenkins on separate servers._
-      ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Integrity_Settings_Advanced_2_2.png) 
+      ![](./images/Jenkins_Integrity_Settings_Advanced_2_2.png) 
       **Note**
       _Click_ ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Help_Button.png) _next to the configuration fields for viewing the associated help._
 
@@ -160,7 +160,7 @@ To configure a build:
     As shown in the following figure, Jenkins polls Integrity CM every five minutes.
     ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_Triggers.png)
 8.  At the bottom of the Jenkins job configuration page, select **Add post-build action** \> **Integrity - CM Checkpoint**.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Post_Build_Action_Integrity_CM_Checkpoint.png)
+    ![](./images/Jenkins_Post_Build_Action_Integrity_CM_Checkpoint.png)
     **Note**
     _The plugin does not checkpoint Integrity CM build configurations. The plugin only checkpoints normal or variant configurations._
 9.  In the **Checkpoint Label** field, define Groovy pattern for the Integrity CM checkpoint label.
@@ -199,7 +199,7 @@ To monitor the build progress:
     ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_Progress.png)
 2.  Click **Console Output**.
     The console output displays the details of the build in progress.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Console_Output.png)
+    ![](./images/Jenkins_Console_Output.png)
 
 As highlighted in the above figure, if the **Clean Workspace** checkbox is not selected, the plugin attempts to update the workspace by performing the following operations:
 
@@ -237,7 +237,7 @@ $
 @
 ```
 
-If you have configured the **Integrity - CM Checkpoint** post-build action correctly, then you can view an entry in the console output after successful completion of a build. ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Successful_Build_Checkpoint.png)
+If you have configured the **Integrity - CM Checkpoint** post-build action correctly, then you can view an entry in the console output after successful completion of a build. ![](./images/Jenkins_Successful_Build_Checkpoint.png)
 
 If you have configured the **Integrity - CM Checkpoint** post-build action for a build configuration, the post-build action labels the project and does not attempt to create a new checkpoint. The post-build action performs a similar operation if you have configured the Jenkins job for a pre-build checkpoint.
 
@@ -247,7 +247,7 @@ The following figure shows the project history view in Integrity CM after succes
 ### Polling
 
 Based on the polling configuration for the Jenkins build job, the **Integrity CM Polling Log** link is visible in the left-side navigation pane. You can click this link to view details about the last poll. Refer the following image for details about the last poll. For example, the poll ran at 2:34 PM and found a total of 1 change (which includes adds/updates/drops).
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Polling_Log.png)
+![](./images/Jenkins_Polling_Log.png)
 Also note that the new builds initiated as a result of the poll are visible in the **Build History** widget.
 
 ### Change Log and Integrity CM Browsing
@@ -263,15 +263,15 @@ The **Action** column provides an indicative icon about the change (add/update/d
 
 _The comments associated with the drop action refer to the last member revision in the Integrity CM Project when you performed the drop action. Currently, Integrity CM does not record comments when a file is dropped._
 
-For example, clicking the ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_EditAction.png)(Edit Action) icon for member _IntegritySCM.java_ generates the Integrity CM - Member Differences view as shown in the following figure: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Differences.png)
+For example, clicking the ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_EditAction.png)(Edit Action) icon for member _IntegritySCM.java_ generates the Integrity CM - Member Differences view as shown in the following figure: ![](./images/Jenkins_Differences.png)
 
-Similarly, clicking the revision link provides you access to the Integrity CM - Annotated Member view: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Annotated_Revision.png)
+Similarly, clicking the revision link provides you access to the Integrity CM - Annotated Member view: ![](./images/Jenkins_Annotated_Revision.png)
 
 ### Remote Execution
 
 The PTC Integrity Plugin for Jenkins supports build execution on remote slaves. Currently, the plugin is designed to only execute the check-out operation on a remote machine. All other commands are executed from the Jenkins master server.
 
-The remote build execution is virtually transparent from an SCM plugin perspective. The only difference may be a different workspace path as illustrated in the output from the following build executed on a slave machine: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_RemoteExecution_ConsoleOutput.png)
+The remote build execution is virtually transparent from an SCM plugin perspective. The only difference may be a different workspace path as illustrated in the output from the following build executed on a slave machine: ![](./images/Jenkins_RemoteExecution_ConsoleOutput.png)
 
 No additional setup is required if the Integrity Lifecycle Manager server is configured to allow API connections from any machine. If Integrity’s API connections are configured for specific servers, ensure that the respective Jenkins slave nodes are added to the list of allowed connections on the Integrity Lifecycle Manager server.
 
@@ -351,13 +351,13 @@ If you want to integrate Build Management with Test Management, then define a re
 
 ### Jenkins Workflow Support
 
-The PTC Integrity Plugin supports the Workflow plugin and associated updated core Jenkins APIs. The following figures show the scripting of a generic checkout step using the Workflow plugin's _Snippet Generator_. ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Snippet_Generator_Steps.png)
+The PTC Integrity Plugin supports the Workflow plugin and associated updated core Jenkins APIs. The following figures show the scripting of a generic checkout step using the Workflow plugin's _Snippet Generator_. ![](./images/Jenkins_Snippet_Generator_Steps.png)
 
-Additionally, the PTC Integrity Plugin also supports three additional workflow steps: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_SampleStep.png) ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_IntegritySCMCheckin_Script.png)
+Additionally, the PTC Integrity Plugin also supports three additional workflow steps: ![](./images/Jenkins_SampleStep.png) ![](./images/Jenkins_IntegritySCMCheckin_Script.png)
 
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_IntegritySCMCheckpoint_Script.png)
+![](./images/Jenkins_IntegritySCMCheckpoint_Script.png)
 
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_IntegritySCMLabel_Script.png)
+![](./images/Jenkins_IntegritySCMLabel_Script.png)
 
 **Note**
 _Since the label step related to the SCM Label is executed independently of the checkout step, currently there is no way to propagate the project or checkpoint label to all subprojects. A project label can only be applied to the top-level project._
@@ -379,10 +379,10 @@ To configure log records:
 3.  Specify a name for the log recorder and click **OK**.
 4.  Select the logger from the **Logger** list.
 5.  In the **Log level** field, select the log levels to record.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Logger_Configuration.png)
+    ![](./images/Jenkins_Logger_Configuration.png)
 6.  Click **Save**.
 
-The following is an excerpt from a sample debug _IntegritySCM_ log: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Log_Records.png)
+The following is an excerpt from a sample debug _IntegritySCM_ log: ![](./images/Jenkins_Log_Records.png)
 
 #### Troubleshooting Local Integrity Lifecycle Manager Client Integration Issues
 
