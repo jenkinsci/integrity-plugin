@@ -1,28 +1,3 @@
-[Jenkins](https://www.jenkins.io/)
-
-- [What is CDF?](https://cd.foundation/)[Jenkins X](https://jenkins-x.io/)[Tekton](https://cloud.google.com/tekton/)[Spinnaker](https://www.spinnaker.io/)
-
-- [Blog](https://www.jenkins.io/node)
-- Documentation
-  [**User Guide**](https://www.jenkins.io/doc/book)[ - Installing Jenkins](https://www.jenkins.io/doc/book/installing/)[ - Jenkins Pipeline](https://www.jenkins.io/doc/book/pipeline)[ - Managing Jenkins](https://www.jenkins.io/doc/book/managing/)[ - System Administration](https://www.jenkins.io/doc/book/system-administration)[ - Terms and Definitions](https://www.jenkins.io/doc/book/glossary/)[**Solution Pages**](https://www.jenkins.io/solutions)[**Tutorials**](https://www.jenkins.io/doc/tutorials/)[ - Guided Tour](https://www.jenkins.io/doc/pipeline/tour/getting-started/)[ - More Tutorials](https://www.jenkins.io/doc/tutorials/)[**Developer Guide**](https://www.jenkins.io/doc/developer)[**Contributor Guide**](https://www.jenkins.io/participate)
-- [Plugins](https://plugins.jenkins.io/)
-- Community
-  [Overview](https://www.jenkins.io/participate)[Chat](https://www.jenkins.io/chat "Chat with the rest of the Jenkins community on IRC")[Meet](https://www.jenkins.io/projects/jam)[Events](https://www.jenkins.io/events)[Issue Tracker](https://issues.jenkins.io/)[Mailing Lists](https://www.jenkins.io/mailing-lists "Browse Jenkins mailing list archives and/or subscribe to lists")[Wiki](https://wiki.jenkins.io/)[Account Management](https://accounts.jenkins.io/ "Create/manage your account for accessing wiki, issue tracker, etc")[**Special Interest Groups**](https://www.jenkins.io/sigs/)[ - Advocacy and Outreach](https://www.jenkins.io/sigs/advocacy-and-outreach/)[ - Chinese Localization](https://www.jenkins.io/sigs/chinese-localization/)[ - Cloud Native](https://www.jenkins.io/sigs/cloud-native/)[ - Documentation](https://www.jenkins.io/sigs/docs/)[ - Google Summer of Code](https://www.jenkins.io/sigs/gsoc/)[ - Hardware and EDA](https://www.jenkins.io/sigs/hw-and-eda/)[ - Pipeline Authoring](https://www.jenkins.io/sigs/pipeline-authoring/)[ - Platform](https://www.jenkins.io/sigs/platform/)[ - User Experience](https://www.jenkins.io/sigs/ux/)
-- Subprojects
-  [Overview](https://www.jenkins.io/projects/)[Evergreen](https://www.jenkins.io/projects/evergreen/)[Google Summer of Code in Jenkins](https://www.jenkins.io/projects/gsoc/)[Infrastructure](https://www.jenkins.io/projects/infrastructure/)[CI/CD and Jenkins Area Meetups](https://www.jenkins.io/projects/jam/)[Jenkins Configuration as Code](https://www.jenkins.io/projects/jcasc/)[Jenkins Remoting](https://www.jenkins.io/projects/remoting/)[Document Jenkins on Kubernetes](https://www.jenkins.io/sigs/docs/gsod/2020/projects/document-jenkins-on-kubernetes/)
-- About
-  [Security](https://www.jenkins.io/security)[Press](https://www.jenkins.io/press)[Awards](https://www.jenkins.io/awards)[Conduct](https://www.jenkins.io/project/conduct)[Artwork](https://www.jenkins.io/artwork)
-- English
-  [中文 Chinese](https://www.jenkins.io/zh)
-- [Download](https://www.jenkins.io/download)
-
-ID: integrity-plugin
-
-- [Documentation](https://plugins.jenkins.io/integrity-plugin/#documentation)
-- [Releases](https://plugins.jenkins.io/integrity-plugin/#releases)
-- [Issues](https://plugins.jenkins.io/integrity-plugin/#issues)
-- [Dependencies](https://plugins.jenkins.io/integrity-plugin/#dependencies)
-
 This Jenkins plugin provides SCM integration capabilities to [Integrity Lifecycle Manager](https://www.ptc.com/en/products/plm/plm-products/integrity-lifecycle-manager) for Configuration Management.
 
 ### Overview
@@ -191,7 +166,6 @@ To configure a build:
 9.  In the **Checkpoint Label** field, define Groovy pattern for the Integrity CM checkpoint label.
     The plugin validates the string defined in the **Checkpoint Label** field for invalid label characters.
     ![](./images/Jenkins_Checkpoint_Label.png)
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Checkpoint_Label.png)
     **Note**
     Jenkins administrators need to approve any potential unsecure groovy script before execution of the script defined in the **Checkpoint Label** field. For example, if you have a custom script evaluation in the above field, it needs to be approved using **Manage Jenkins** **\>** **In-process Script Approval** (URL: http://\<jenkins-instance\>:\<jenkins-port\>/scriptApproval), before the job configuration can be saved.
 
