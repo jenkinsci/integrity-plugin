@@ -28,14 +28,14 @@ The plugin provides the following capabilities:
 - Provides a detailed change log of differences for the current build with an integrated SCM browser support. Change Log report links directly to Windchill RV&S CM Annotated Member and Differences views.
 - Polls Windchill RV&S CM on a cron schedule to check for any changes. If there are changes, the plugin automatically initiates a build.
 - Supports distributed/remote build execution. In a clustered Jenkins environment, this plugin is designed to execute the checkout operation on remote agents.
-- Supports Workflow plugins for Jenkins. For more information, see [Jenkins Workflow Support](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-JenkinsWorkflowSupport).
+- Supports Workflow plugins for Jenkins. For more information, see [Jenkins Workflow Support](#jenkins-workflow-support).
 - Provides the option to update a Windchill RV&S Build item with the results of the build. The plugin also provides the option to save the log contents to a rich text field.
 - Provides the option to update a Windchill RV&S Test Session item with the results from a build's automated test execution.
 - Updates Windchill RV&S project/sub-project with output from builds.
 
 ### Licensing
 
-The PTC Windchill RV&S CM - Jenkins Plugin does not require any explicit license currently. However, the mksapi.jar used by the plugin (to connect to the Windchill RV&S server from Jenkins) is a proprietary PTC jar and hence has its own PTC license. Windchill RV&S users get this mksapi.jar (and its license) bundled with the Windchill RV&S server.
+The PTC Windchill RV&S CM - Jenkins Plugin does not require any explicit license currently. However, the mksapi.jar used by the plugin (to connect to the Windchill RV&S server from Jenkins) is a proprietary PTC jar and hence has its own PTC license. Windchill RV&S users get this mksapi.jar and the license for this jar bundled with the Windchill RV&S server.
 
 ### Development
 
@@ -43,7 +43,7 @@ Being an open source software, the plugin follows all standards for being an ope
 
 ### Assumptions
 
-This document assumes that you know how to use Windchill RV&S and Jenkins. For more information on using Jenkins, refer the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) next to the configuration fields in Jenkins for viewing the associated help.
+This document assumes that you know how to use Windchill RV&S and Jenkins. For more information on using Jenkins, refer to the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) next to the configuration fields in Jenkins for viewing the associated help.
 
 ### Installing PTC Windchill RV&S CM - Jenkins Plugin
 
@@ -54,7 +54,7 @@ The installation of the PTC Windchill RV&S CM - Jenkins Plugin requires the foll
 - Jenkins 1.628 server or a later server is installed.
 - PTC Integrity Lifecycle Manager 11.0 server or a later server is installed.
 - API connections on the Windchill RV&S server are enabled.
-- For local client integration, Windchill RV&S client is installed locally on Jenkins instances, including both controller and agents. For more information, see [PTC Windchill RV&S CM - Jenkins Plugin Local Client Integration](https://wiki.jenkins.io/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-PTCIntegrityPluginLocalClientIntegration).
+- For local client integration, Windchill RV&S client is installed locally on Jenkins instances, including both controller and agents. For more information, see [PTC Windchill RV&S CM - Jenkins Plugin Local Client Integration](#ptc-windchill-rvs-cm---jenkins-plugin-local-client-integration).
 
 **Note**
 
@@ -96,7 +96,7 @@ height="643"}
 The presence of **Windchill RV&S** server configuration options validates the successful installation of the plugin.
 ![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
 
-You can create a list of the default Windchill RV&S server connection profiles using the **Windchill RV&S** server configuration options. You can select a Windchill RV&S server connection profile when you configure a build job or when you enable other post-build actions like **Windchill RV&S – Workflow Item**. See [Windchill RV&S Workflows and Documents Integration](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-IntegrityWorkflows%26DocumentsIntegration) for more information on the **Windchill RV&S – Workflow Item** post-build action.
+You can create a list of the default Windchill RV&S server connection profiles using the **Windchill RV&S** server configuration options. You can select a Windchill RV&S server connection profile when you configure a build job or when you enable other post-build actions like **Windchill RV&S – Workflow Item**. See [Windchill RV&S Workflows and Documents Integration](#windchill-rvs-workflows--documents-integration) for more information on the **Windchill RV&S – Workflow Item** post-build action.
 
 **Note**
 
@@ -126,9 +126,9 @@ To configure a build:
       **Note**
       
       _See the Windchill RV&S documentation or contact PTC Technical Support for details on how to obtain the configuration path for variant and build configurations._
-    - Select the **Use Local Client** checkbox to enable local Windchill RV&S client integration point. When this checkbox is selected, the plugin does not use remote connections to the Windchill RV&S server. For more information on integration with local Windchill RV&S client, see [PTC Windchill RV&S CM - Jenkins Plugin Local Client Integration](https://wiki.jenkins.io/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-PTCIntegrityPluginLocalClientIntegration).
+    - Select the **Use Local Client** checkbox to enable local Windchill RV&S client integration point. When this checkbox is selected, the plugin does not use remote connections to the Windchill RV&S server. For more information on integration with local Windchill RV&S client, see [PTC Windchill RV&S CM - Jenkins Plugin Local Client Integration](#ptc-windchill-rvs-cm---jenkins-plugin-local-client-integration).
     - Clear the **Clean Workspace** checkbox (default setting) if you want to update an existing Jenkins workspace.
-    - Select the **Use Change Package Mode** checkbox to enable the change package mode for the plugin. The **Change Package** mode enables the plugin to detect changes made using change packages on the Windchill RV&S server repository for generating the builds. By default, the plugin is configured to work in file-based changes mode and considers the file changes for generating the build. For more information on the Change Package mode, see [Change Detection](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-ChangeDetection).
+    - Select the **Use Change Package Mode** checkbox to enable the change package mode for the plugin. The **Change Package** mode enables the plugin to detect changes made using change packages on the Windchill RV&S server repository for generating the builds. By default, the plugin is configured to work in file-based changes mode and considers the file changes for generating the build. For more information on the Change Package mode, see [Change Detection](#change-detection).
       ![](./images/Jenkins_Integrity_Settings_2_1.png)
 
 6.  Click **Advanced** and define the following advance settings:
@@ -193,7 +193,7 @@ To configure a build:
     
     **Note**
     
-    Jenkins administrators need to approve any potential unsecure groovy script before execution of the script defined in the **Checkpoint Label** field. For example, if you have a custom script evaluation in the above field, it needs to be approved using **Manage Jenkins** **\>** **In-process Script Approval** (URL: http://\<jenkins-instance\>:\<jenkins-port\>/scriptApproval), before the job configuration can be saved.
+    _Jenkins administrators need to approve any potential unsecure groovy script before execution of the script defined in the **Checkpoint Label** field. For example, if you have a custom script evaluation in the above field, it needs to be approved using **Manage Jenkins** **\>** **In-process Script Approval** (URL: http://\<jenkins-instance\>:\<jenkins-port\>/scriptApproval), before the job configuration can be saved._
 
 10. Click **Save** to commit your changes.
 
@@ -272,7 +272,7 @@ The following figure shows the project history view in Windchill RV&S CM after s
 
 ### Polling
 
-Based on the polling configuration for the Jenkins build job, the **Windchill RV&S CM Polling Log** link is visible in the left-side navigation pane. You can click this link to view details about the last poll. Refer the following image for details about the last poll. For example, the poll ran at 2:34 PM and found a total of 1 change (which includes adds/updates/drops).
+Based on the polling configuration for the Jenkins build job, the **Windchill RV&S CM Polling Log** link is visible in the left-side navigation pane. You can click this link to view details about the last poll. Refer to the following image for details about the last poll. For example, the poll ran at 2:34 PM and found a total of 1 change (which includes adds/updates/drops).
 ![](./images/Jenkins_Polling_Log.png)
 
 Also note that the new builds initiated as a result of the poll are visible in the **Build History** widget.
@@ -390,7 +390,7 @@ _Since the label step related to the SCM Label is executed independently of the 
 
 ### Limitations
 
-- The PTC Windchill RV&S CM - Jenkins Plugin 2.4 does not support non-transactional change packages in the Change Package mode. It is recommended to use the file mode for non-transactional change packages by clearing the **Use Change Package Mode** checkbox during the job configuration. For more information, see [Change Detection](https://wiki.jenkins-ci.org/display/JENKINS/PTC+Integrity+Plugin#PTCIntegrityPlugin-ChangeDetection).
+- The PTC Windchill RV&S CM - Jenkins Plugin 2.4 does not support non-transactional change packages in the Change Package mode. It is recommended to use the file mode for non-transactional change packages by clearing the **Use Change Package Mode** checkbox during the job configuration. For more information, see [Change Detection](#change-detection).
 - The PTC Windchill RV&S CM - Jenkins Plugin is designed to work with PTC Integrity Lifecycle Manager 11.0 and later.
 
 ### Troubleshooting
@@ -416,7 +416,8 @@ If you encounter the following error in the Jenkins job console:
 
     Attempt to launch Integrity Client timed out. To solve this please try the following:
     - Verify that the user you are logged in as has read and write permissions to the Integrity Client install directory.
-    - Make sure the Integrity Client install directory is the very first entry in the path.com.mks.connect.BlimpException: Attempt to launch Integrity Client timed out. To solve this please try the following:
+    - Make sure the Integrity Client install directory is the very first entry in the path.
+    com.mks.connect.BlimpException: Attempt to launch Integrity Client timed out. To solve this please try the following:
     - Verify that the user you are logged in as has read and write permissions to the Integrity Client install directory.
     - Make sure the Integrity Client install directory is the very first entry in the path.
 
