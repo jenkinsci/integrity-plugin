@@ -455,7 +455,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(eh.getMessage());
       LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
       listener.getLogger().println(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
-      throw new AbortException("[Local Client] Caught Integrity APIException!");
+      throw new AbortException("[Local Client] Caught Windchil RV&S APIException!");
     } catch (Exception e) {
       e.printStackTrace(listener.getLogger());
       LOGGER.log(Level.SEVERE, "[Local Client] Exception occured during checkout!", e);
