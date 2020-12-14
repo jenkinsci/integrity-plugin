@@ -57,7 +57,7 @@ public class APISession implements ISession
     // Attempt to open a connection to the Integrity Server
     try {
       LOGGER.fine(
-                      "Creating Integrity API Session for :" +
+                      "Creating Windchill RV&S API Session for :" +
                                       settings.getUserName() +
                                       settings.getSecure());
       return new APISession(settings.getIpHostName(), settings.getIpPort(),
@@ -85,7 +85,7 @@ public class APISession implements ISession
   {
     try {
       LOGGER.fine(
-                      "Creating Integrity API Session for :" +
+                      "Creating Windchill RV&S API Session for :" +
                                       settings.getUserName() +
                                       settings.getSecure());
       return new APISession(settings.getIpHostName(), settings.getIpPort(),
