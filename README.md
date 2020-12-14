@@ -73,8 +73,7 @@ Consider the following when attempting connection to an Integrity Lifecycle Man
 To install the PTC Windchill RV&S CM - Jenkins Plugin:
 
 1.  On the Jenkins dashboard, select **Jenkins \>** **Manage Jenkins \> Manage Plugins**.
-    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Manage_Plugins_Access.png?version=1&modificationDate=1453894559000&api=v2){width="351"
-    height="586"}  
+    ![](./images/Jenkins_Manage_Plugins_Access.png)  
     The **Plugin Manager** page opens.
 2.  Select the **Available** tab.
 3.  Navigate to the **Source Code Management** section and select the **PTC Windchill RV&S CM - Jenkins Plugin** checkbox.
@@ -90,8 +89,7 @@ To install the PTC Windchill RV&S CM - Jenkins Plugin:
 Once you have installed the PTC Windchill RV&S CM - Jenkins Plugin, you can verify if the plugin installation is successful after restarting the Jenkins server.
 
 To verify the plugin installation, click **Jenkins \>** **Manage Jenkins** \> **Configure System** on the Jenkins dashboard.
-![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Manage_Plugins_Configure_System.png?version=1&modificationDate=1453895051000&api=v2){width="382"
-height="643"}
+![](./images/Jenkins_Manage_Plugins_Configure_System.png)
 
 The presence of **Windchill RV&S** server configuration options validates the successful installation of the plugin.
 ![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
@@ -111,8 +109,7 @@ To configure a build:
 
 1.  On the Jenkins dashboard, select any existing build configuration or create a new build job (as per your requirement). See the Jenkins documentation on how to create a new build job.
 2.  Select **Configure**.
-    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Configure_Build.png?version=1&modificationDate=1453897563000&api=v2){width="326"
-    height="311"}
+    ![](./images/Jenkins_Configure_Build.png) 
 3.  Navigate to the **Source Code Management** section.
 4.  Select **Windchill RV&S** to configure the settings for the PTC Windchill RV&S CM - Jenkins Plugin.
     ![](./images/Jenkins_SCM_Integrity.png)
@@ -175,12 +172,11 @@ To configure a build:
       
       **Note**
       
-      _Click_ ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) _next to the configuration fields for viewing the associated help._
+      _Click_ ![](./images/Help_Button.png) _next to the configuration fields for viewing the associated help._
 
 7.  Optionally, if you want to poll Windchill RV&S CM for updates to your project, select the **Poll SCM** checkbox in the **Build Triggers** section and specify a schedule in the **Schedule** field.
     As shown in the following figure, Jenkins polls Windchill RV&S CM every five minutes.
-    ![](https://wiki.jenkins.io/download/attachments/54723366/Jenkins_Build_Triggers.png?version=1&modificationDate=1453898701000&api=v2){width="948"
-    height="239"}
+    ![](./images/Jenkins_Build_Triggers.png)
 8.  At the bottom of the Jenkins job configuration page, select **Add post-build action** \> **Windchill RV&S - CM Checkpoint**.
     ![](./images/Jenkins_Post_Build_Action_Integrity_CM_Checkpoint.png)
     
@@ -204,10 +200,10 @@ To execute the build:
 1.  On the Jenkins dashboard, select an existing build configuration (job).
 2.  Select **Build Now** to start the build.
     If you configured your build job to use parameters (for example, Windchill RV&S Item ID), then select **Build with Parameters**.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_with_Parameters.png)
+    ![](./images/Jenkins_Build_with_Parameters.png)
 
 If you want to check in artifacts from the build back into Windchill RV&S, specify how you are authorized to update the Windchill RV&S project using the **ItemID** parameter values.
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Parameter_ItemID.png)
+![](./images/Jenkins_Parameter_ItemID.png)
 Valid values for the **ItemID** parameter include:
 
 ```{.syntaxhighlighter-pre data-syntaxhighlighter-params="brush: java; gutter: false; theme: Confluence" data-theme="Confluence"}
@@ -222,7 +218,7 @@ Valid values for the **ItemID** parameter include:
 To monitor the build progress:
 
 1.  In the **Build History** widget, select the build that you initiated to monitor the progress.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_Progress.png)
+    ![](./images/Jenkins_Build_Progress.png)
 2.  Click **Console Output**.
     The console output displays the details of the build in progress.
     ![](./images/Jenkins_Console_Output.png)
@@ -280,17 +276,18 @@ Also note that the new builds initiated as a result of the poll are visible in t
 ### Change Log and Windchill RV&S CM Browsing
 
 The PTC Windchill RV&S CM - Jenkins Plugin provides a detailed Change Log of changes for the current build with integrated SCM browser support. The Change Log report links directly to Windchill RV&S CM Annotated Member and Differences views. For example, if you select the build initiated by the SCM Polling trigger, notice that the build was started by a SCM change. Additionally, the **Summary of Changes** section lists out the details (date and comments) obtained directly from Windchill RV&S CM.
-![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_SummaryOfChanges_SCM.png)
+![](./images/Jenkins_SummaryOfChanges_SCM.png)
 
-Selecting **detail view** (as shown in the above figure) generates a detailed report as follows: ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Changes_Summary.png)
+Selecting **detail view** (as shown in the above figure) generates a detailed report as follows: 
+![](./images/Jenkins_Changes_Summary.png)
 
-The **Action** column provides an indicative icon about the change (add/update/drop). Additionally, in the case of an update, you can click ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_EditAction.png)(Edit Action) icon to access the Windchill RV&S CM member differences view. Similarly, you can click the **Revision** link to access the Windchill RV&S CM annotated member view. To view the change package details in Windchill RV&S CM, click the change package ID links in the **C.P. ID** column.
+The **Action** column provides an indicative icon about the change (add/update/drop). Additionally, in the case of an update, you can click ![](./images/Jenkins_EditAction.png)(Edit Action) icon to access the Windchill RV&S CM member differences view. Similarly, you can click the **Revision** link to access the Windchill RV&S CM annotated member view. To view the change package details in Windchill RV&S CM, click the change package ID links in the **C.P. ID** column.
 
 **Note**
 
 _The comments associated with the drop action refer to the last member revision in the Windchill RV&S CM Project when you performed the drop action. Currently, Windchill RV&S CM does not record comments when a file is dropped._
 
-For example, clicking the ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_EditAction.png)(Edit Action) icon for member _IntegritySCM.java_ generates the Windchill RV&S CM - Member Differences view as shown in the following figure: ![](./images/Jenkins_Differences.png)
+For example, clicking the ![](./images/Jenkins_EditAction.png)(Edit Action) icon for member _IntegritySCM.java_ generates the Windchill RV&S CM - Member Differences view as shown in the following figure: ![](./images/Jenkins_Differences.png)
 
 Similarly, clicking the revision link provides you access to the Windchill RV&S CM - Annotated Member view: ![](./images/Jenkins_Annotated_Revision.png)
 
@@ -359,9 +356,9 @@ If you did not use a build item, you can enable the recording of the test result
 You need to select the **Windchill RV&S - Workflow Item** post-build action during build configuration to enable configuration options for the following:
 
 - Build Management
-  ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Build_Management.png)
+  ![](./images/Jenkins_Build_Management.png)
 - Test Management
-  ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Test_Management.png)
+  ![](./images/Jenkins_Test_Management.png)
 
 The plugin can obtain build information or test results or both. If you want to use the Test Management integration only, do not specify anything in the **Query Definition** field and specify a **SessionID** parameter for the build. The **SessionID** parameter is used to find the Windchill RV&S test cases and based on the **External ID** field mapping (**Test Case Test Name Field External ID**), the test results are populated in Windchill RV&S. The **External ID** field should reference the JUnit or other test ID using the appropriate syntax. In the case of JUnit test results, the following are acceptable forms of test case IDs:
 
@@ -379,7 +376,10 @@ If you want to integrate Build Management with Test Management, then define a re
 
 The PTC Windchill RV&S CM - Jenkins Plugin supports the Workflow plugin and associated updated core Jenkins APIs. The following figures show the scripting of a generic checkout step using the Workflow plugin's _Snippet Generator_. ![](./images/Jenkins_Snippet_Generator_Steps.png)
 
-Additionally, the PTC Windchill RV&S CM - Jenkins Plugin also supports three additional workflow steps: ![](./images/Jenkins_SampleStep.png) ![](./images/Jenkins_IntegritySCMCheckin_Script.png)
+Additionally, the PTC Windchill RV&S CM - Jenkins Plugin also supports three additional workflow steps: 
+![](./images/Jenkins_SampleStep.png) 
+
+![](./images/Jenkins_IntegritySCMCheckin_Script.png)
 
 ![](./images/Jenkins_IntegritySCMCheckpoint_Script.png)
 
@@ -400,7 +400,7 @@ To troubleshoot the PTC Windchill RV&S CM - Jenkins Plugin, you can configure lo
 To configure log records:
 
 1.  On the Jenkins dashboard, select **Jenkins** \> **Manage Jenkins \>** **System Log**.
-    ![](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/Jenkins_Configure_System_Log.png)
+    ![](./images/Jenkins_Configure_System_Log.png)
 2.  Select **Add new log recorder**.
 3.  Specify a name for the log recorder and click **OK**.
 4.  Select the logger from the **Logger** list.
@@ -408,7 +408,8 @@ To configure log records:
     ![](./images/Jenkins_Logger_Configuration.png)
 6.  Click **Save**.
 
-The following is an excerpt from a sample debug _IntegritySCM_ log: ![](./images/Jenkins_Log_Records.png)
+The following is an excerpt from a sample debug _IntegritySCM_ log: 
+![](./images/Jenkins_Log_Records.png)
 
 #### Troubleshooting Local Windchill RV&S Client Integration Issues
 
@@ -800,4 +801,3 @@ UI [28ee5cb](https://github.com/jenkins-infra/plugin-site/commit/28ee5cbf0a7750e
 - [Artwork](https://www.jenkins.io/artwork)
 - [Awards](https://www.jenkins.io/awards)
 
-Navigated to PTC Integrity CM
