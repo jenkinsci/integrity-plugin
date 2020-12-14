@@ -21,6 +21,8 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry
     private static final String tokenOperator = ",";
     private String author = "user";
 
+    public IntegrityLcChangeSet() {}
+
     public IntegrityLcChangeSet(String line)
     {
         String[] tokens = line.split(tokenOperator);
@@ -43,10 +45,24 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry
     {
 	return msg;
     }
+
+    public void setMsg(String msg)
+    {
+    if (msg.endsWith(",")) 
+    {
+        msg = msg.substring(0, msg.length() - 1);
+    }
+    this.msg = msg;
+    }
     
     public String getContext()
     {
 	return context;
+    }
+
+    public void setContext(String context)
+    {
+	this.context = context;
     }
 
     @Override
@@ -62,6 +78,11 @@ public class IntegrityLcChangeSet extends ChangeLogSet.Entry
     public String getFile()
     {
 	return file;
+    }
+
+    public void setFile(String file)
+    {
+	this.file  = file;
     }
 
     @Override
