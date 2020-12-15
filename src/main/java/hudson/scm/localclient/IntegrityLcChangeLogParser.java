@@ -10,6 +10,8 @@ import java.util.List;
 import java.util.Set;
 
 import org.apache.commons.digester3.Digester;
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.LineIterator;
 import org.xml.sax.SAXException;
 
 import hudson.model.Run;
@@ -32,17 +34,26 @@ public class IntegrityLcChangeLogParser extends ChangeLogParser implements
     }
 
 	@Override
-	public IntegrityLcChangeSetList parse(@SuppressWarnings("rawtypes") Run build, 
-    RepositoryBrowser<?> browser, File changelogFile) 
-            throws IOException, SAXException 
-    {	
-		List<IntegrityLcChangeSet> changeSetList = parseXML(build, browser, integrityUrl, changelogFile);
-		return new IntegrityLcChangeSetList(build, browser, integrityUrl, changeSetList);
+	public IntegrityLcChangeSetList parse(@SuppressWarnings("rawtypes") Run build, RepositoryBrowser<?> browser,
+			File changelogFile) throws IOException, SAXException {
+		try {
+			List<IntegrityLcChangeSet>  changeSetList = parseXML(build, browser, integrityUrl, changelogFile);
+			return new IntegrityLcChangeSetList(build, browser, integrityUrl, changeSetList);
+		} catch (SAXException e) {
+			LineIterator lineIterator = null;
+			try {
+				lineIterator = FileUtils.lineIterator(changelogFile, "UTF-8");
+				return new IntegrityLcChangeSetList(build, browser, integrityUrl, parse(lineIterator));
+			} finally {
+				LineIterator.closeQuietly(lineIterator);
+			}
+			
+		}
 	}
 
 	private List<IntegrityLcChangeSet> parseXML(@SuppressWarnings("rawtypes") Run build, 
     RepositoryBrowser<?> browser, String integrityUrl, File changelogFile) 
-            throws IOException 
+            throws IOException, SAXException
     {
 		List<IntegrityLcChangeSet> changeSetList = new ArrayList<IntegrityLcChangeSet>();
 		Digester digester = new Digester();
@@ -69,7 +80,7 @@ public class IntegrityLcChangeLogParser extends ChangeLogParser implements
 			throw new IOException("Failed to parse " + changelogFile, e);
 		} catch (SAXException e)
         {
-			throw new IOException("Failed to parse " + changelogFile, e);
+			throw new SAXException("Failed to parse " + changelogFile, e);
 		}
 
 		return changeSetList;
