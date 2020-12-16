@@ -268,7 +268,7 @@ The following figure shows the project history view in Windchill RV&S CM after s
 
 ### Polling
 
-Based on the polling configuration for the Jenkins build job, the **Windchill RV&S CM Polling Log** link is visible in the left-side navigation pane. You can click this link to view details about the last poll. Refer to the following image for details about the last poll. For example, the poll ran at 2:34 PM and found a total of 1 change (which includes adds/updates/drops).
+Based on the polling configuration for the Jenkins build job, the **Windchill RV&S Polling Log** link is visible in the left-side navigation pane. You can click this link to view details about the last poll. Refer to the following image for details about the last poll. For example, the poll ran at 2:34 PM and found a total of 1 change (which includes adds/updates/drops).
 ![](./images/Jenkins_Polling_Log.png)
 
 Also note that the new builds initiated as a result of the poll are visible in the **Build History** widget.
@@ -449,14 +449,11 @@ The above sections of this document provides information on how to install, conf
 
 - **Version 2.4**
   - Rebranding updates
-  - Fixed JENKINS-52899 - Clean Workpace doesn't work for local client setting in PTC Integrity Plugin
-  - Fixed JENKINS-62548 - Issue regarding PTC Integrity CM - Jenkins Plugin "An API Exception was caught!"
-  - Fixed JENKINS-61754 - SQLException before checkout: Supplied locale description 'english' is invalid
+  - Fixed JENKINS-52899 - Clean Workspace doesn't work for local client setting in PTC Integrity Plugin
   - Fixed JENKINS-56663 - Integrity plugin local client does create a correct changelog.xml
-  - Fixed JENKINS-42567 - si viewproject gets stuck (sometimes) while checking out Integrity project
+  - Fixed JENKINS-62548 - Issue regarding PTC Integrity CM - Jenkins Plugin "An API Exception was caught!"
   - Fixed JENKINS-63288 - Checkin failure does not cause build to fail
-  - Fixed JENKINS-61189 - Not able to trigger Jenkins job automatically based on the PTC integrity checkin
-
+  
 #### 2019
 
 - **Version 2.3 (Feb 18, 2019)**
@@ -721,83 +718,3 @@ The above sections of this document provides information on how to install, conf
 
 - **Version 1.3 (Feb 28, 2011)**
   - Initial Jenkins release
-
-[\*\*ArchivesGet past versions](https://plugins.jenkins.io/integrity-plugin/#releases)
-
-##### Version: 2.3
-
-Released: 2 years ago
-
-Requires Jenkins 1.625.3
-
-##### Installs: 262
-
-##### Links
-
-[GitHub](https://github.com/jenkinsci/integrity-plugin)
-
-[Javadoc](https://javadoc.jenkins.io/plugin/integrity-plugin)
-
-##### Labels
-
-[SCM connections](https://plugins.jenkins.io/ui/search/?labels=scm)
-
-##### Maintainers
-
-PTC Integrity Support Team
-
-##### Help us improve this page!
-
-This content is served from the [Jenkins Wiki](https://wiki.jenkins.io/display/JENKINS/PTC+Integrity+Plugin) the [read-only state](https://groups.google.com/forum/#!msg/jenkinsci-dev/lNmas8aBRrI/eL3u7A6qBwAJ). We recommend moving the plugin documentation to GitHub, see [the guidelines](https://jenkins.io/blog/2019/10/21/plugin-docs-on-github/).
-
-##### Previous Security Warnings
-
-- ###### [Arbitrary code execution vulnerability](https://jenkins.io/security/advisory/2017-04-10/)
-
-  - Affects version 2.0.2 and earlier
-
-[Report a problem](<https://github.com/jenkins-infra/plugin-site/issues/new?labels=bug&template=4-bug.md&title=PTC%20Integrity%20CM%20page%20-%20TODO:%20Put%20a%20summary%20here&body=Problem%20with%20the%20[PTC%20Integrity%20CM](https://plugins.jenkins.io/integrity-plugin)%20page,%20[source%20file](https://github.com/jenkins-infra/plugin-site/tree/master/src/templates/plugin.jsx)%0A%0ATODO:%20Describe%20the%20expected%20and%20actual%20behavior%20here%20%0A%0A%23%23%20Screenshots%20%0A%0A%20TODO:%20Add%20screenshots%20if%20possible%20%0A%0A%23%23%20Possible%20Solution%20%0A%0A%3C!--%20If%20you%20have%20suggestions%20on%20a%20fix%20for%20the%20bug,%20please%20describe%20it%20here.%20--%3E%20%0A%0AN/A> "Report a problem with templates/plugin.jsx")
-
-[](https://creativecommons.org/licenses/by-sa/4.0/)
-
-![Creative Commons Attribution-ShareAlike license](./PTC%20Integrity%20CM%20_%20Jenkins%20plugin_files/88x31.png)
-
-The content driving this site is licensed under the Creative Commons Attribution-ShareAlike 4.0 license.
-
-UI [28ee5cb](https://github.com/jenkins-infra/plugin-site/commit/28ee5cbf0a7750ee4234f22829f44eb08d6ad7d3) / API [921cc1e](https://github.com/jenkins-infra/plugin-site-api/commit/921cc1eb4c2b2bdef791cbdfd9c9b27e4eec5b81)
-2020-12-08T06:03:31.000Z
-
-##### Resources
-
-- [Downloads](https://www.jenkins.io/download)
-- [Blog](https://www.jenkins.io/node)
-- [Documentation](https://www.jenkins.io/doc)
-- [Plugins](https://plugins.jenkins.io/)
-- [Security](https://www.jenkins.io/security)
-- [Contributing](https://www.jenkins.io/participate)
-
-##### Project
-
-- [Structure and governance](https://www.jenkins.io/project)
-- [Issue tracker](https://issues.jenkins.io/)
-- [Wiki](https://wiki.jenkins.io/)
-- [GitHub](https://github.com/jenkinsci)
-- [Jenkins on Jenkins](https://ci.jenkins.io/)
-
-##### Community
-
-- [Events](https://www.jenkins.io/events)
-- [Mailing lists](https://www.jenkins.io/mailing-lists)
-- [Chats](https://www.jenkins.io/chat)
-- [Special Interest Groups](https://www.jenkins.io/sigs)
-- [Twitter](https://twitter.com/jenkinsci)
-- [Reddit](https://reddit.com/r/jenkinsci)
-
-##### Other
-
-- [Code of Conduct](https://www.jenkins.io/conduct)
-- [Press information](https://www.jenkins.io/press)
-- [Merchandise](https://www.jenkins.io/merchandise)
-- [Artwork](https://www.jenkins.io/artwork)
-- [Awards](https://www.jenkins.io/awards)
-
