@@ -43,7 +43,7 @@ Being an open source software, the plugin follows all standards for being an ope
 
 ### Assumptions
 
-This document assumes that you know how to use Windchill RV&S and Jenkins. For more information on using Jenkins, refer to the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](https://wiki.jenkins.io/download/attachments/54723366/Help_Button.png?version=1&modificationDate=1453893714000&api=v2) next to the configuration fields in Jenkins for viewing the associated help.
+This document assumes that you know how to use Windchill RV&S and Jenkins. For more information on using Jenkins, refer to the [Jenkins documentation](https://wiki.jenkins-ci.org/display/JENKINS/Use+Jenkins). Click ![](./images/Help_Button.png) next to the configuration fields in Jenkins for viewing the associated help.
 
 ### Installing PTC Windchill RV&S CM - Jenkins Plugin
 
@@ -80,7 +80,7 @@ To install the PTC Windchill RV&S CM - Jenkins Plugin:
 
     **Tip**
     
-    _You can use the_ **_Filter_** _field at the top-right corner of the_ **_Plugin Manager_** _page to search for_ **\*PTC Windchill RV&S CM - Jenkins Plugin\*\***.\*
+    _You can use the_ **_Filter_** _field at the top-right corner of the_ **_Plugin Manager_** _page to search for_ **PTC Windchill RV&S CM - Jenkins Plugin**.
 4.  Click **Install without restart** to directly install the plugin.
 5.  Restart the Jenkins server after the plugin is installed.
 
