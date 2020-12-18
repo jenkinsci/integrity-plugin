@@ -452,7 +452,7 @@ The above sections of this document provides information on how to install, conf
 
 #### 2020
 
-- **Version 2.4**
+- **Version 2.4 (Dec 18, 2020)**
 
   - Rebranding updates
   - Fixed JENKINS-52899 - Clean Workspace doesn't work for local client setting in PTC Integrity Plugin
