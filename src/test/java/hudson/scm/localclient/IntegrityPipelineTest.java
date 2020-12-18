@@ -1,5 +1,6 @@
 package hudson.scm.localclient;
 
+import hudson.model.Result;
 import hudson.model.queue.QueueTaskFuture;
 import hudson.scm.ChangeLogSet;
 import hudson.scm.IntegritySCMTest;
@@ -169,5 +170,29 @@ public class IntegrityPipelineTest extends IntegritySCMTest
 	jenkinsRule.assertBuildStatusSuccess(build2.get());
 	jenkinsRule.assertBuildStatusSuccess(build3.get());
 	jenkinsRule.assertBuildStatusSuccess(build4.get());
+    }
+    
+    @Test
+    public void pipeLineTestWithLocalClientonRemoteNodeCheckin() throws Exception
+    {
+	WorkflowJob wfJob= jenkinsRule.jenkins.createProject(WorkflowJob.class, "demo");
+	wfJob.addTrigger(new SCMTrigger(""));
+	wfJob.setQuietPeriod(3); // so it only does one build
+	wfJob.setDefinition(new CpsFlowDefinition(
+			"node ('slave0') {\n" +
+					"checkout " +
+					"([$class: 'IntegritySCM', checkpointBeforeBuild: false, " +
+					"configPath: '"+successConfigPath+"', configurationName: 'test', " +
+					"serverConfig: 'test', localClient: true])" +
+					"\n" +
+					"sici ( configPath: '#/JenkinsBulkProject1', serverConfig: 'test'\r\n)" +
+					"}"));
+	//Checkin will fail because change package id is required for checkin operation.
+	WorkflowRun b = jenkinsRule.assertBuildStatus(Result.FAILURE ,wfJob.scheduleBuild2(0));
+	List<ChangeLogSet<? extends ChangeLogSet.Entry>> changeSets = b.getChangeSets();
+	assertEquals(1, changeSets.size());
+	ChangeLogSet<? extends ChangeLogSet.Entry> changeSet = changeSets.get(0);
+	assertEquals(b, changeSet.getRun());
+	assertEquals("integrity", changeSet.getKind());
     }
 }
