@@ -754,18 +754,9 @@ public class DerbyUtils
           break;
 
         case java.sql.Types.BLOB:
-          InputStream is = null;
-          try
-          {
-            is = rs.getBlob(i).getBinaryStream();
+          try (InputStream is = rs.getBlob(i).getBinaryStream()) {
             byte[] bytes = IOUtils.toByteArray(is);
             rowData.put(getEnum(rsMetaData.getColumnLabel(i)), bytes);
-          } finally
-          {
-            if (null != is)
-            {
-              is.close();
-            }
           }
           break;
 
@@ -778,23 +769,13 @@ public class DerbyUtils
           break;
 
         case java.sql.Types.CLOB:
-          BufferedReader reader = null;
-          try
-          {
-            reader = new java.io.BufferedReader(rs.getClob(i).getCharacterStream());
+          try (BufferedReader reader = new BufferedReader(rs.getClob(i).getCharacterStream())) {
             String line = null;
             StringBuilder sb = new StringBuilder();
-            while (null != (line = reader.readLine()))
-            {
+            while (null != (line = reader.readLine())) {
               sb.append(line + IntegritySCM.NL);
             }
             rowData.put(getEnum(rsMetaData.getColumnLabel(i)), sb.toString());
-          } finally
-          {
-            if (null != reader)
-            {
-              reader.close();
-            }
           }
           break;
 
@@ -1303,49 +1284,27 @@ public class DerbyUtils
   public static synchronized void primeAuthorInformation(String serverConfigId,
       String projectCacheTable) throws SQLException, IOException
   {
-    Connection db = null;
-    PreparedStatement authSelect = null;
-    ResultSet rs = null;
-    try
-    {
+    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
+            .getConnection(); PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE); ResultSet rs = authSelect.executeQuery()) {
       // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      rs = authSelect.executeQuery();
-      while (rs.next())
-      {
+      while (rs.next()) {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
-            getAuthorFromRevisionInfo(serverConfigId,
-                rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
-                rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
-                rowHash.get(CM_PROJECT.REVISION).toString()));
+                getAuthorFromRevisionInfo(serverConfigId,
+                        rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
+                        rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
+                        rowHash.get(CM_PROJECT.REVISION).toString()));
         rs.updateRow();
       }
 
       // Commit the updates
       db.commit();
-    } finally
-    {
-      // Release the result set
-      if (null != rs)
-      {
-        rs.close();
-      }
-
-      // Release the statement
-      if (null != authSelect)
-      {
-        authSelect.close();
-      }
-
-      // Close project db connections
-      if (null != db)
-      {
-        db.close();
-      }
     }
+    // Release the result set
+
+    // Release the statement
+
+    // Close project db connections
   }
 
   /**
@@ -1358,24 +1317,15 @@ public class DerbyUtils
   public static synchronized void updateChecksum(String projectCacheTable,
       ConcurrentHashMap<String, String> checksumHash) throws SQLException, IOException
   {
-    Connection db = null;
-    PreparedStatement checksumSelect = null;
-    ResultSet rs = null;
-    try
-    {
+    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
+            .getConnection(); PreparedStatement checksumSelect = db.prepareStatement(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE); ResultSet rs = checksumSelect.executeQuery()) {
       // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
       // Create the select statement for the current project
-      checksumSelect = db.prepareStatement(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      rs = checksumSelect.executeQuery();
       LOGGER.finer(String.format("Updating checksums for table: %s", rs.toString()));
-      while (rs.next())
-      {
+      while (rs.next()) {
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         String newChecksum = checksumHash.get(rowHash.get(CM_PROJECT.NAME).toString());
-        if (null != newChecksum && newChecksum.length() > 0)
-        {
+        if (null != newChecksum && newChecksum.length() > 0) {
           LOGGER.finer(String.format("Updating checksum for rowHash: %s newChecksum: %s", rowHash.toString(), newChecksum));
           rs.updateString(CM_PROJECT.CHECKSUM.toString(), newChecksum);
           rs.updateRow();
@@ -1384,26 +1334,12 @@ public class DerbyUtils
 
       // Commit the updates
       db.commit();
-    } finally
-    {
-      // Release the result set
-      if (null != rs)
-      {
-        rs.close();
-      }
-
-      // Release the statement
-      if (null != checksumSelect)
-      {
-        checksumSelect.close();
-      }
-
-      // Close project db connections
-      if (null != db)
-      {
-        db.close();
-      }
     }
+    // Release the result set
+
+    // Release the statement
+
+    // Close project db connections
   }
 
   /**
@@ -1422,37 +1358,15 @@ public class DerbyUtils
         new ArrayList<Hashtable<CM_PROJECT, Object>>();
 
     // Initialize our db connection
-    Connection db = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
 
-    try
-    {
+    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
+            .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      stmt = db.prepareStatement(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
-      rs = stmt.executeQuery();
-      while (rs.next())
-      {
+      while (rs.next()) {
         projectMembersList.add(DerbyUtils.getRowData(rs));
       }
-    } finally
-    {
-      // Close the database resources
-      if (null != rs)
-      {
-        rs.close();
-      }
-      if (null != stmt)
-      {
-        stmt.close();
-      }
-      if (null != db)
-      {
-        db.close();
-      }
     }
+    // Close the database resources
 
     return projectMembersList;
   }
@@ -1473,37 +1387,15 @@ public class DerbyUtils
         new ArrayList<Hashtable<CM_PROJECT, Object>>();
 
     // Initialize our db connection
-    Connection db = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
 
-    try
-    {
+    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
+            .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      stmt = db.prepareStatement(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
-      rs = stmt.executeQuery();
-      while (rs.next())
-      {
+      while (rs.next()) {
         subprojectsList.add(DerbyUtils.getRowData(rs));
       }
-    } finally
-    {
-      // Close the database resources
-      if (null != rs)
-      {
-        rs.close();
-      }
-      if (null != stmt)
-      {
-        stmt.close();
-      }
-      if (null != db)
-      {
-        db.close();
-      }
     }
+    // Close the database resources
 
     return subprojectsList;
   }
@@ -1522,38 +1414,16 @@ public class DerbyUtils
     List<String> dirList = new ArrayList<String>();
 
     // Initialize our db connection
-    Connection db = null;
-    PreparedStatement stmt = null;
-    ResultSet rs = null;
 
-    try
-    {
+    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
+            .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      stmt = db.prepareStatement(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable));
-      rs = stmt.executeQuery();
-      while (rs.next())
-      {
+      while (rs.next()) {
         Hashtable<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
         dirList.add(rowData.get(CM_PROJECT.RELATIVE_FILE).toString());
       }
-    } finally
-    {
-      // Close the database resources
-      if (null != rs)
-      {
-        rs.close();
-      }
-      if (null != stmt)
-      {
-        stmt.close();
-      }
-      if (null != db)
-      {
-        db.close();
-      }
     }
+    // Close the database resources
 
     return dirList;
   }
