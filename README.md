@@ -60,7 +60,7 @@ The installation of the PTC Windchill RV&S CM - Jenkins Plugin requires the foll
 
 - _The plugin uses the API exclusively to communicate with the Windchill RV&S server._
 - _The plugin does not require the Windchill RV&S client if local client integration is not used._
-- _The plugin install package includes the mksapi.jar (4.16.2671), which is licensed under the PTC Freeware license. Please refer to ‘PTC Freeware License Agreement.docx’ located inside the mksapi.jar file._
+- _The plugin install package includes the mksapi.jar (4.16.7368), which is licensed under the PTC Freeware license. Please refer to ‘PTC Freeware License Agreement.docx’ located inside the mksapi.jar file._
 
 Consider the following when attempting connection to an Integrity Lifecycle Manager 11.0 or a later server that is SSL-enabled:
 
@@ -450,6 +450,11 @@ The above sections of this document provides information on how to install, conf
 
 **Note**: PTC Windchill RV&S CM - Jenkins Plugin versions older than 2.4 are no longer supported.
 
+#### 2021
+
+- **Version 2.5 (Dec 22, 2021)**
+  - Upgraded mksapi.jar (version 4.16.7368)
+   
 #### 2020
 
 - **Version 2.4 (Dec 18, 2020)**
