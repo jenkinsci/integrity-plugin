@@ -74,7 +74,7 @@
 	<dependency>
 		<groupId>io.github.ptc-alm</groupId>
 		<artifactId>mksapi-jar</artifactId>
-		<version>4.16.7370</version>
+		<version>4.16.7371</version>
 	</dependency>
 	<dependency>
 		<groupId>org.apache.commons</groupId>
