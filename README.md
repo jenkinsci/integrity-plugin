@@ -4,7 +4,7 @@ This Jenkins plugin provides SCM integration capabilities to [Windchill RV&S](ht
 
 ### Overview
 
-The Windchill RV&S Jenkins plugin has been qualified with Jenkins Java 11 supported versions. Older versions of this plugin may not be safe to use. Please review the following warnings before using an older version:
+The Windchill RV&S Jenkins plugin has been qualified with Jenkins Java 11 and supported versions. Older versions of this plugin may not be safe to use. Please review the following warnings before using an older version:
 
 - [Arbitrary code execution vulnerability](https://jenkins.io/security/advisory/2017-04-10/)
 
@@ -454,6 +454,7 @@ The above sections of this document provides information on how to install, conf
 
 - **Version 2.5 (Jan 07, 2022)**
   - Upgraded mksapi.jar (version 4.16.7371)
+  - Qualified with Jenkins Java 11 and supported versions
    
 #### 2020
 
