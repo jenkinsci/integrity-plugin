@@ -450,7 +450,7 @@ The above sections of this document provides information on how to install, conf
 
 **Note**: PTC Windchill RV&S CM - Jenkins Plugin versions older than 2.4 are no longer supported.
 
-#### 2021
+#### 2022
 
 - **Version 2.5 (Jan 07, 2022)**
   - Upgraded mksapi.jar (version 4.16.7371)
