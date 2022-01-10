@@ -4,7 +4,8 @@
   <parent>
 	<groupId>org.jenkins-ci.plugins</groupId>    
 	<artifactId>plugin</artifactId>    
-	<version>1.628</version>
+	 <version>2.11</version>
+    <relativePath/>
   </parent>  
   
   <artifactId>integrity-plugin</artifactId>
@@ -35,6 +36,7 @@
     <findbugs-maven-plugin.version>3.0.4</findbugs-maven-plugin.version>
     <findbugs.failOnError>false</findbugs.failOnError>
     <jenkins.version>1.628</jenkins.version>
+	<java.level>8</java.level>
   </properties>
   
   <dependencies>
@@ -129,6 +131,17 @@
           <scope>test</scope>
     </dependency>
   </dependencies>
+
+	<distributionManagement>
+		<repository>
+		  <id>repo.jenkins-ci.org</id>
+		  <url>http://repo.jenkins-ci.org/releases</url>
+		</repository>
+		<snapshotRepository>
+		  <id>repo.jenkins-ci.org</id>
+		  <url>http://repo.jenkins-ci.org/snapshots</url>
+		</snapshotRepository>
+	</distributionManagement>
  
   
   <build>
@@ -192,6 +205,7 @@
               <version>2.2</version>
             </dependency>
           </dependencies>
+		  
         </plugin>
     </plugins>
   </build>
