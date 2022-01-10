@@ -132,16 +132,17 @@
     </dependency>
   </dependencies>
 
-	<distributionManagement>
-		<repository>
-		  <id>repo.jenkins-ci.org</id>
-		  <url>http://repo.jenkins-ci.org/releases</url>
-		</repository>
-		<snapshotRepository>
-		  <id>repo.jenkins-ci.org</id>
-		  <url>http://repo.jenkins-ci.org/snapshots</url>
-		</snapshotRepository>
-	</distributionManagement>
+  <distributionManagement>
+    <repository>
+      <uniqueVersion>false</uniqueVersion>
+      <id>maven.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/releases/</url>
+    </repository>
+    <snapshotRepository>
+      <id>maven.jenkins-ci.org</id>
+      <url>https://repo.jenkins-ci.org/snapshots/</url>
+    </snapshotRepository>
+  </distributionManagement>
  
   
   <build>
