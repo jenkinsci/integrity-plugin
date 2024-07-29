@@ -137,7 +137,7 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
     @Override
     public String getDisplayName()
     {
-      return "Windchill RV&S SCM Label";
+      return "PTC RV&S SCM Label";
     }
 
     /**

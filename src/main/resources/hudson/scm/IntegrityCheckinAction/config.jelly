@@ -4,7 +4,7 @@
 		<f:select />
 	</f:entry>
 	
-	<f:entry title="Windchill RV&amp;S Project" field="ciConfigPath">
+	<f:entry title="PTC RV&amp;S Project" field="ciConfigPath">
 		<f:textbox clazz="required" name="ciConfigPath" value="${instance.ciConfigPath}" />
 	</f:entry>
 	

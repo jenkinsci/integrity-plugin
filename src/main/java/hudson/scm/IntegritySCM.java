@@ -547,8 +547,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       } else
       {
         // We don't have the previous Integrity Revision State!
-        listener.getLogger().println("Cannot construct previous Windchill RV&S Revision State! null baseline");
-        LOGGER.warning("Cannot construct previous Windchill RV&S Revision State! null baseline");
+        listener.getLogger().println("Cannot construct previous PTC RV&S Revision State! null baseline");
+        LOGGER.warning("Cannot construct previous PTC RV&S Revision State! null baseline");
         // Prime the author information for the current build as this could be the first build
         if (!skipAuthorInfo)
         {
@@ -595,7 +595,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       {
         // Now that the workspace is updated, lets save the current project state for future
         // comparisons
-        listener.getLogger().println("Saving current Windchill RV&S Project configuration...");
+        listener.getLogger().println("Saving current PTC RV&S Project configuration...");
         if (fetchChangedWorkspaceFiles)
         {
           DerbyUtils.updateChecksum(projectCacheTable, coTask.getChecksumUpdates());
@@ -628,7 +628,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       listener.getLogger().println(eh.getMessage());
       LOGGER.fine(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
       listener.getLogger().println(eh.getCommand() + RETURNED_EXIT_CODE + eh.getExitCode());
-      throw new AbortException("Caught Windchill RV&S APIException!");
+      throw new AbortException("Caught PTC RV&S APIException!");
     } catch (SQLException sqlex)
     {
       LOGGER.severe(SQL_EXCEPTION_CAUGHT);
@@ -894,12 +894,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	}
       } else {
 	// We've got no previous builds, build now!
-	LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
+	LOGGER.fine("No prior PTC RV&S Project state can be found!  Advice to build now!");
 	return BUILD_NOW;
       }
     } else {
       // We've got no previous builds, build now!
-      LOGGER.fine("No prior Windchill RV&S Project state can be found!  Advice to build now!");
+      LOGGER.fine("No prior PTC RV&S Project state can be found!  Advice to build now!");
       return BUILD_NOW;
     }
   }
@@ -913,7 +913,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
   }
 
   @Override public String getKey() {
-      return "Windchill RV&S " + getSource(new EnvVars());
+      return "PTC RV&S " + getSource(new EnvVars());
   }
 
   /**
@@ -946,10 +946,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
           Jenkins.getInstance().getRootDir().getAbsolutePath());
       DerbyUtils.loadDerbyDriver();
-      LOGGER.info("Creating Windchill RV&S SCM cache db connection...");
+      LOGGER.info("Creating PTC RV&S SCM cache db connection...");
       connectionPoolDataSource = DerbyUtils
           .createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
-      LOGGER.info("Creating Windchill RV&S SCM cache registry...");
+      LOGGER.info("Creating PTC RV&S SCM cache registry...");
       DerbyUtils.createRegistry(connectionPoolDataSource);
 
       // Log the construction...
@@ -978,7 +978,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Windchill RV&S";
+      return "PTC RV&S";
     }
 
     /**
@@ -1143,7 +1143,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         @QueryParameter("serverConfig.ipPort") final int ipPort)
             throws IOException, ServletException, APIException
     {
-      LOGGER.fine("Testing Windchill RV&S API Connection...");
+      LOGGER.fine("Testing PTC RV&S API Connection...");
       LOGGER.fine("hostName: " + hostName);
       LOGGER.fine("port: " + port);
       LOGGER.fine("userName: " + userName);
@@ -1167,7 +1167,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     		String versions[] = version.split("\\.");
     		int majorVer = Integer.parseInt(versions[0]);
     		int minorVer = Integer.parseInt(versions[1]);
-    		String strVerMsg = "Windchill RV&S server version: " + version;
+    		String strVerMsg = "PTC RV&S server version: " + version;
     		LOGGER.fine(strVerMsg);
     		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
    			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);

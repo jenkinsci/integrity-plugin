@@ -73,7 +73,7 @@ public class IntegrityChangeLogSet extends ChangeLogSet<IntegrityChangeLog>
   @Override
   public String getKind()
   {
-    return "Windchill RV&S";
+    return "PTC RV&S";
   }
 
   /**

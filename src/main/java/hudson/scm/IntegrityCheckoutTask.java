@@ -104,7 +104,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     this.checkoutThreadPoolSize = checkoutThreadPoolSize;
     this.checkoutThreadTimeout = checkoutThreadTimeout;
     this.checksumHash = new ConcurrentHashMap<String, String>();
-    LOGGER.fine("Windchill RV&S Checkout Task Created!");
+    LOGGER.fine("PTC RV&S Checkout Task Created!");
   }
 
   /**

@@ -8,9 +8,9 @@
   </parent>  
   
   <artifactId>integrity-plugin</artifactId>
-  <name>PTC Windchill RV&amp;S CM - Jenkins Plugin</name>
-  <description>Integrates Jenkins with PTC Windchill RV&amp;S</description>
-  <version>2.6-SNAPSHOT</version>
+  <name>PTC RV&amp;S CM - Jenkins Plugin</name>
+  <description>Integrates Jenkins with PTC RV&amp;S</description>
+  <version>2.6</version>
   <packaging>hpi</packaging>
   <url>https://github.com/jenkinsci/integrity-plugin</url>
 
@@ -75,7 +75,7 @@
 	<dependency>
 		<groupId>io.github.ptc-alm</groupId>
 		<artifactId>mksapi-jar</artifactId>
-		<version>4.16.7371</version>
+		<version>5.0</version>
 	</dependency>
 	<dependency>
 		<groupId>org.apache.commons</groupId>

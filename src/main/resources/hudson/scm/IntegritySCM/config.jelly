@@ -8,8 +8,8 @@
 		<input class="setting-input" name="configurationName" type="hidden" value="${h.ifThenElse(scm.configurationName==null,descriptor.configurationName,scm.configurationName)}" />         
 	</f:invisibleEntry>
 	
-	<f:entry title="Windchill RV&amp;S Project" field="configPath" help="/plugin/integrity-plugin/help-configPath.html">
-		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'Windchill RV&amp;S Project' is a required field!" />        
+	<f:entry title="PTC RV&amp;S Project" field="configPath" help="/plugin/integrity-plugin/help-configPath.html">
+		<f:textbox name="configPath" value="${scm.configPath}" clazz="required" checkMessage="'PTC RV&amp;S Project' is a required field!" />        
 	</f:entry>
 
 	<f:entry title="Use Local Client?" field="localClient" help="/plugin/integrity-plugin/help-isLocalClient.html">

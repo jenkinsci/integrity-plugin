@@ -150,7 +150,7 @@ public class IntegrityWebUI extends IntegrityRepositoryBrowser
     @Override
     public String getDisplayName()
     {
-      return "Windchill RV&S CM - Web Interface";
+      return "PTC RV&S CM - Web Interface";
     }
   }
 

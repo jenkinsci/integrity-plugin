@@ -117,7 +117,7 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
     @Override
     public String getDisplayName()
     {
-      return "Windchill RV&S - Delete Non Members";
+      return "PTC RV&S - Delete Non Members";
     }
 
     @Override

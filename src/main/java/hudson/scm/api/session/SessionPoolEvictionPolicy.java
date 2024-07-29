@@ -42,7 +42,7 @@ public class SessionPoolEvictionPolicy extends DefaultEvictionPolicy<ISession>
       } catch (APIException e)
       {
         LOGGER.log(Level.FINEST,
-            "Eviction Thread: Failed to ping Windchill RV&S Session Pool object : " + session.toString(),
+            "Eviction Thread: Failed to ping PTC RV&S Session Pool object : " + session.toString(),
             e);
         return true;
       }

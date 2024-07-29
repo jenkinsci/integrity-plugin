@@ -458,7 +458,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
     // Update Integrity for this Test Case result
     try
     {
-      LOGGER.fine("Attempting to update test result for Windchill RV&S Test - " + testCaseID);
+      LOGGER.fine("Attempting to update test result for PTC RV&S Test - " + testCaseID);
       editresultCmd.execute();
     } catch (APIException aex)
     {
@@ -722,7 +722,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
     if (!(rootProject.getScm() instanceof IntegritySCM))
     {
       listener.getLogger().println(
-          "Windchill RV&S Item update is being executed for an invalid context!  Current SCM is "
+          "PTC RV&S Item update is being executed for an invalid context!  Current SCM is "
               + rootProject.getScm() + "!");
       return true;
     }
@@ -780,19 +780,19 @@ public class IntegrityItemAction extends Notifier implements Serializable
             } else
             {
               listener.getLogger().println(
-                  "Cannot find an Windchill RV&S Build Item!  Response from executing custom query is null!");
+                  "Cannot find an PTC RV&S Build Item!  Response from executing custom query is null!");
               return false;
             }
           } else
           {
             listener.getLogger().println(
-                "Cannot find an Windchill RV&S Build Item!  Response from executing custom query is null!");
+                "Cannot find an PTC RV&S Build Item!  Response from executing custom query is null!");
             return false;
           }
         } else
         {
           listener.getLogger().println(
-              "WARNING: No configuration information provided to locate an Windchill RV&S Build Item!");
+              "WARNING: No configuration information provided to locate an PTC RV&S Build Item!");
         }
       }
 
@@ -855,10 +855,10 @@ public class IntegrityItemAction extends Notifier implements Serializable
         // to work with...
         if (intTestSessionID > 0)
         {
-          listener.getLogger().println("Obtained Windchill RV&S Test Session Item '" + testSessionID
+          listener.getLogger().println("Obtained PTC RV&S Test Session Item '" + testSessionID
               + "' from build environment!");
           success = collectTestResults(build, listener, testSessionID);
-          listener.getLogger().println("Updated Windchill RV&S Test Session Item '" + testSessionID
+          listener.getLogger().println("Updated PTC RV&S Test Session Item '" + testSessionID
               + "' with results from automated test execution!");
         }
       }
@@ -867,7 +867,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
       if (intBuildItemID > 0)
       {
         listener.getLogger()
-            .println("Obtained Windchill RV&S Build Item '" + buildItemID + "' from build environment!");
+            .println("Obtained PTC RV&S Build Item '" + buildItemID + "' from build environment!");
         success = editBuildItem(build, listener, buildItemID);
       }
 
@@ -959,7 +959,7 @@ public class IntegrityItemAction extends Notifier implements Serializable
     @Override
     public String getDisplayName()
     {
-      return "Windchill RV&S - Workflow Item";
+      return "PTC RV&S - Workflow Item";
     }
 
     @Override
