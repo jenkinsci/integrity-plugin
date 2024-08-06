@@ -445,7 +445,7 @@ The above sections of this document provides information on how to install, conf
 
 **Note**: PTC RV&S CM - Jenkins Plugin versions older than 2.5 are no longer supported.
 #### 2024
-- **Version 2.6(Date of release)**
+- **Version 2.6 (Aug 03, 2024)**
   - Rebranding changes
   - Updated mksapi.jar version 13.3.0.0 to use API Version 5.0. This integration is compatible starting PTC RV&S 13.3.0.0.
 
