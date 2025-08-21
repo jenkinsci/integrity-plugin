@@ -254,7 +254,7 @@ public class IntegrityCMProject implements Serializable
 
   /**
    * Returns the Change Log based on the project baseline comparison This assumes that
-   * compareBaseline() has been called already
+   * compare Baseline has been called already
    * 
    * @return
    * @throws DOMException

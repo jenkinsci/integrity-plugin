@@ -916,7 +916,7 @@ public class DerbyUtils
    */
   public static synchronized int compareBaseline(String serverConfigId, String baselineProjectCache,
       String projectCacheTable, Map<CPInfo, List<CPMember>> membersInCP, boolean skipAuthorInfo,
-      boolean CPMode) throws SQLException, IOException
+      boolean CPMode,TaskListener listener) throws SQLException, IOException
   {
     // Re-initialize our return variable
     int changeCount = 0;
@@ -930,8 +930,10 @@ public class DerbyUtils
 
     try
     {
+      listener.getLogger().println("S1:such nach error");
       if (CPMode)
       {
+         listener.getLogger().println("S2:such nach error");
         if (membersInCP.isEmpty())
           return changeCount;
       }
@@ -941,6 +943,7 @@ public class DerbyUtils
       db.setAutoCommit(false);
       if (CPMode) // CP Mode comparison
       {
+         listener.getLogger().println("S3:such nach error");
         // All members in CP(s) at this stage are from a closed CP. So we update their deltas in the
         // project cache
         for (CPInfo cpInfo : membersInCP.keySet())

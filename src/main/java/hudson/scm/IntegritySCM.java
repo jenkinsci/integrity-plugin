@@ -533,10 +533,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           // Compare the current project with the old revision state
           listener.getLogger().println("Found previous project state in catch !!!!");
           LOGGER.fine("Found previous project state " + prevProjectCache);
-          listener.getLogger().println("		Begin DerbyUtils.compareBaseline");
+          listener.getLogger().println("		Begin DerbyUtils compare Baseline");
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
-                          skipAuthorInfo, CPBasedMode);
-          listener.getLogger().println("		End DerbyUtils.compareBaseline");
+                          skipAuthorInfo, CPBasedMode,listener);
+          listener.getLogger().println("		End DerbyUtils compare Baseline");
         }
         else {
           listener.getLogger().println("No previous project found in cache.");
@@ -839,10 +839,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	  } else {
 	    initializeCMProjectMembers();
 	    // Compare this project with the old project for file mode
-	    changeCount = DerbyUtils
-			    .compareBaseline(serverConfig, prevProjectCache,
-					    projectCacheTable, membersInCP,
-					    skipAuthorInfo, false);
+	    changeCount = DerbyUtils.compareBaseline(serverConfig, prevProjectCache,projectCacheTable, membersInCP,skipAuthorInfo, false, listener);
 	  }
 	  // Finally decide whether or not we need to build again
 	  if (changeCount > 0) {

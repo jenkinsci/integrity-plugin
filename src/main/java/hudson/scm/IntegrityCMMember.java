@@ -103,7 +103,7 @@ public final class IntegrityCMMember
 
   /**
    * Returns an URL encoded string representation for invoking this Integrity member's differences
-   * view This assumes that IntegrityCMProject.compareBaseline() was invoked!
+   * view This assumes that Integrity CMProject compare Baseline() was invoked!
    * 
    * @param configPath Full server side path for this Integrity member's project/subproject
    * @param memberID Full server side path for this Integrity member
@@ -129,7 +129,7 @@ public final class IntegrityCMMember
 
   /**
    * Returns an URL encoded string representation for invoking this Integrity CP view This assumes
-   * that IntegrityCMProject.compareBaseline() was invoked!
+   * that IntegrityCMProject compare Baseline was invoked!
    * 
    * @param cpid
    * @return
