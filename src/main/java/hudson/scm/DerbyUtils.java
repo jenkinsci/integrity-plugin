@@ -1295,7 +1295,7 @@ public class DerbyUtils
         db.setAutoCommit(false);
         listener.getLogger().println("PTC Plugin: Begin Prime Author Infomation (init or refresh complete history cache)...");
         listener.getLogger().print("PTC Plugin: Number of elements to process: ");
-        int totalMembersInProjectTodo = 0;
+        /*int totalMembersInProjectTodo = 0;
         int filesDone = -1;
         if (!rs.wasNull()) {
             rs.next();
@@ -1304,15 +1304,16 @@ public class DerbyUtils
         } else {
             listener.getLogger().println("error no sql count possible.");
         }
-        int perc = -1;
+        int perc = -1; */
       // Get a connection from our pool
       while (rs.next()) {
-        filesDone += 10;      // report each 10 % percent only
-        int pnew = (filesDone / totalMembersInProjectTodo);
+        //filesDone += 10;      // report each 10 % percent only
+        /*int pnew = (filesDone / totalMembersInProjectTodo);
         if (pnew > perc) {
             perc = pnew;
             listener.getLogger().println(perc*10 + "% done ...");
-        }
+        } 
+        */
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
@@ -1332,7 +1333,6 @@ public class DerbyUtils
       authSelect.close();
       db.commit();
       db.setAutoCommit(true);
-      db.close();
     }
     // Release the result set
 
