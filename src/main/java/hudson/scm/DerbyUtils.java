@@ -1286,7 +1286,7 @@ public class DerbyUtils
   public static synchronized void primeAuthorInformation(String serverConfigId,
       String projectCacheTable,TaskListener listener) throws SQLException, IOException
   {
-    listener.getLogger().print("try to loging in sql DB");
+    listener.getLogger().println("try to loging in sql DB");
     Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
     PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
     ResultSet rs = authSelect.executeQuery();
@@ -1294,26 +1294,33 @@ public class DerbyUtils
       {
         db.setAutoCommit(false);
         listener.getLogger().println("PTC Plugin: Begin Prime Author Infomation (init or refresh complete history cache)...");
-        listener.getLogger().print("PTC Plugin: Number of elements to process: ");
-        /*int totalMembersInProjectTodo = 0;
+        listener.getLogger().println("PTC Plugin: Number of elements to process: ");
+
+        int totalMembersInProjectTodo = 0;
         int filesDone = -1;
-        if (!rs.wasNull()) {
-            rs.next();
-            totalMembersInProjectTodo = rs.getInt(1);
-            listener.getLogger().println(totalMembersInProjectTodo);
+        int perc = -1; 
+        if (rs.next()) {
+            try {
+                totalMembersInProjectTodo = rs.getInt(1);
+                listener.getLogger().println("Total members in project: " + totalMembersInProjectTodo);
+            } catch (SQLException e) {
+                listener.getLogger().println("Error: The value in the database is not a valid number. " + e.getMessage());
+                totalMembersInProjectTodo = 0;
+            }
         } else {
-            listener.getLogger().println("error no sql count possible.");
+            // Dieser Block wird ausgeführt, wenn das ResultSet leer ist, also keine Ergebnisse gefunden wurden.
+            listener.getLogger().println("Info: No SQL count available. The project seems to have no members.");
         }
-        int perc = -1; */
+
       // Get a connection from our pool
       while (rs.next()) {
-        //filesDone += 10;      // report each 10 % percent only
-        /*int pnew = (filesDone / totalMembersInProjectTodo);
+        
+        filesDone += 10;      // report each 10 % percent only
+        int pnew = (filesDone / totalMembersInProjectTodo);
         if (pnew > perc) {
             perc = pnew;
             listener.getLogger().println(perc*10 + "% done ...");
         } 
-        */
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
