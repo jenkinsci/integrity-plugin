@@ -1286,15 +1286,24 @@ public class DerbyUtils
   public static synchronized void primeAuthorInformation(String serverConfigId,
       String projectCacheTable,TaskListener listener) throws SQLException, IOException
   {
-    try (
-      Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
-      PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
-      ResultSet rs = authSelect.executeQuery()) 
+    listener.getLogger().print("try to loging in sql DB");
+    Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+    PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+    ResultSet rs = authSelect.executeQuery();
+    try
       {
+        db.setAutoCommit(false);
         listener.getLogger().println("PTC Plugin: Begin Prime Author Infomation (init or refresh complete history cache)...");
         listener.getLogger().print("PTC Plugin: Number of elements to process: ");
         int totalMembersInProjectTodo = 0;
         int filesDone = -1;
+        if (!rs.wasNull()) {
+            rs.next();
+            totalMembersInProjectTodo = rs.getInt(1);
+            listener.getLogger().println(totalMembersInProjectTodo);
+        } else {
+            listener.getLogger().println("error no sql count possible.");
+        }
         int perc = -1;
       // Get a connection from our pool
       while (rs.next()) {
@@ -1311,10 +1320,19 @@ public class DerbyUtils
                         rowHash.get(CM_PROJECT.MEMBER_ID).toString(),
                         rowHash.get(CM_PROJECT.REVISION).toString()));
         rs.updateRow();
-      }
+      } 
 
       // Commit the updates
+      
+    } finally{
+      if (null != rs)
+      {
+        rs.close();
+      }
+      authSelect.close();
       db.commit();
+      db.setAutoCommit(true);
+      db.close();
     }
     // Release the result set
 
