@@ -280,8 +280,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
 
     Response infoRes = command.execute();
-
-    LOGGER.fine(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
+    System.out.println(" 2: XXXXXXXXXXXXX returned  XXXXXXXXXXXX ");
+    LOGGER.fine(infoRes.getCommandString() + " XXXXXXXXXXXXX returned  XXXXXXXXXXXX " + infoRes.getExitCode());
     // Initialize our siProject class variable
     IntegrityCMProject siProject =
         new IntegrityCMProject(APIUtils.getWorkItem(infoRes), projectCacheTable);
