@@ -175,8 +175,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       if (cleanCopy)
       {
         listener.getLogger()
-            .println("A clean copy is requested; deleting contents of " + workspace);
-        LOGGER.fine("Deleting contents of workspace " + workspace);
+            .println("INFO: A clean copy is requested (or project cache is empty); deleting contents of  " + workspace);
+        LOGGER.fine("INFO: Deleting contents of workspace " + workspace);
         workspace.deleteContents();
         listener.getLogger().println("Populating clean workspace...");
       }
@@ -267,21 +267,16 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
           Future<?> future = iter.next();
           if (future.isCancelled())
           {
-            listener.getLogger().println("Checkout thread " + future.toString() + " was cancelled");
+            listener.getLogger().println("INFO: Checkout thread " + future.toString() + " was cancelled");
             canceledMembers++;
             iter.remove();
-          } else
-          {
+          } else if( future.isDone()){
             // Look for the result of this thread's execution within project-specific checkout thread timeout
             try
             {
-              future.get(checkoutThreadTimeout, TimeUnit.MINUTES);
-            } catch(TimeoutException e) {
-            	LOGGER.log(Level.SEVERE, "Timeout Exception caught :: ", e);
-                listener.getLogger().println("A Timeout Exception was caught. Failed to checkout contents of file!");
-                listener.getLogger().println(e.getMessage());
-                return false;
-            } catch (ExecutionException e)
+              future.get();
+            } 
+            catch (ExecutionException e)
             {
               listener.getLogger().println(e.getMessage());
               LOGGER.log(Level.SEVERE, "ExecutionException", e);
@@ -292,8 +287,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
                     + st[i].getFileName() + ":" + st[i].getLineNumber() + ")");
               }
 
-              if (null != e.getMessage() && e.getMessage()
-                  .indexOf("Unbuffered entity enclosing request can not be repeated") > 0)
+              if( (null != e.getMessage()) && (e.getMessage().contains("Unbuffered entity enclosing request can not be repeated")) )
               {
                 // ignore...
               } else
@@ -306,6 +300,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
             iter.remove();
           }
         }
+        listener.getLogger().println("INFO: members to synch: " + (projectMembersList.size() - previousCount));
         if (previousCount != (checkoutMembers + canceledMembers))
         {
           LOGGER.fine("Checkout process: " + checkoutMembers + " of " + totalMembers
@@ -315,6 +310,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         // Wait 2 seconds a check again if all threads are done
         Thread.sleep(2000);
       }
+      executor.shutdown();
+      executor.awaitTermination(2, TimeUnit.MINUTES);
 
       // Lets advice the user that we've checked out all the members
       if (cleanCopy)
@@ -341,8 +338,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       return false;
     } finally {
       listener.getLogger().println("Terminating checkout threads");
-      if(executor != null)
-        executor.shutdown();
+      //if(executor != null)
+      //  executor.shutdown();
       if( generateAPISession != null )
         generateAPISession.remove();
     }

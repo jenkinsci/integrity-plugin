@@ -268,7 +268,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @return response Integrity API Response
    * @throws Exception 
    */
-  public Response initializeCMProject(EnvVars environment, String projectCacheTable)
+  public Response initializeCMProject(EnvVars environment, String projectCacheTable,TaskListener listener)
       throws Exception
   {
     // Re-evaluate the config path to resolve any groovy expressions...
@@ -279,9 +279,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     IAPICommand command = CommandFactory.createCommand(IAPICommand.PROJECT_INFO_COMMAND, getProjectSettings());
     command.addOption(new APIOption(IAPIOption.PROJECT, resolvedConfigPath));
 
+    listener.getLogger().println("... command.execute() just to get true or false response:");
     Response infoRes = command.execute();
-    System.out.println(" 2: XXXXXXXXXXXXX returned  XXXXXXXXXXXX ");
-    LOGGER.fine(infoRes.getCommandString() + " XXXXXXXXXXXXX returned  XXXXXXXXXXXX " + infoRes.getExitCode());
+
+    LOGGER.fine(infoRes.getCommandString() + " returned " + infoRes.getExitCode());
     // Initialize our siProject class variable
     IntegrityCMProject siProject =
         new IntegrityCMProject(APIUtils.getWorkItem(infoRes), projectCacheTable);
@@ -360,7 +361,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Apply our include/exclude filters
     applyMemberFilters(command);
 
-    LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+    LOGGER.fine("INFO: Preparing to execute si viewproject for " + siProject.getConfigurationPath());
     Response viewRes = command.execute();
 
     // Update Derby DB with the API results
@@ -485,6 +486,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Lets start with creating an authenticated Integrity API Session for various parts of this
     // operation...
     IntegrityConfigurable coSettings = getProjectSettings();
+    //ISession api = APISession.create(coSettings);
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
@@ -506,42 +508,38 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         checkPointBeforeBuild(run, listener, siProject);
       }
 
-      listener.getLogger()
-                      .println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+      listener.getLogger().println("INFO: Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+      listener.getLogger().println("INFO: Initializing CM Project Members...");
       initializeCMProjectMembers();
 
       // Now, we need to find the project state from the previous build.
       String prevProjectCache = null;
       if (null != baseline && baseline instanceof IntegrityRevisionState)
       {
-        LOGGER.info(String.format("Checking previous project state. Baseline name: %s", baseline.getDisplayName()));
-        listener.getLogger().println(String.format("Checking previous project state. Baseline %s", baseline.getDisplayName()));
+        // can you explain me this log info ?
+        LOGGER.info(String.format(" INFO: Checking previous project state. Baseline name: %s", baseline.getDisplayName()));
+        listener.getLogger().println(String.format("INFO: Checking previous project state. Baseline %s", baseline.getDisplayName()));
+        listener.getLogger().println("INFO: Reference found.");
         IntegrityRevisionState irs = (IntegrityRevisionState) baseline;
         prevProjectCache = irs.getProjectCache();
 
         if (null != prevProjectCache && prevProjectCache.length() > 0)
         {
-          if (CPBasedMode && !cleanCopy)
-          {
             Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();
-            if (lastSuccjob != null)
-            {
               Date lastSuccBuildDate = new Date(lastSuccjob.getStartTimeInMillis());
               Set<String> projectCPIDs = siProject.projectCPDiff(coSettings, lastSuccBuildDate);
-
-              IntegrityCMMember.viewCP(coSettings, projectCPIDs,
-                              job.getFullName().replace("/", "_"), membersInCP);
-            }
-          }
+              IntegrityCMMember.viewCP(coSettings, projectCPIDs,job.getFullName().replace("/", "_"), membersInCP);
 
           // Compare the current project with the old revision state
-          listener.getLogger().println("Found previous project state");
+          listener.getLogger().println("Found previous project state in catch !!!!");
           LOGGER.fine("Found previous project state " + prevProjectCache);
+          listener.getLogger().println("		Begin DerbyUtils.compareBaseline");
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
                           skipAuthorInfo, CPBasedMode);
+          listener.getLogger().println("		End DerbyUtils.compareBaseline");
         }
         else {
-          listener.getLogger().println("No previous project cache.");
+          listener.getLogger().println("No previous project found in cache.");
           LOGGER.fine("No previous project cache.");
         }
       } else
@@ -668,7 +666,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                                     job.getName(), configurationName, run.getNumber());
 
     listener.getLogger().println("Preparing to execute si projectinfo for " + configPath);
-    initializeCMProject(run.getEnvironment(listener), projectCacheTable);
+    initializeCMProject(run.getEnvironment(listener), projectCacheTable,listener);
+    listener.getLogger().println("INFO: successfully initialized for " + configPath + " and executed si projectinfo");
     return getIntegrityProject();
   }
 
@@ -820,7 +819,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 					  .getDataSource(), job.getName(),
 			  configurationName, 0);
 	  initializeCMProject(job.getCharacteristicEnvVars(),
-			  projectCacheTable);
+			  projectCacheTable, listener);
 	  Map<CPInfo, List<CPMember>> membersInCP = new HashMap<CPInfo, List<CPMember>>();
 	  if (CPBasedMode) {
 	    Run<?, ?> lastSuccjob = job.getLastSuccessfulBuild();

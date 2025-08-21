@@ -611,7 +611,6 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 		desSettings.getHostName(), desSettings.getPort(),
 		desSettings.getSecure(), strUserName, strPassword);
 	LOGGER.fine("Project Userame = " + strUserName);
-  System.out.println(" 1: Project User password = ");
 	// Das Protokollieren von Passwörtern, selbst auf der Stufe FINE, ist ein erhebliches Sicherheitsrisiko und sollte vermieden werden.
 	// LOGGER.fine("Project User password = " + strPassword);
 	return ciSettings;
