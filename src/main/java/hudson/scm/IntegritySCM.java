@@ -550,7 +550,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         // Prime the author information for the current build as this could be the first build
         if (!skipAuthorInfo)
         {
-          DerbyUtils.primeAuthorInformation(serverConfig, projectCacheTable);
+          listener.getLogger().println("		Begin DerbyUtils.primeAuthorInformation");
+          DerbyUtils.primeAuthorInformation(serverConfig, projectCacheTable, listener);
+          listener.getLogger().println("		End DerbyUtils.primeAuthorInformation");
         }
       }
 

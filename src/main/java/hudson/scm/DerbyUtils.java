@@ -34,6 +34,7 @@ import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
 
 import hudson.AbortException;
+import hudson.model.TaskListener;
 import hudson.scm.IntegrityCMMember.CPInfo;
 import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegritySCM.DescriptorImpl;
@@ -44,6 +45,7 @@ import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
+import hudson.scm.api.session.APISession;
 import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 
 /**
@@ -1282,12 +1284,26 @@ public class DerbyUtils
    * @throws IOException
    */
   public static synchronized void primeAuthorInformation(String serverConfigId,
-      String projectCacheTable) throws SQLException, IOException
+      String projectCacheTable,TaskListener listener) throws SQLException, IOException
   {
-    try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-            .getConnection(); PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE); ResultSet rs = authSelect.executeQuery()) {
+    try (
+      Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+      PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+      ResultSet rs = authSelect.executeQuery()) 
+      {
+        listener.getLogger().println("PTC Plugin: Begin Prime Author Infomation (init or refresh complete history cache)...");
+        listener.getLogger().print("PTC Plugin: Number of elements to process: ");
+        int totalMembersInProjectTodo = 0;
+        int filesDone = -1;
+        int perc = -1;
       // Get a connection from our pool
       while (rs.next()) {
+        filesDone += 10;      // report each 10 % percent only
+        int pnew = (filesDone / totalMembersInProjectTodo);
+        if (pnew > perc) {
+            perc = pnew;
+            listener.getLogger().println(perc*10 + "% done ...");
+        }
         Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
@@ -1306,6 +1322,7 @@ public class DerbyUtils
 
     // Close project db connections
   }
+
 
   /**
    * Updates the underlying Integrity SCM Project table cache with the new checksum information
