@@ -938,7 +938,7 @@ public class DerbyUtils
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
-
+      db.setAutoCommit(false);
       if (CPMode) // CP Mode comparison
       {
         // All members in CP(s) at this stage are from a closed CP. So we update their deltas in the
@@ -1240,6 +1240,7 @@ public class DerbyUtils
         }
         // Commit changes to the database...
         db.commit();
+        db.setAutoCommit(true);
       }
     } finally
 
