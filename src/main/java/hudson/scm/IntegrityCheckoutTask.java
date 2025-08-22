@@ -41,6 +41,7 @@ import hudson.scm.api.ExceptionHandler;
 import hudson.scm.api.session.APISession;
 import hudson.scm.api.session.ISession;
 import jenkins.security.Roles;
+import java.net.SocketException;
 
 public class IntegrityCheckoutTask implements FileCallable<Boolean>
 {
@@ -339,6 +340,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       listener.getLogger().println(iex.getMessage());
       listener.getLogger().println("Failed to clean up workspace (" + workspace + ") contents!");
       return false;
+    } catch (SocketException se) {
+        listener.getLogger().println("ERROR: Netzwerkfehler (SocketException): " + se.getMessage());
     } catch (Exception e) {
         listener.getLogger().println("Terminating checkout threads");
         if(executor != null) {
