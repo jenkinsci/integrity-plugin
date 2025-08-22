@@ -16,6 +16,7 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashSet;
 import java.util.HashMap;
+import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -919,15 +920,15 @@ public class DerbyUtils
     // Re-initialize our return variable
     int changeCount = 0;
 
-    Connection db = null;
-    PreparedStatement baselineSelect = null;
-    PreparedStatement pjSelect = null;
-    ResultSet baselineRS = null;
-    ResultSet rs = null;
-    PreparedStatement select = null;
-    // Get a connection from our pool
-    db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
-    db.setAutoCommit(false);
+  Connection db = null;
+  PreparedStatement baselineSelect = null;
+  PreparedStatement pjSelect = null;
+  ResultSet baselineRS = null;
+  ResultSet rs = null;
+  PreparedStatement select = null;
+  // Get a connection from our pool
+  db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+  db.setAutoCommit(false);
     try
     {
       listener.getLogger().println("S1:such nach error");
@@ -965,100 +966,86 @@ public class DerbyUtils
               rs.absolute(1);
             }
 
-            switch (cpMemberOperation) {
-              case ADD:
-                if (rs.getRow() != 0)
+            if (CPMode)
+            {
+              listener.getLogger().println("S2:such nach error");
+              if (membersInCP.isEmpty()) return changeCount;
+              // PreparedStatement nur einmal anlegen
+              String cpMemberSelectSql = CP_MEMBER_SELECT.replace("CM_PROJECT", projectCacheTable);
+              select = db.prepareStatement(cpMemberSelectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+              for (CPInfo cpInfo : membersInCP.keySet())
+              {
+                String cpid = cpInfo.getId();
+                List<CPMember> cpMembers = membersInCP.get(cpInfo);
+                for (CPMember cpMember : cpMembers)
                 {
-                  // Initialize the delta flag for this member
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
-                  LOGGER
-                      .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
-                  rs.updateRow();
-                  //db.commit();
+                  String cpMemberName = cpMember.getMemberName();
+                  CP_MEMBER_OPERATION cpMemberOperation = cpMember.getOperationType();
+                  String cpMemberRevision = cpMember.getRevision();
+                  LOGGER.log(Level.FINE,
+                      "CP Member : " + cpMemberName + ", Type : " + cpMemberOperation.toString());
+
+                  select.setString(1, cpMemberName);
+                  rs = select.executeQuery();
+                  if (getRowCount(rs) > 0)
+                  {
+                    LOGGER.log(Level.FINE,
+                        "Retrieved member info from project cache for :" + cpMemberName);
+                    rs.next();
+                  }
+
+                  switch (cpMemberOperation) {
+                    case ADD:
+                      if (rs.getRow() != 0)
+                      { /* ...unverändert... */ }
+                      break;
+                    case DROP:
+                    case MOVEMEMBER:
+                      if (rs.getRow() == 0)
+                      { /* ...unverändert... */ }
+                      else
+                      { /* ...unverändert... */ }
+                      LOGGER.fine("... " + cpMemberName + " file operation: "
+                          + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
+                      break;
+                    case UPDATE:
+                      if (rs.getRow() != 0)
+                      { /* ...unverändert... */ }
+                      break;
+                    case RENAME:
+                      if (rs.getRow() == 0)
+                      {
+                        rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
+                        rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
+                        rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
+                        rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 3);
+                        rs.updateString(CM_PROJECT.CPID.toString(), cpid);
+                        rs.insertRow();
+                        rs.moveToCurrentRow();
+                      } else
+                      {
+                        rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
+                        LOGGER.fine(
+                            "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
+                        rs.updateRow();
+                      }
+                      break;
+                    case ADDFROMARCHIVE: {
+                      break;
+                    }
+                    case CREATESUBPROJECT: {
+                      break;
+                    }
+                    default: {
+                      LOGGER.log(Level.WARNING,
+                          "Unsupported CP Operation : " + cpMemberOperation.toString());
+                      break;
+                    }
+                  }
                 }
-                break;
-              case DROP:
-              case MOVEMEMBER:
-                // Member Dropped / Moved
-                // Add the deleted/ moved members with Delta=3 to Derby so that project checkout can
-                // delete the files from workspace
-                if (rs.getRow() == 0)
-                {
-                  rs.moveToInsertRow();
-                  rs.updateShort(CM_PROJECT.TYPE.toString(), (short) 0);
-                  rs.updateString(CM_PROJECT.NAME.toString(), cpMemberName);
-                  rs.updateString(CM_PROJECT.MEMBER_ID.toString(), cpMemberName);
-                  rs.updateTimestamp(CM_PROJECT.TIMESTAMP.toString(),
-                      new Timestamp(new java.util.Date().getTime()));
-                  rs.updateString(CM_PROJECT.DESCRIPTION.toString(), cpMemberOperation.toString());
-                  rs.updateString(CM_PROJECT.AUTHOR.toString(), cpMember.getUser());
-                  rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
-                  rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
-                  rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 3);
-                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
-                  rs.insertRow();
-                  rs.moveToCurrentRow();
-                } else
-                {
-                  // Member moved 'into' or readded after drop into the project. So an ADD
-                  // operation.
-                  // Initialize the delta flag for this member
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
-                  LOGGER
-                      .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
-                  rs.updateRow();
-                }
-                LOGGER.fine("... " + cpMemberName + " file operation: "
-                    + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
-                //db.commit();
-                break;
-              case UPDATE:
-                if (rs.getRow() != 0)
-                {
-                  // Member Updated
-                  // Initialize the delta flag for this member
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
-                  LOGGER.fine("... " + cpMemberName + " revision changed - new revision is "
-                      + cpMemberRevision);
-                  rs.updateRow();
-                  //db.commit();
-                }
-                break;
-              case RENAME:
-                if (rs.getRow() == 0)
-                {
-                  // Renamed member doesn't exist in project cache. So remove
-                  rs.moveToInsertRow();
-                  rs.updateShort(CM_PROJECT.TYPE.toString(), (short) 0);
-                  rs.updateString(CM_PROJECT.NAME.toString(), cpMemberName);
-                  rs.updateString(CM_PROJECT.MEMBER_ID.toString(), cpMemberName);
-                  rs.updateTimestamp(CM_PROJECT.TIMESTAMP.toString(),
-                      new Timestamp(new java.util.Date().getTime()));
-                  rs.updateString(CM_PROJECT.DESCRIPTION.toString(), cpMemberOperation.toString());
-                  rs.updateString(CM_PROJECT.AUTHOR.toString(), cpMember.getUser());
-                  rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
-                  rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
-                  rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 3);
-                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
-                  rs.insertRow();
-                  rs.moveToCurrentRow();
-                } else
-                {
-                  // Member Updated
-                  // Initialize the delta flag for this member
-                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
-                  LOGGER.fine(
-                      "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
-                  rs.updateRow();
-                }
-                //db.commit();
-                break;
-              case ADDFROMARCHIVE: {
-                // NOOP
-                break;
               }
+              if (select != null) select.close();
+            } else // File Mode comparison
               case CREATESUBPROJECT: {
                 // NOOP - Files added under subproject will be handled under the Add/Update/Delete
                 // operations
@@ -1084,12 +1071,13 @@ public class DerbyUtils
         listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
 
         // Create a HashMap to hold the old baseline for easy comparison
-      HashMap<String, HashMap<CM_PROJECT, Object>> baselinePJ =
-      new HashMap<String, HashMap<CM_PROJECT, Object>>();
+  HashMap<String, EnumMap<CM_PROJECT, Object>> baselinePJ =
+  new HashMap<String, EnumMap<CM_PROJECT, Object>>();
         while (baselineRS.next())
         {
-          HashMap<CM_PROJECT, Object> baselineRowHash = DerbyUtils.getRowData(baselineRS);
-          HashMap<CM_PROJECT, Object> memberInfo = new HashMap<CM_PROJECT, Object>();
+    EnumMap<CM_PROJECT, Object> baselineRowHash = new EnumMap<>(CM_PROJECT.class);
+    baselineRowHash.putAll(DerbyUtils.getRowData(baselineRS));
+    EnumMap<CM_PROJECT, Object> memberInfo = new EnumMap<>(CM_PROJECT.class);
           memberInfo.put(CM_PROJECT.MEMBER_ID, (null == baselineRowHash.get(CM_PROJECT.MEMBER_ID)
               ? "" : baselineRowHash.get(CM_PROJECT.MEMBER_ID).toString()));
           memberInfo.put(CM_PROJECT.TIMESTAMP, (null == baselineRowHash.get(CM_PROJECT.TIMESTAMP)
@@ -1128,13 +1116,14 @@ public class DerbyUtils
           listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
           // Move the cursor to the current record
           rs.absolute(i);
-          HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+          EnumMap<CM_PROJECT, Object> rowHash = new EnumMap<>(CM_PROJECT.class);
+          rowHash.putAll(DerbyUtils.getRowData(rs));
           // Obtain the member we're working with
           String memberName = rowHash.get(CM_PROJECT.NAME).toString();
 
           // Get the baseline project information for this member
           LOGGER.fine("Comparing file against baseline " + memberName);
-          HashMap<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
+          EnumMap<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
 
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
@@ -1208,7 +1197,7 @@ public class DerbyUtils
         // one.
         for (String memberName : baselinePJ.keySet()) {
           changeCount++;
-          HashMap<CM_PROJECT, Object> memberInfo = baselinePJ.get(memberName);
+          EnumMap<CM_PROJECT, Object> memberInfo = baselinePJ.get(memberName);
 
           // Add the deleted members to the database
           rs.moveToInsertRow();
@@ -1292,7 +1281,7 @@ public class DerbyUtils
   {
     listener.getLogger().println("INFO: try to loging in sql DB");
     Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
-    PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
+  PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replace("CM_PROJECT", projectCacheTable), ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
     ResultSet rs = authSelect.executeQuery();
     db.setAutoCommit(false);
     try
@@ -1325,7 +1314,8 @@ public class DerbyUtils
             perc = pnew;
             listener.getLogger().println(perc*10 + "% done ...");
         } 
-        HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+  EnumMap<CM_PROJECT, Object> rowHash = new EnumMap<>(CM_PROJECT.class);
+  rowHash.putAll(DerbyUtils.getRowData(rs));
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
                         rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
