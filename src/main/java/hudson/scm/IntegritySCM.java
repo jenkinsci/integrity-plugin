@@ -534,7 +534,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listener.getLogger().println("Found previous project state in catch !!!!");
           LOGGER.fine("Found previous project state " + prevProjectCache);
           listener.getLogger().println("		Begin DerbyUtils compare Baseline");
-          skipAuthorInfo = true; // Hard add
           DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,
                           skipAuthorInfo, CPBasedMode,listener);
           listener.getLogger().println("		End DerbyUtils compare Baseline");
@@ -552,7 +551,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         if (!skipAuthorInfo)
         {
           listener.getLogger().println("		Begin DerbyUtils.primeAuthorInformation");
-          DerbyUtils.primeAuthorInformation(serverConfig, projectCacheTable, listener);
+          DerbyUtils.compareBaseline(serverConfig, prevProjectCache, projectCacheTable, membersInCP,skipAuthorInfo, CPBasedMode,listener);
+          // DerbyUtils.primeAuthorInformation(serverConfig, projectCacheTable, listener);
           listener.getLogger().println("		End DerbyUtils.primeAuthorInformation");
         }
       }
