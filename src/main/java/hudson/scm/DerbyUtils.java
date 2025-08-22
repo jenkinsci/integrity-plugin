@@ -1079,6 +1079,7 @@ public class DerbyUtils
         }
       } else // File Mode comparison
       {
+         listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
         // Create the select statement for the previous baseline
         String baselineSelectSql =
             DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
@@ -1086,11 +1087,15 @@ public class DerbyUtils
         baselineSelect = db.prepareStatement(baselineSelectSql);
         baselineRS = baselineSelect.executeQuery();
 
+        listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
+
         // Create a hashtable to hold the old baseline for easy comparison
         Hashtable<String, Hashtable<CM_PROJECT, Object>> baselinePJ =
             new Hashtable<String, Hashtable<CM_PROJECT, Object>>();
         while (baselineRS.next())
         {
+          listener.getLogger().println("INFO: S1.4: baselineRS.next");
+
           Hashtable<CM_PROJECT, Object> baselineRowHash = DerbyUtils.getRowData(baselineRS);
           Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
           memberInfo.put(CM_PROJECT.MEMBER_ID, (null == baselineRowHash.get(CM_PROJECT.MEMBER_ID)
@@ -1122,10 +1127,13 @@ public class DerbyUtils
         LOGGER.log(Level.FINE, "Attempting to execute query ", pjSelectSql);
         pjSelect = db.prepareStatement(pjSelectSql, ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
         rs = pjSelect.executeQuery();
-        
+
+        listener.getLogger().println("INFO: S1.5: Create the select statement for the current project");
+
         // Now we will compare the adds and updates between the current project and the baseline
         for (int i = 1; i <= DerbyUtils.getRowCount(rs); i++)
         {
+          listener.getLogger().println("INFO: S1.6: Move the cursor to the current record");
           // Move the cursor to the current record
           rs.absolute(i);
           Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -1139,6 +1147,7 @@ public class DerbyUtils
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
           {
+            listener.getLogger().println("INFO: S1.7:");
             // Did it change? Either by an update or roll back (update member revision)?
             String oldRevision = baselineMemberInfo.get(CM_PROJECT.REVISION).toString();
             if (!rowHash.get(CM_PROJECT.REVISION).toString().equals(oldRevision))
@@ -1161,6 +1170,7 @@ public class DerbyUtils
               changeCount++;
             } else
             {
+              listener.getLogger().println("INFO: S1.8:");
               // This member did not change, so lets copy its old author information
               if (null != baselineMemberInfo.get(CM_PROJECT.AUTHOR))
               {
@@ -1185,6 +1195,8 @@ public class DerbyUtils
             // Initialize the author information as requested
             if (!skipAuthorInfo)
             {
+              listener.getLogger().println("INFO: S1.9:");
+
               rs.updateString(CM_PROJECT.AUTHOR.toString(),
                   getAuthorFromRevisionInfo(serverConfigId,
                       rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
@@ -1207,6 +1219,7 @@ public class DerbyUtils
         Enumeration<String> deletedMembers = baselinePJ.keys();
         while (deletedMembers.hasMoreElements())
         {
+          listener.getLogger().println("INFO: S1.10:");
           changeCount++;
           String memberName = deletedMembers.nextElement();
           Hashtable<CM_PROJECT, Object> memberInfo = baselinePJ.get(memberName);
@@ -1244,7 +1257,9 @@ public class DerbyUtils
         // Commit changes to the database...
         db.commit();
         db.setAutoCommit(true);
+        listener.getLogger().println("INFO: S1.11: Commit changes to the database");
       }
+      
     } finally
 
     {
