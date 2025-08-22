@@ -1,3 +1,5 @@
+import java.util.EnumMap;
+import java.util.HashMap;
 /*******************************************************************************
  * Contributors: PTC 2016
  *******************************************************************************/
@@ -14,9 +16,6 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.HashSet;
-import java.util.HashMap;
-import java.util.EnumMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -717,17 +716,17 @@ public class DerbyUtils
   }
 
   /**
-   * Convenience function that converts a result set row into a HashMap for easy access
+  * Convenience function that converts a result set row into an EnumMap for easy access
    * 
    * @param rs ResultSet row object
-   * @return HashMap containing the non-null values for each column
+  * @return EnumMap containing the non-null values for each column
    * @throws SQLException
    * @throws IOException
    */
-  public static HashMap<CM_PROJECT, Object> getRowData(ResultSet rs)
+  public static EnumMap<CM_PROJECT, Object> getRowData(ResultSet rs)
       throws SQLException, IOException
   {
-    HashMap<CM_PROJECT, Object> rowData = new HashMap<CM_PROJECT, Object>();
+  EnumMap<CM_PROJECT, Object> rowData = new EnumMap<>(CM_PROJECT.class);
     ResultSetMetaData rsMetaData = rs.getMetaData();
     int columns = rsMetaData.getColumnCount();
     for (int i = 1; i <= columns; i++)
@@ -1001,9 +1000,9 @@ public class DerbyUtils
 
         listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
 
-        // Create a HashMap to hold the old baseline for easy comparison
-  HashMap<String, EnumMap<CM_PROJECT, Object>> baselinePJ =
-  new HashMap<String, EnumMap<CM_PROJECT, Object>>();
+    // Create a Map to hold the old baseline for easy comparison
+    Map<String, EnumMap<CM_PROJECT, Object>> baselinePJ =
+      new java.util.HashMap<>();
         while (baselineRS.next())
         {
     EnumMap<CM_PROJECT, Object> baselineRowHash = new EnumMap<>(CM_PROJECT.class);
@@ -1047,8 +1046,7 @@ public class DerbyUtils
           listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
           // Move the cursor to the current record
           rs.absolute(i);
-          EnumMap<CM_PROJECT, Object> rowHash = new EnumMap<>(CM_PROJECT.class);
-          rowHash.putAll(DerbyUtils.getRowData(rs));
+          EnumMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
           // Obtain the member we're working with
           String memberName = rowHash.get(CM_PROJECT.NAME).toString();
 
@@ -1291,7 +1289,7 @@ public class DerbyUtils
       // Create the select statement for the current project
       LOGGER.finer(String.format("Updating checksums for table: %s", rs.toString()));
       while (rs.next()) {
-  HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+  EnumMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         String newChecksum = checksumHash.get(rowHash.get(CM_PROJECT.NAME).toString());
         if (null != newChecksum && newChecksum.length() > 0) {
           LOGGER.finer(String.format("Updating checksum for rowHash: %s newChecksum: %s", rowHash.toString(), newChecksum));
@@ -1319,12 +1317,12 @@ public class DerbyUtils
    * @throws SQLException
    * @throws IOException
    */
-  public static synchronized List<HashMap<CM_PROJECT, Object>> viewProject(
+  public static synchronized List<EnumMap<CM_PROJECT, Object>> viewProject(
       String projectCacheTable) throws SQLException, IOException
   {
     // Initialize our return variable
-    List<HashMap<CM_PROJECT, Object>> projectMembersList =
-        new ArrayList<HashMap<CM_PROJECT, Object>>();
+    List<EnumMap<CM_PROJECT, Object>> projectMembersList =
+        new ArrayList<>();
 
     // Initialize our db connection
 
@@ -1332,7 +1330,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-  projectMembersList.add(DerbyUtils.getRowData(rs));
+        projectMembersList.add(DerbyUtils.getRowData(rs));
       }
     }
     // Close the database resources
@@ -1347,12 +1345,12 @@ public class DerbyUtils
    * @throws SQLException
    * @throws IOException
    */
-  public static synchronized List<HashMap<CM_PROJECT, Object>> viewSubProjects(
+  public static synchronized List<EnumMap<CM_PROJECT, Object>> viewSubProjects(
       String projectCacheTable) throws SQLException, IOException
   {
     // Initialize our return variable
-    List<HashMap<CM_PROJECT, Object>> subprojectsList =
-        new ArrayList<HashMap<CM_PROJECT, Object>>();
+    List<EnumMap<CM_PROJECT, Object>> subprojectsList =
+        new ArrayList<>();
 
     // Initialize our db connection
 
@@ -1360,7 +1358,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-  subprojectsList.add(DerbyUtils.getRowData(rs));
+        subprojectsList.add(DerbyUtils.getRowData(rs));
       }
     }
     // Close the database resources
@@ -1387,7 +1385,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-  HashMap<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
+        EnumMap<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
         dirList.add(rowData.get(CM_PROJECT.RELATIVE_FILE).toString());
       }
     }
