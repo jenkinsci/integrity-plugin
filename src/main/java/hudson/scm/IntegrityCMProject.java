@@ -282,26 +282,20 @@ public class IntegrityCMProject implements Serializable
       changeLogElem.appendChild(items);
 
       // Process the changes...
-  for (Map<CM_PROJECT, Object> memberInfo : projectMembersList)
-        if (null != memberInfo.get(CM_PROJECT.DELTA))
-        {
+      for (Map<CM_PROJECT, Object> memberInfo : projectMembersList) {
+        if (null != memberInfo.get(CM_PROJECT.DELTA)) {
           short deltaFlag = Short.valueOf(memberInfo.get(CM_PROJECT.DELTA).toString());
-          if (deltaFlag > 0)
-          {
+          if (deltaFlag > 0) {
             // Create the individual <item> element for the add/update/drop
             Element item = xmlDoc.createElement("item");
             // Set the action attribute
-            if (deltaFlag == 1)
-            {
+            if (deltaFlag == 1) {
               item.setAttribute("action", "add");
-            } else if (deltaFlag == 2)
-            {
+            } else if (deltaFlag == 2) {
               item.setAttribute("action", "update");
-            } else if (deltaFlag == 3)
-            {
+            } else if (deltaFlag == 3) {
               item.setAttribute("action", "delete");
-            } else
-            {
+            } else {
               item.setAttribute("action", "undefined");
             }
             // Append the <item> to the <items> element
