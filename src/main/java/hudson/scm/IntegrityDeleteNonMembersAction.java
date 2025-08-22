@@ -7,6 +7,8 @@ package hudson.scm;
 import java.io.IOException;
 import java.io.Serializable;
 import java.sql.SQLException;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -55,9 +57,9 @@ public class IntegrityDeleteNonMembersAction extends Notifier implements Seriali
       String resolvedAltWkspace = IntegrityCheckpointAction
           .evalGroovyExpression(build.getEnvironment(listener), scm.getAlternateWorkspace());
       IntegrityDeleteNonMembersTask deleteNonMembers =
-          new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace,
-              DerbyUtils.viewProject(scm.getIntegrityProject().getProjectCacheTable()),
-              DerbyUtils.getDirList(scm.getIntegrityProject().getProjectCacheTable()));
+      new IntegrityDeleteNonMembersTask(listener, resolvedAltWkspace,
+        (List<Map<CM_PROJECT, Object>>) (List<?>) DerbyUtils.viewProject(scm.getIntegrityProject().getProjectCacheTable()),
+        DerbyUtils.getDirList(scm.getIntegrityProject().getProjectCacheTable()));
       if (!build.getWorkspace().act(deleteNonMembers))
       {
         return false;
