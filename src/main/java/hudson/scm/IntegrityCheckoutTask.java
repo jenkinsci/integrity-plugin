@@ -310,11 +310,11 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
               + (canceledMembers > 0 ? "(Canceled: " + canceledMembers + ")" : ""));
         }
         previousCount = checkoutMembers + canceledMembers;
-        // Wait 2 seconds a check again if all threads are done
-        Thread.sleep(2000);
+        // Wait 500 milliseconds a check again if all threads are done
+        Thread.sleep(500);
       }
       executor.shutdown();
-      executor.awaitTermination(2, TimeUnit.MINUTES);
+      executor.awaitTermination(1, TimeUnit.MINUTES);
 
       // Lets advice the user that we've checked out all the members
       if (cleanCopy)

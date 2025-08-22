@@ -287,8 +287,8 @@ public class IntegrityCheckpointAction extends Notifier implements Serializable
                 siProject.getProjectName(), siProject.getProjectRevision(), chkptLabel);
 
             // Attach label to 'subProjects'
-            for (Hashtable<CM_PROJECT, Object> memberInfo : DerbyUtils
-                .viewSubProjects(siProject.getProjectCacheTable()))
+      for (Map<CM_PROJECT, Object> memberInfo : DerbyUtils
+        .viewSubProjects(siProject.getProjectCacheTable()))
             {
               String fullConfigPath = String.class.cast(memberInfo.get(CM_PROJECT.CONFIG_PATH));
               String projectName = String.class.cast(memberInfo.get(CM_PROJECT.NAME));
