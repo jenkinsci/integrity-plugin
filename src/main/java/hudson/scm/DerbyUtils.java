@@ -927,20 +927,17 @@ public class DerbyUtils
     ResultSet baselineRS = null;
     ResultSet rs = null;
     PreparedStatement select = null;
-
+    // Get a connection from our pool
+    db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+    db.setAutoCommit(false);
     try
     {
       listener.getLogger().println("S1:such nach error");
       if (CPMode)
       {
-         listener.getLogger().println("S2:such nach error");
-        if (membersInCP.isEmpty())
-          return changeCount;
+        listener.getLogger().println("S2:such nach error");
+        if (membersInCP.isEmpty()) return changeCount;
       }
-      // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      db.setAutoCommit(false);
       if (CPMode) // CP Mode comparison
       {
          listener.getLogger().println("S3:such nach error");
@@ -979,7 +976,7 @@ public class DerbyUtils
                   LOGGER
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
-                  db.commit();
+                  // db.commit();
                 }
                 break;
               case DROP:
@@ -1016,7 +1013,7 @@ public class DerbyUtils
                 }
                 LOGGER.fine("... " + cpMemberName + " file operation: "
                     + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
-                db.commit();
+                // db.commit();
                 break;
               case UPDATE:
                 if (rs.getRow() != 0)
@@ -1027,7 +1024,7 @@ public class DerbyUtils
                   LOGGER.fine("... " + cpMemberName + " revision changed - new revision is "
                       + cpMemberRevision);
                   rs.updateRow();
-                  db.commit();
+                  // db.commit();
                 }
                 break;
               case RENAME:
@@ -1058,7 +1055,7 @@ public class DerbyUtils
                       "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
                   rs.updateRow();
                 }
-                db.commit();
+                // db.commit();
                 break;
               case ADDFROMARCHIVE: {
                 // NOOP
@@ -1081,8 +1078,7 @@ public class DerbyUtils
       {
          listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
         // Create the select statement for the previous baseline
-        String baselineSelectSql =
-            DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
+        String baselineSelectSql = DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
         LOGGER.log(Level.FINE, "Attempting to execute query ", baselineSelectSql);
         baselineSelect = db.prepareStatement(baselineSelectSql);
         baselineRS = baselineSelect.executeQuery();
@@ -1147,7 +1143,7 @@ public class DerbyUtils
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
           {
-            listener.getLogger().println("INFO: S1.7:");
+            listener.getLogger().println("INFO: S1.7: update member revision");
             // Did it change? Either by an update or roll back (update member revision)?
             String oldRevision = baselineMemberInfo.get(CM_PROJECT.REVISION).toString();
             if (!rowHash.get(CM_PROJECT.REVISION).toString().equals(oldRevision))
@@ -1170,7 +1166,7 @@ public class DerbyUtils
               changeCount++;
             } else
             {
-              listener.getLogger().println("INFO: S1.8:");
+              listener.getLogger().println("INFO: S1.7.2:");
               // This member did not change, so lets copy its old author information
               if (null != baselineMemberInfo.get(CM_PROJECT.AUTHOR))
               {
@@ -1195,8 +1191,7 @@ public class DerbyUtils
             // Initialize the author information as requested
             if (!skipAuthorInfo)
             {
-              listener.getLogger().println("INFO: S1.9:");
-
+              listener.getLogger().println("INFO: S1.8: !skipAuthorInfo");
               rs.updateString(CM_PROJECT.AUTHOR.toString(),
                   getAuthorFromRevisionInfo(serverConfigId,
                       rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
@@ -1205,8 +1200,8 @@ public class DerbyUtils
             }
             // Initialize the delta flag for this member
             rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
-            LOGGER.fine("... " + memberName + " new file - revision is "
-                + rowHash.get(CM_PROJECT.REVISION).toString());
+            // LOGGER.fine("... " + memberName + " new file - revision is "+ rowHash.get(CM_PROJECT.REVISION).toString());
+            listener.getLogger().println("INFO S1.9: " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
             changeCount++;
           }
 
@@ -1255,11 +1250,10 @@ public class DerbyUtils
               + memberInfo.get(CM_PROJECT.REVISION).toString());
         }
         // Commit changes to the database...
+      }
         db.commit();
         db.setAutoCommit(true);
         listener.getLogger().println("INFO: S1.11: Commit changes to the database");
-      }
-      
     } finally
 
     {
