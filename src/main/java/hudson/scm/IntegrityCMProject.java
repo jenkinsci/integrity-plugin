@@ -13,7 +13,7 @@ import java.util.ArrayList;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashSet;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -652,7 +652,7 @@ public class IntegrityCMProject implements Serializable
   {
 
     ExecutorService executor = null;
-    Map<String, String> pjConfigHash = new Hashtable<String, String>();
+  Map<String, String> pjConfigHash = new HashMap<String, String>();
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
 
     // Setup the Derby DB for this Project
