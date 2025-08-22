@@ -14,9 +14,8 @@ import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
 import java.util.Date;
-import java.util.Enumeration;
 import java.util.HashSet;
-import java.util.Hashtable;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -45,7 +44,6 @@ import hudson.scm.api.command.IAPICommand;
 import hudson.scm.api.option.APIOption;
 import hudson.scm.api.option.IAPIFields;
 import hudson.scm.api.option.IAPIOption;
-import hudson.scm.api.session.APISession;
 import hudson.scm.api.option.IAPIFields.CP_MEMBER_OPERATION;
 
 /**
@@ -725,10 +723,10 @@ public class DerbyUtils
    * @throws SQLException
    * @throws IOException
    */
-  public static Hashtable<CM_PROJECT, Object> getRowData(ResultSet rs)
+  public static HashMap<CM_PROJECT, Object> getRowData(ResultSet rs)
       throws SQLException, IOException
   {
-    Hashtable<CM_PROJECT, Object> rowData = new Hashtable<CM_PROJECT, Object>();
+    HashMap<CM_PROJECT, Object> rowData = new HashMap<CM_PROJECT, Object>();
     ResultSetMetaData rsMetaData = rs.getMetaData();
     int columns = rsMetaData.getColumnCount();
     for (int i = 1; i <= columns; i++)
@@ -976,7 +974,7 @@ public class DerbyUtils
                   LOGGER
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
-                  // db.commit();
+                  //db.commit();
                 }
                 break;
               case DROP:
@@ -1013,7 +1011,7 @@ public class DerbyUtils
                 }
                 LOGGER.fine("... " + cpMemberName + " file operation: "
                     + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
-                // db.commit();
+                //db.commit();
                 break;
               case UPDATE:
                 if (rs.getRow() != 0)
@@ -1024,7 +1022,7 @@ public class DerbyUtils
                   LOGGER.fine("... " + cpMemberName + " revision changed - new revision is "
                       + cpMemberRevision);
                   rs.updateRow();
-                  // db.commit();
+                  //db.commit();
                 }
                 break;
               case RENAME:
@@ -1055,7 +1053,7 @@ public class DerbyUtils
                       "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
                   rs.updateRow();
                 }
-                // db.commit();
+                //db.commit();
                 break;
               case ADDFROMARCHIVE: {
                 // NOOP
@@ -1076,7 +1074,7 @@ public class DerbyUtils
         }
       } else // File Mode comparison
       {
-         listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
+        listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
         // Create the select statement for the previous baseline
         String baselineSelectSql = DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
         LOGGER.log(Level.FINE, "Attempting to execute query ", baselineSelectSql);
@@ -1086,14 +1084,12 @@ public class DerbyUtils
         listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
 
         // Create a hashtable to hold the old baseline for easy comparison
-        Hashtable<String, Hashtable<CM_PROJECT, Object>> baselinePJ =
-            new Hashtable<String, Hashtable<CM_PROJECT, Object>>();
+      HashMap<String, HashMap<CM_PROJECT, Object>> baselinePJ =
+      new HashMap<String, HashMap<CM_PROJECT, Object>>();
         while (baselineRS.next())
         {
-          listener.getLogger().println("INFO: S1.4: baselineRS.next");
-
-          Hashtable<CM_PROJECT, Object> baselineRowHash = DerbyUtils.getRowData(baselineRS);
-          Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
+          HashMap<CM_PROJECT, Object> baselineRowHash = DerbyUtils.getRowData(baselineRS);
+          HashMap<CM_PROJECT, Object> memberInfo = new HashMap<CM_PROJECT, Object>();
           memberInfo.put(CM_PROJECT.MEMBER_ID, (null == baselineRowHash.get(CM_PROJECT.MEMBER_ID)
               ? "" : baselineRowHash.get(CM_PROJECT.MEMBER_ID).toString()));
           memberInfo.put(CM_PROJECT.TIMESTAMP, (null == baselineRowHash.get(CM_PROJECT.TIMESTAMP)
@@ -1129,16 +1125,16 @@ public class DerbyUtils
         // Now we will compare the adds and updates between the current project and the baseline
         for (int i = 1; i <= DerbyUtils.getRowCount(rs); i++)
         {
-          listener.getLogger().println("INFO: S1.6: Move the cursor to the current record");
+          listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
           // Move the cursor to the current record
           rs.absolute(i);
-          Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+          HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
           // Obtain the member we're working with
           String memberName = rowHash.get(CM_PROJECT.NAME).toString();
 
           // Get the baseline project information for this member
           LOGGER.fine("Comparing file against baseline " + memberName);
-          Hashtable<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
+          HashMap<CM_PROJECT, Object> baselineMemberInfo = baselinePJ.get(memberName);
 
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
@@ -1166,7 +1162,7 @@ public class DerbyUtils
               changeCount++;
             } else
             {
-              listener.getLogger().println("INFO: S1.7.2:");
+              listener.getLogger().println("INFO: S1.7.2: old revision is Read catch");
               // This member did not change, so lets copy its old author information
               if (null != baselineMemberInfo.get(CM_PROJECT.AUTHOR))
               {
@@ -1200,7 +1196,7 @@ public class DerbyUtils
             }
             // Initialize the delta flag for this member
             rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
-            // LOGGER.fine("... " + memberName + " new file - revision is "+ rowHash.get(CM_PROJECT.REVISION).toString());
+            LOGGER.fine("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
             listener.getLogger().println("INFO S1.9: " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
             changeCount++;
           }
@@ -1211,13 +1207,9 @@ public class DerbyUtils
 
         // Now, we should be left with the drops. Exist only in the old baseline and not the current
         // one.
-        Enumeration<String> deletedMembers = baselinePJ.keys();
-        while (deletedMembers.hasMoreElements())
-        {
-          listener.getLogger().println("INFO: S1.10:");
+        for (String memberName : baselinePJ.keySet()) {
           changeCount++;
-          String memberName = deletedMembers.nextElement();
-          Hashtable<CM_PROJECT, Object> memberInfo = baselinePJ.get(memberName);
+          HashMap<CM_PROJECT, Object> memberInfo = baselinePJ.get(memberName);
 
           // Add the deleted members to the database
           rs.moveToInsertRow();
@@ -1317,7 +1309,7 @@ public class DerbyUtils
                 totalMembersInProjectTodo = rs.getInt(1);
                 listener.getLogger().println("INFO: Total members in project: " + totalMembersInProjectTodo);
             } catch (SQLException e) {
-                listener.getLogger().println("WARNING: The value in the database is not a valid number. " + e.getMessage());
+                listener.getLogger().println("Warning: The value in the database is not a valid number. " + e.getMessage());
                 totalMembersInProjectTodo = 1000;
             }
         } else {
@@ -1334,7 +1326,7 @@ public class DerbyUtils
             perc = pnew;
             listener.getLogger().println(perc*10 + "% done ...");
         } 
-        Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+  HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
                         rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
@@ -1379,7 +1371,7 @@ public class DerbyUtils
       // Create the select statement for the current project
       LOGGER.finer(String.format("Updating checksums for table: %s", rs.toString()));
       while (rs.next()) {
-        Hashtable<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+  HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         String newChecksum = checksumHash.get(rowHash.get(CM_PROJECT.NAME).toString());
         if (null != newChecksum && newChecksum.length() > 0) {
           LOGGER.finer(String.format("Updating checksum for rowHash: %s newChecksum: %s", rowHash.toString(), newChecksum));
@@ -1407,12 +1399,12 @@ public class DerbyUtils
    * @throws SQLException
    * @throws IOException
    */
-  public static synchronized List<Hashtable<CM_PROJECT, Object>> viewProject(
+  public static synchronized List<HashMap<CM_PROJECT, Object>> viewProject(
       String projectCacheTable) throws SQLException, IOException
   {
     // Initialize our return variable
-    List<Hashtable<CM_PROJECT, Object>> projectMembersList =
-        new ArrayList<Hashtable<CM_PROJECT, Object>>();
+    List<HashMap<CM_PROJECT, Object>> projectMembersList =
+        new ArrayList<HashMap<CM_PROJECT, Object>>();
 
     // Initialize our db connection
 
@@ -1420,7 +1412,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-        projectMembersList.add(DerbyUtils.getRowData(rs));
+  projectMembersList.add(DerbyUtils.getRowData(rs));
       }
     }
     // Close the database resources
@@ -1435,12 +1427,12 @@ public class DerbyUtils
    * @throws SQLException
    * @throws IOException
    */
-  public static synchronized List<Hashtable<CM_PROJECT, Object>> viewSubProjects(
+  public static synchronized List<HashMap<CM_PROJECT, Object>> viewSubProjects(
       String projectCacheTable) throws SQLException, IOException
   {
     // Initialize our return variable
-    List<Hashtable<CM_PROJECT, Object>> subprojectsList =
-        new ArrayList<Hashtable<CM_PROJECT, Object>>();
+    List<HashMap<CM_PROJECT, Object>> subprojectsList =
+        new ArrayList<HashMap<CM_PROJECT, Object>>();
 
     // Initialize our db connection
 
@@ -1448,7 +1440,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.SUB_PROJECT_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-        subprojectsList.add(DerbyUtils.getRowData(rs));
+  subprojectsList.add(DerbyUtils.getRowData(rs));
       }
     }
     // Close the database resources
@@ -1475,7 +1467,7 @@ public class DerbyUtils
             .getConnection(); PreparedStatement stmt = db.prepareStatement(DerbyUtils.DIR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable)); ResultSet rs = stmt.executeQuery()) {
       // Get a connection from our pool
       while (rs.next()) {
-        Hashtable<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
+  HashMap<CM_PROJECT, Object> rowData = DerbyUtils.getRowData(rs);
         dirList.add(rowData.get(CM_PROJECT.RELATIVE_FILE).toString());
       }
     }

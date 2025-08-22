@@ -743,7 +743,7 @@ public class IntegrityCMProject implements Serializable
       for (CPInfo cpInfo : membersInCP.keySet())
       {
         List<CPMember> cpMembers = membersInCP.get(cpInfo);
-        Hashtable<CM_PROJECT, Object> memberInfo = new Hashtable<CM_PROJECT, Object>();
+        HashMap<CM_PROJECT, Object> memberInfo = new HashMap<CM_PROJECT, Object>();
 
         for (CPMember cpMember : cpMembers)
         {
