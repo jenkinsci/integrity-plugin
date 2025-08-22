@@ -1365,6 +1365,7 @@ public class DerbyUtils
   {
     try (Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
             .getConnection(); PreparedStatement checksumSelect = db.prepareStatement(DerbyUtils.CHECKSUM_UPDATE.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE); ResultSet rs = checksumSelect.executeQuery()) {
+      db.setAutoCommit(false);
       // Get a connection from our pool
       // Create the select statement for the current project
       LOGGER.finer(String.format("Updating checksums for table: %s", rs.toString()));
@@ -1380,6 +1381,7 @@ public class DerbyUtils
 
       // Commit the updates
       db.commit();
+      db.setAutoCommit(true);
     }
     // Release the result set
 
@@ -1413,7 +1415,6 @@ public class DerbyUtils
       }
     }
     // Close the database resources
-
     return projectMembersList;
   }
 
@@ -1500,6 +1501,7 @@ public class DerbyUtils
       // Get a connection from our pool
       db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
           .getConnection();
+      db.setAutoCommit(false);
       if (operation.equalsIgnoreCase(IAPIFields.ADD_OPERATION))
       {
         // Add CP entry to cache
@@ -1537,6 +1539,7 @@ public class DerbyUtils
       }
 
       db.commit();
+      db.setAutoCommit(true);
     } finally
     {
       // Close the insert statement
