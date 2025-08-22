@@ -716,10 +716,10 @@ public class DerbyUtils
   }
 
   /**
-   * Convenience function that converts a result set row into a Hashtable for easy access
+   * Convenience function that converts a result set row into a HashMap for easy access
    * 
    * @param rs ResultSet row object
-   * @return Hashtable containing the non-null values for each column
+   * @return HashMap containing the non-null values for each column
    * @throws SQLException
    * @throws IOException
    */
@@ -1083,7 +1083,7 @@ public class DerbyUtils
 
         listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
 
-        // Create a hashtable to hold the old baseline for easy comparison
+        // Create a HashMap to hold the old baseline for easy comparison
       HashMap<String, HashMap<CM_PROJECT, Object>> baselinePJ =
       new HashMap<String, HashMap<CM_PROJECT, Object>>();
         while (baselineRS.next())
@@ -1179,7 +1179,7 @@ public class DerbyUtils
               rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 0);
             }
 
-            // Remove this member from the baseline project hashtable, so we'll be left with items
+            // Remove this member from the baseline project HashMap, so we'll be left with items
             // that are dropped
             baselinePJ.remove(memberName);
           } else // We've found a new file
@@ -1187,7 +1187,6 @@ public class DerbyUtils
             // Initialize the author information as requested
             if (!skipAuthorInfo)
             {
-              listener.getLogger().println("INFO: S1.8: !skipAuthorInfo");
               rs.updateString(CM_PROJECT.AUTHOR.toString(),
                   getAuthorFromRevisionInfo(serverConfigId,
                       rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
@@ -1295,9 +1294,9 @@ public class DerbyUtils
     Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
     PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
     ResultSet rs = authSelect.executeQuery();
+    db.setAutoCommit(false);
     try
       {
-        db.setAutoCommit(false);
         listener.getLogger().println("PTC Plugin: Begin Prime Author Infomation (init or refresh complete history cache)...");
         listener.getLogger().println("PTC Plugin: Number of elements to process: ");
 
@@ -1326,7 +1325,7 @@ public class DerbyUtils
             perc = pnew;
             listener.getLogger().println(perc*10 + "% done ...");
         } 
-  HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
+        HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
         rs.updateString(CM_PROJECT.AUTHOR.toString(),
                 getAuthorFromRevisionInfo(serverConfigId,
                         rowHash.get(CM_PROJECT.CONFIG_PATH).toString(),
@@ -1357,7 +1356,7 @@ public class DerbyUtils
   /**
    * Updates the underlying Integrity SCM Project table cache with the new checksum information
    * 
-   * @param checksumHash Checksum hashtable generated from a checkout operation
+   * @param checksumHash Checksum hashMap generated from a checkout operation
    * @throws SQLException
    * @throws IOException
    */

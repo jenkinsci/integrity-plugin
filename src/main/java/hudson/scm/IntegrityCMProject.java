@@ -336,7 +336,7 @@ public class IntegrityCMProject implements Serializable
    * the details around adds, updates, and deletes
    * 
    * @param item XML Element representing the item node
-   * @param memberInfo Hashtable representing the member information
+   * @param memberInfo HashMap representing the member information
    */
   private Element writeChangeLog(Element item, Map<CM_PROJECT, Object> memberInfo)
   {
