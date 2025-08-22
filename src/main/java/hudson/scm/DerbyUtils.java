@@ -1290,7 +1290,7 @@ public class DerbyUtils
   public static synchronized void primeAuthorInformation(String serverConfigId,
       String projectCacheTable,TaskListener listener) throws SQLException, IOException
   {
-    listener.getLogger().println("try to loging in sql DB");
+    listener.getLogger().println("INFO: try to loging in sql DB");
     Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
     PreparedStatement authSelect = db.prepareStatement(DerbyUtils.AUTHOR_SELECT.replaceFirst("CM_PROJECT", projectCacheTable), ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
     ResultSet rs = authSelect.executeQuery();
@@ -1306,14 +1306,14 @@ public class DerbyUtils
         if (rs.next()) {
             try {
                 totalMembersInProjectTodo = rs.getInt(1);
-                listener.getLogger().println("Total members in project: " + totalMembersInProjectTodo);
+                listener.getLogger().println("INFO: Total members in project: " + totalMembersInProjectTodo);
             } catch (SQLException e) {
-                listener.getLogger().println("Error: The value in the database is not a valid number. " + e.getMessage());
-                totalMembersInProjectTodo = 0;
+                listener.getLogger().println("WARNING: The value in the database is not a valid number. " + e.getMessage());
+                totalMembersInProjectTodo = 1000;
             }
         } else {
             // Dieser Block wird ausgeführt, wenn das ResultSet leer ist, also keine Ergebnisse gefunden wurden.
-            listener.getLogger().println("Info: No SQL count available. The project seems to have no members.");
+            listener.getLogger().println("INFO: No SQL count available. The project seems to have no members.");
         }
 
       // Get a connection from our pool
