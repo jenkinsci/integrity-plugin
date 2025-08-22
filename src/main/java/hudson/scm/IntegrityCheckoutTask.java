@@ -339,12 +339,19 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       listener.getLogger().println(iex.getMessage());
       listener.getLogger().println("Failed to clean up workspace (" + workspace + ") contents!");
       return false;
-    } finally {
+    } catch (Exception e) {
+        listener.getLogger().println("Terminating checkout threads");
+        if(executor != null) {
+        listener.getLogger().println("Error: Connection with PTC timed out, Please Contact your PTC administrator or IT to make a Stabile Connection with the server");
+        executor.shutdown();
+      }
+    }finally {
       listener.getLogger().println("Terminating checkout threads");
-      //if(executor != null)
-      //  executor.shutdown();
-      if( generateAPISession != null )
-        generateAPISession.remove();
+      if(executor != null) {
+        listener.getLogger().println("COOL: Although the connection with PTC was to slow you succeeded in checking out the files");
+        executor.shutdown();
+      }
+      if( generateAPISession != null ) generateAPISession.remove();
     }
 
     // If we got here, everything is good on the checkout...

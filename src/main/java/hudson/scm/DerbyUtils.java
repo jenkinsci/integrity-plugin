@@ -925,7 +925,9 @@ public class DerbyUtils
     ResultSet baselineRS = null;
     ResultSet rs = null;
     PreparedStatement select = null;
-
+    // Get a connection from our pool
+    db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+    db.setAutoCommit(false);
     try
     {
       listener.getLogger().println("S1:such nach error");
@@ -935,10 +937,6 @@ public class DerbyUtils
         if (membersInCP.isEmpty())
           return changeCount;
       }
-      // Get a connection from our pool
-      db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection()
-          .getConnection();
-      db.setAutoCommit(false);
       if (CPMode) // CP Mode comparison
       {
          listener.getLogger().println("S3:such nach error");
@@ -977,7 +975,7 @@ public class DerbyUtils
                   LOGGER
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
-                  db.commit();
+                  //db.commit();
                 }
                 break;
               case DROP:
@@ -1014,7 +1012,7 @@ public class DerbyUtils
                 }
                 LOGGER.fine("... " + cpMemberName + " file operation: "
                     + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
-                db.commit();
+                //db.commit();
                 break;
               case UPDATE:
                 if (rs.getRow() != 0)
@@ -1025,7 +1023,7 @@ public class DerbyUtils
                   LOGGER.fine("... " + cpMemberName + " revision changed - new revision is "
                       + cpMemberRevision);
                   rs.updateRow();
-                  db.commit();
+                  //db.commit();
                 }
                 break;
               case RENAME:
@@ -1056,7 +1054,7 @@ public class DerbyUtils
                       "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
                   rs.updateRow();
                 }
-                db.commit();
+                //db.commit();
                 break;
               case ADDFROMARCHIVE: {
                 // NOOP
@@ -1077,6 +1075,7 @@ public class DerbyUtils
         }
       } else // File Mode comparison
       {
+        listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
         // Create the select statement for the previous baseline
         String baselineSelectSql =
             DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
@@ -1124,6 +1123,7 @@ public class DerbyUtils
         // Now we will compare the adds and updates between the current project and the baseline
         for (int i = 1; i <= DerbyUtils.getRowCount(rs); i++)
         {
+          listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
           // Move the cursor to the current record
           rs.absolute(i);
           HashMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -1137,6 +1137,7 @@ public class DerbyUtils
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
           {
+            listener.getLogger().println("INFO: S1.7: update member revision");
             // Did it change? Either by an update or roll back (update member revision)?
             String oldRevision = baselineMemberInfo.get(CM_PROJECT.REVISION).toString();
             if (!rowHash.get(CM_PROJECT.REVISION).toString().equals(oldRevision))
@@ -1159,6 +1160,7 @@ public class DerbyUtils
               changeCount++;
             } else
             {
+              listener.getLogger().println("INFO: S1.7.2: old revision is Read catch");
               // This member did not change, so lets copy its old author information
               if (null != baselineMemberInfo.get(CM_PROJECT.AUTHOR))
               {
@@ -1191,8 +1193,8 @@ public class DerbyUtils
             }
             // Initialize the delta flag for this member
             rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
-            LOGGER.fine("... " + memberName + " new file - revision is "
-                + rowHash.get(CM_PROJECT.REVISION).toString());
+            LOGGER.fine("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
+            listener.getLogger().println("INFO S1.9: " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
             changeCount++;
           }
 
@@ -1303,8 +1305,8 @@ public class DerbyUtils
                 totalMembersInProjectTodo = rs.getInt(1);
                 listener.getLogger().println("Total members in project: " + totalMembersInProjectTodo);
             } catch (SQLException e) {
-                listener.getLogger().println("Error: The value in the database is not a valid number. " + e.getMessage());
-                totalMembersInProjectTodo = 0;
+                listener.getLogger().println("Warning: The value in the database is not a valid number. " + e.getMessage());
+                totalMembersInProjectTodo = 1000;
             }
         } else {
             // Dieser Block wird ausgeführt, wenn das ResultSet leer ist, also keine Ergebnisse gefunden wurden.
