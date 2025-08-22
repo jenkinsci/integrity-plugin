@@ -2,7 +2,7 @@ name: Build Jenkins Plugin
 
 on:
   push:
-    branches: [ ptc-dev ]
+    branches: [ptc-dev, ptc-ai-dev, ptc-test]
   pull_request:
 
 jobs:
