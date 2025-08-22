@@ -8,19 +8,22 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.Map;
+// entfernt: HashMap
+// entfernt: doppeltes Map
 import java.util.Iterator;
 import java.util.List;
-import java.util.Vector;
+// entfernt: Vector
 import java.util.concurrent.Callable;
 import java.util.concurrent.ConcurrentHashMap;
+// entfernt: ConcurrentMap
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
 import java.util.concurrent.ThreadFactory;
 import java.util.concurrent.TimeUnit;
-import java.util.concurrent.TimeoutException;
+// entfernt: TimeoutException
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -44,7 +47,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   private static final long serialVersionUID = 1240357991626897900L;
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
   private static final int CHECKOUT_TRESHOLD = 5000;
-  private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
+  private final List<Map<CM_PROJECT, Object>> projectMembersList;
   private final List<String> dirList;
   private final String lineTerminator;
   private final boolean restoreTimestamp;
@@ -83,7 +86,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
    * @param listener The Hudson task listener
    * @param integrityConfig Integrity Configuration Object
    */
-  public IntegrityCheckoutTask(List<Hashtable<CM_PROJECT, Object>> projectMembersList,
+  public IntegrityCheckoutTask(List<Map<CM_PROJECT, Object>> projectMembersList,
       List<String> dirList, String alternateWorkspaceDir, String lineTerminator,
       boolean restoreTimestamp, boolean cleanCopy, boolean fetchChangedWorkspaceFiles,
       int checkoutThreadPoolSize, int checkoutThreadTimeout, TaskListener listener, IntegrityConfigurable integrityConfig)
@@ -185,10 +188,10 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       createFolderStructure(workspace);
 
       // Perform a synchronize of each file in the member list...
-      for (Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it
+      for (Iterator<Map<CM_PROJECT, Object>> it = projectMembersList.iterator(); it
           .hasNext();)
       {
-        Hashtable<CM_PROJECT, Object> memberInfo = it.next();
+        Map<CM_PROJECT, Object> memberInfo = it.next();
         short deltaFlag = (null == memberInfo.get(CM_PROJECT.DELTA) ? -1
             : Short.valueOf(memberInfo.get(CM_PROJECT.DELTA).toString()));
         File targetFile = new File(workspace + memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
@@ -354,8 +357,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
   private static class ThreadLocalAPISession extends ThreadLocal<ISession>
   {
     IntegrityConfigurable integrityConfig;
-    // Using a thread safe Vector instead of a List
-    private Vector<ISession> sessions = new Vector<ISession>();
+  private final List<ISession> sessions = new ArrayList<>();
 
     /**
      * Initialize our constructor with the all the information needed to create an APISession
@@ -424,7 +426,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
     protected Integer initialValue()
     {
       LOGGER.fine("Trying to retrieve initial value for open file handler");
-      return new Integer(1);
+  return Integer.valueOf(1);
     }
   }
 
