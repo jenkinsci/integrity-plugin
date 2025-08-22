@@ -929,136 +929,67 @@ public class DerbyUtils
   // Get a connection from our pool
   db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
   db.setAutoCommit(false);
-    try
-    {
+    try {
       listener.getLogger().println("S1:such nach error");
-      if (CPMode)
-      {
+      if (CPMode) {
         listener.getLogger().println("S2:such nach error");
         if (membersInCP.isEmpty()) return changeCount;
-      }
-      if (CPMode) // CP Mode comparison
-      {
-         listener.getLogger().println("S3:such nach error");
-        // All members in CP(s) at this stage are from a closed CP. So we update their deltas in the
-        // project cache
-        for (CPInfo cpInfo : membersInCP.keySet())
-        {
+        String cpMemberSelectSql = CP_MEMBER_SELECT.replace("CM_PROJECT", projectCacheTable);
+        select = db.prepareStatement(cpMemberSelectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
+        for (CPInfo cpInfo : membersInCP.keySet()) {
           String cpid = cpInfo.getId();
           List<CPMember> cpMembers = membersInCP.get(cpInfo);
-          for (CPMember cpMember : cpMembers)
-          {
+          for (CPMember cpMember : cpMembers) {
             String cpMemberName = cpMember.getMemberName();
             CP_MEMBER_OPERATION cpMemberOperation = cpMember.getOperationType();
             String cpMemberRevision = cpMember.getRevision();
-            LOGGER.log(Level.FINE,
-                "CP Member : " + cpMemberName + ", Type : " + cpMemberOperation.toString());
+            LOGGER.log(Level.FINE, "CP Member : " + cpMemberName + ", Type : " + cpMemberOperation.toString());
 
-            select =
-                db.prepareStatement(CP_MEMBER_SELECT.replaceFirst("CM_PROJECT", projectCacheTable),
-                    ResultSet.TYPE_SCROLL_INSENSITIVE, ResultSet.CONCUR_UPDATABLE);
             select.setString(1, cpMemberName);
             rs = select.executeQuery();
-            if (getRowCount(rs) > 0)
-            {
-              LOGGER.log(Level.FINE,
-                  "Retrieved member info from project cache for :" + cpMemberName);
-              rs.absolute(1);
+            if (getRowCount(rs) > 0) {
+              LOGGER.log(Level.FINE, "Retrieved member info from project cache for :" + cpMemberName);
+              rs.next();
             }
 
-            if (CPMode)
-            {
-              listener.getLogger().println("S2:such nach error");
-              if (membersInCP.isEmpty()) return changeCount;
-              // PreparedStatement nur einmal anlegen
-              String cpMemberSelectSql = CP_MEMBER_SELECT.replace("CM_PROJECT", projectCacheTable);
-              select = db.prepareStatement(cpMemberSelectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
-              for (CPInfo cpInfo : membersInCP.keySet())
-              {
-                String cpid = cpInfo.getId();
-                List<CPMember> cpMembers = membersInCP.get(cpInfo);
-                for (CPMember cpMember : cpMembers)
-                {
-                  String cpMemberName = cpMember.getMemberName();
-                  CP_MEMBER_OPERATION cpMemberOperation = cpMember.getOperationType();
-                  String cpMemberRevision = cpMember.getRevision();
-                  LOGGER.log(Level.FINE,
-                      "CP Member : " + cpMemberName + ", Type : " + cpMemberOperation.toString());
-
-                  select.setString(1, cpMemberName);
-                  rs = select.executeQuery();
-                  if (getRowCount(rs) > 0)
-                  {
-                    LOGGER.log(Level.FINE,
-                        "Retrieved member info from project cache for :" + cpMemberName);
-                    rs.next();
-                  }
-
-                  switch (cpMemberOperation) {
-                    case ADD:
-                      if (rs.getRow() != 0)
-                      { /* ...unverändert... */ }
-                      break;
-                    case DROP:
-                    case MOVEMEMBER:
-                      if (rs.getRow() == 0)
-                      { /* ...unverändert... */ }
-                      else
-                      { /* ...unverändert... */ }
-                      LOGGER.fine("... " + cpMemberName + " file operation: "
-                          + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
-                      break;
-                    case UPDATE:
-                      if (rs.getRow() != 0)
-                      { /* ...unverändert... */ }
-                      break;
-                    case RENAME:
-                      if (rs.getRow() == 0)
-                      {
-                        rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
-                        rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
-                        rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
-                        rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 3);
-                        rs.updateString(CM_PROJECT.CPID.toString(), cpid);
-                        rs.insertRow();
-                        rs.moveToCurrentRow();
-                      } else
-                      {
-                        rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
-                        LOGGER.fine(
-                            "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
-                        rs.updateRow();
-                      }
-                      break;
-                    case ADDFROMARCHIVE: {
-                      break;
-                    }
-                    case CREATESUBPROJECT: {
-                      break;
-                    }
-                    default: {
-                      LOGGER.log(Level.WARNING,
-                          "Unsupported CP Operation : " + cpMemberOperation.toString());
-                      break;
-                    }
-                  }
+            switch (cpMemberOperation) {
+              case ADD:
+                // TODO: Implementiere die Logik für ADD
+                break;
+              case DROP:
+              case MOVEMEMBER:
+                // TODO: Implementiere die Logik für DROP/MOVEMEMBER
+                LOGGER.fine("... " + cpMemberName + " file operation: " + cpMemberOperation.toString() + " - revision was " + cpMemberRevision);
+                break;
+              case UPDATE:
+                // TODO: Implementiere die Logik für UPDATE
+                break;
+              case RENAME:
+                if (rs.getRow() == 0) {
+                  rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
+                  rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
+                  rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
+                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 3);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
+                  rs.insertRow();
+                  rs.moveToCurrentRow();
+                } else {
+                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
+                  LOGGER.fine("... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
+                  rs.updateRow();
                 }
-              }
-              if (select != null) select.close();
-            } else // File Mode comparison
-              case CREATESUBPROJECT: {
-                // NOOP - Files added under subproject will be handled under the Add/Update/Delete
-                // operations
                 break;
-              }
-              default: {
-                LOGGER.log(Level.WARNING,
-                    "Unsupported CP Operation : " + cpMemberOperation.toString());
+              case ADDFROMARCHIVE:
+              case CREATESUBPROJECT:
+                // NOOP
                 break;
-              }
+              default:
+                LOGGER.log(Level.WARNING, "Unsupported CP Operation : " + cpMemberOperation.toString());
+                break;
             }
           }
         }
+        if (select != null) select.close();
       } else // File Mode comparison
       {
         listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
