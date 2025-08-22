@@ -7,7 +7,7 @@ import java.io.File;
 import java.io.IOException;
 import java.sql.SQLException;
 import java.util.ArrayList;
-import java.util.Hashtable;
+import java.util.Map;
 import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
@@ -27,11 +27,11 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
   private static final Logger LOGGER = Logger.getLogger(IntegritySCM.class.getSimpleName());
   private final TaskListener listener;
   private String alternateWorkspaceDir;
-  private final List<Hashtable<CM_PROJECT, Object>> projectMembersList;
+  private final List<Map<CM_PROJECT, Object>> projectMembersList;
   private final List<String> folderList;
 
   public IntegrityDeleteNonMembersTask(TaskListener listener, String alternateWorkspaceDir,
-      List<Hashtable<CM_PROJECT, Object>> projectMembersList, List<String> folderList)
+      List<Map<CM_PROJECT, Object>> projectMembersList, List<String> folderList)
   {
     this.listener = listener;
     this.alternateWorkspaceDir = alternateWorkspaceDir;
@@ -94,7 +94,7 @@ public class IntegrityDeleteNonMembersTask implements FileCallable<Boolean>
 
     // Get all Integrity project members of the current build
     List<FilePath> projectMembers = new ArrayList<FilePath>();
-    for (Hashtable<CM_PROJECT, Object> memberInfo : projectMembersList)
+  for (Map<CM_PROJECT, Object> memberInfo : projectMembersList)
     {
       File targetFile = new File(workspace + memberInfo.get(CM_PROJECT.RELATIVE_FILE).toString());
       LOGGER.fine("Project Member: " + targetFile.getAbsolutePath());

@@ -259,7 +259,7 @@ public class IntegrityCMProject implements Serializable
    * @return
    * @throws DOMException
    */
-  public String getChangeLog(String version, List<Hashtable<CM_PROJECT, Object>> projectMembersList)
+  public String getChangeLog(String version, List<Map<CM_PROJECT, Object>> projectMembersList)
       throws DOMException
   {
     try
@@ -282,10 +282,7 @@ public class IntegrityCMProject implements Serializable
       changeLogElem.appendChild(items);
 
       // Process the changes...
-      for (Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it
-          .hasNext();)
-      {
-        Hashtable<CM_PROJECT, Object> memberInfo = it.next();
+  for (Map<CM_PROJECT, Object> memberInfo : projectMembersList)
         if (null != memberInfo.get(CM_PROJECT.DELTA))
         {
           short deltaFlag = Short.valueOf(memberInfo.get(CM_PROJECT.DELTA).toString());
@@ -347,7 +344,7 @@ public class IntegrityCMProject implements Serializable
    * @param item XML Element representing the item node
    * @param memberInfo Hashtable representing the member information
    */
-  private Element writeChangeLog(Element item, Hashtable<CM_PROJECT, Object> memberInfo)
+  private Element writeChangeLog(Element item, Map<CM_PROJECT, Object> memberInfo)
   {
     if (null == memberInfo)
       return item;

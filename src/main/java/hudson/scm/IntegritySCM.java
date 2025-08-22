@@ -560,8 +560,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       // correctly initialized and either compared against its baseline or is a fresh baseline
       // itself
       // Now, lets figure out how to populate the workspace...
-      List<Hashtable<CM_PROJECT, Object>> projectMembersList =
-                      DerbyUtils.viewProject(projectCacheTable);
+  List<Map<CM_PROJECT, Object>> projectMembersList =
+          (List<Map<CM_PROJECT, Object>>) (List<?>) DerbyUtils.viewProject(projectCacheTable);
       List<String> dirList = DerbyUtils.getDirList(projectCacheTable);
       String resolvedAltWkspace = IntegrityCheckpointAction
                       .evalGroovyExpression(run.getEnvironment(listener), alternateWorkspace);
@@ -586,7 +586,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
       }
 
-      IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace,
+  IntegrityCheckoutTask coTask = new IntegrityCheckoutTask(projectMembersList, dirList, resolvedAltWkspace,
           lineTerminator, restoreTimestamp, checkoutCleanCopy, fetchChangedWorkspaceFiles, checkoutThreadPoolSize,
           checkoutThreadTimeout, listener, coSettings);
 
@@ -602,7 +602,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         }
 
         // Write out the change log file, which will be used by the parser to report the updates
-        writeChangeLog(run, listener, changeLogFile, membersInCP, siProject, projectMembersList);
+  writeChangeLog(run, listener, changeLogFile, membersInCP, siProject, projectMembersList);
 
         // Delete non-members in this workspace, if appropriate.
         if (deleteNonMembers)
@@ -685,8 +685,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	 * @throws IOException 
 	 */
   private void writeChangeLog(Run<?, ?> run, TaskListener listener, File changeLogFile,
-			Map<CPInfo, List<CPMember>> membersInCP, IntegrityCMProject siProject,
-			List<Hashtable<CM_PROJECT, Object>> projectMembersList) throws IOException {
+      Map<CPInfo, List<CPMember>> membersInCP, IntegrityCMProject siProject,
+      List<Map<CM_PROJECT, Object>> projectMembersList) throws IOException {
 		try (PrintWriter writer = new PrintWriter(new OutputStreamWriter(new FileOutputStream(changeLogFile), "UTF-8"))) {
 			listener.getLogger().println("Writing build change log...");
 			if (changeLogFile != null) {
