@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.StringReader;
 import java.sql.Connection;
 import java.sql.PreparedStatement;
 import java.sql.ResultSet;
@@ -14,9 +15,11 @@ import java.sql.ResultSetMetaData;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.util.ArrayList;
+import java.util.Calendar;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.UUID;
 import java.util.concurrent.ConcurrentHashMap;
@@ -30,6 +33,9 @@ import org.apache.derby.jdbc.EmbeddedConnectionPoolDataSource;
 
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
+import com.mks.api.si.SIModelTypeName;
 
 import hudson.AbortException;
 import hudson.model.TaskListener;
@@ -1510,5 +1516,183 @@ public class DerbyUtils
 
     return author;
   }
+
+      /**
+     * Parses the output from the si viewproject command to get a list of
+     * members
+     *
+     * @param siProject
+     * @param wit WorkItemIterator
+     * @param listener
+     * @throws APIException
+     * @throws SQLException
+     */
+    public static synchronized void parseProjectzf(IntegrityCMProject siProject, WorkItemIterator wit, TaskListener listener) throws APIException, SQLException {
+
+        // Setup the Derby DB for this Project
+        PreparedStatement insert = null;
+
+                // Get a connection from our pool
+        Connection db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
+        try {
+
+            // WABco: disable autocommit to avoid thousands of them while inserting into db
+            db.setAutoCommit(false);
+
+            // Create a fresh set of tables for this project
+            listener.getLogger().println("Derby.parse:  Create a fresh set of tables for this project");
+            DerbyUtils.createCMProjectTables(DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource(), siProject.getProjectCacheTable());
+
+            // Initialize the project config hash
+            listener.getLogger().println("Derby.parse:  Initialize the project config hash");
+            HashMap<String, String> pjConfigHash = new HashMap<>();
+            // Add the mapping for the current project
+            pjConfigHash.put(siProject.getProjectName(), siProject.getConfigurationPath());
+            // Compute the project root directory
+            String projectRoot = siProject.getProjectName().substring(0, siProject.getProjectName().lastIndexOf('/'));
+
+            // Iterate through the list of members returned by the API
+            String insertSQL = DerbyUtils.INSERT_MEMBER_RECORD.replaceFirst("CM_PROJECT", siProject.getProjectCacheTable());
+
+            LOGGER.log(Level.FINE, "Attempting to execute query {0}", insertSQL);
+            insert = db.prepareStatement(insertSQL);
+
+            // Wabco:
+            listener.getLogger().println("PTC viewproject - SCM Info:");
+
+            while (wit.hasNext()) {
+                WorkItem wi = wit.next();
+                String entryType = (null != wi.getField("type") ? wi.getField("type").getValueAsString() : "");
+
+                switch (wi.getModelType()) {
+                    case SIModelTypeName.SI_SUBPROJECT:
+                        // Ignore p e n d i n g subprojects in the tree...
+                        if (entryType.equalsIgnoreCase("pending-sharesubproject")) {
+                            LOGGER.log(Level.WARNING, "Skipping {0} {1}", new Object[]{entryType, wi.getId()});
+                            listener.getLogger().println("Derby.parse:  Ignoring " + entryType + " " + wi.getId());
+                        } else {
+                            // Save the configuration path for the current subproject, using the canonical path name
+                            pjConfigHash.put(wi.getField("name").getValueAsString(), wi.getId());
+                            // Save the relative directory path for this subproject
+                            String pjDir = wi.getField("name").getValueAsString().substring(projectRoot.length());
+                            pjDir = pjDir.substring(0, pjDir.lastIndexOf('/'));
+                            // Save this directory entry
+                            insert.clearParameters();
+                            insert.setShort(1, (short) 1);							// Type
+                            insert.setString(2, wi.getField("name").getValueAsString());			// Name
+                            insert.setString(3, wi.getId());							// MemberID
+                            insert.setTimestamp(4, new Timestamp(Calendar.getInstance().getTimeInMillis()));	// Timestamp
+                            insert.setClob(5, new StringReader(""));						// Description
+                            insert.setString(6, wi.getId());							// ConfigPath
+                            
+                            String subProjectRev = "";
+                            if (wi.contains("memberrev")) {
+                                subProjectRev = wi.getField("memberrev").getItem().getId();
+                            }
+                            insert.setString(7, subProjectRev);							// Revision
+                            insert.setString(8, pjDir);								// RelativeFile
+                            
+                            insert.executeUpdate();
+                        }   break;
+                    case SIModelTypeName.MEMBER:
+                        // Ignore certain p e n d i n g operations
+                        if (entryType.endsWith("in-pending-sub")
+                                || entryType.equalsIgnoreCase("pending-add")
+                                || entryType.equalsIgnoreCase("pending-move-to-update")
+                                || entryType.equalsIgnoreCase("pending-rename-update")) {
+                            LOGGER.log(Level.WARNING, "Skipping {0} {1}", new Object[]{entryType, wi.getId()});
+                            listener.getLogger().println("Derby.parse:  Ignoring " + entryType + " " + wi.getId());
+                        } else {
+                            // Figure out this member's parent project's canonical path name
+                            String parentProject = wi.getField("parent").getValueAsString();
+                            // Save this member entry
+                            String memberName = wi.getField("name").getValueAsString();
+                            // Figure out the full member path
+                            LOGGER.log(Level.FINE, "Member context: {0}", wi.getContext());
+                            LOGGER.log(Level.FINE, "Member parent: {0}", parentProject);
+                            LOGGER.log(Level.FINE, "Member name: {0}", memberName);
+                            
+                            // Process this member only if we can figure out where to put it in the workspace
+                            if (memberName.startsWith(projectRoot)) {
+                                String description = "";
+                                // Per JENKINS-19791 some users are getting an exception when attempting
+                                // to read the 'memberdescription' field in the API response. This is an
+                                // attempt to catch the exception and ignore it...!
+                                try {
+                                    if (null != wi.getField("memberdescription") && null != wi.getField("memberdescription").getValueAsString()) {
+                                        description = fixDescription(wi.getField("memberdescription").getValueAsString());
+                                    }
+                                } catch (NoSuchElementException e) {
+                                    // Ignore exception
+                                    LOGGER.log(Level.WARNING, "Cannot obtain the value for ''memberdescription'' in API response for member: {0}", memberName);
+                                    LOGGER.info("API Response has the following fields available: ");
+                                    for (@SuppressWarnings("unchecked")
+                                    final Iterator<Field> fieldsIterator = wi.getFields(); fieldsIterator.hasNext();) {
+                                        Field apiField = fieldsIterator.next();
+                                        LOGGER.log(Level.INFO, "Name: {0}, Value: {1}", new Object[]{apiField.getName(), apiField.getValueAsString()});
+                                    }
+                                }
+                                
+                                Date timestamp = new Date();
+                                // Per JENKINS-25068 some users are getting a null pointer exception when attempting
+                                // to read the 'membertimestamp' field in the API response. This is an attempt to work around it!
+                                try {
+                                    Field timeFld = wi.getField("membertimestamp");
+                                    if (null != timeFld && null != timeFld.getDateTime()) {
+                                        timestamp = timeFld.getDateTime();
+                                    }
+                                } catch (Exception e) {
+                                    // Ignore exception
+                                    LOGGER.log(Level.WARNING, "Cannot obtain the value for ''membertimestamp'' in API response for member: {0}", memberName);
+                                    LOGGER.log(Level.WARNING, "Defaulting ''membertimestamp'' to now - {0}", timestamp);
+                                }
+                                
+                                insert.clearParameters();
+                                insert.setShort(1, (short) 0);                                      // Type
+                                insert.setString(2, memberName);                                    // Name
+                                insert.setString(3, wi.getId());                                    // MemberID
+                                insert.setTimestamp(4, new Timestamp(timestamp.getTime()));         // Timestamp
+                                insert.setClob(5, new StringReader(description));                   // Description
+                                insert.setString(6, pjConfigHash.get(parentProject));               // ConfigPath
+                                insert.setString(7, wi.getField("memberrev").getItem().getId());    // Revision
+                                insert.setString(8, memberName.substring(projectRoot.length()));    // RelativeFile (for workspace)
+                                
+                                // Wabco-Feature: always print all items and main configuration information to the log
+                                listener.getLogger().println("\t"
+                                        //									+ "Type:" +  (short)0                               // Type
+                                        + memberName.substring(projectRoot.length()) + '\t' // RelativeFile (for workspace)
+                                        //									+ memberName + "\t"                                 // Name
+                                        + wi.getField("memberrev").getItem().getId() + '\t' // Revision
+                                        //									+ wi.getId() + '\t'                                 // MemberID
+                                        + new Timestamp(timestamp.getTime()) // Timestamp
+                                        //									+ new StringReader(description)                     // Description
+                                        //									+ pjConfigHash.get(parentProject)                   // ConfigPath
+                                );
+                                /// Wabco:
+                                insert.executeUpdate();
+                            } else {
+                                // Issue warning...
+                                LOGGER.log(Level.WARNING, "Skipping {0} it doesn''t appear to exist within this project {1}!", new Object[]{memberName, projectRoot});
+                            }
+                        }   break;
+                    default:
+                        LOGGER.log(Level.WARNING, "View project output contains an invalid model type: {0}", wi.getModelType());
+                        break;
+                }
+            }
+
+        } finally {
+            if (null != insert) { insert.close(); }
+
+            // Commit to the database
+            db.commit();
+            db.setAutoCommit(true);
+            db.close();
+        }
+
+        // Log the completion of this operation
+        LOGGER.log(Level.FINE, "Parsing project {0} complete!", siProject.getConfigurationPath());
+    }
+
   
 }

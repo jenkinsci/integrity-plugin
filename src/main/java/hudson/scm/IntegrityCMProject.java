@@ -652,7 +652,7 @@ public class IntegrityCMProject implements Serializable
   {
 
     ExecutorService executor = null;
-  Map<String, String> pjConfigHash = new HashMap<String, String>();
+    Map<String, String> pjConfigHash = new HashMap<String, String>();
     List<Future<Void>> futures = new ArrayList<Future<Void>>();
 
     // Setup the Derby DB for this Project

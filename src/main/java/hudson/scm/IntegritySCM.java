@@ -344,14 +344,16 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
    * @throws ExecutionException
    * @throws InterruptedException
    */
-  private Response initializeCMProjectMembers()
+  private Response initializeCMProjectMembers(TaskListener listener)
       throws APIException, SQLException, AbortException, InterruptedException, ExecutionException
   {
     IntegrityCMProject siProject = getIntegrityProject();
 
     // Lets parse this project
     IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, getProjectSettings());
-
+    
+    command.addOption(new APIOption("recurse"));  //ZF
+    
     command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
     MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME,
         IAPIFields.CONTEXT, IAPIFields.CP_ID, IAPIFields.MEMBER_REV, IAPIFields.MEMBER_TIMESTAMP,
@@ -362,10 +364,14 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     applyMemberFilters(command);
 
     LOGGER.fine("INFO: Preparing to execute si viewproject for " + siProject.getConfigurationPath());
-    Response viewRes = command.execute();
 
+
+    Response viewRes = command.execute();
+    
+    // listener.getLogger().println("\n... done.\n Begin parsing member info into Derby...");
     // Update Derby DB with the API results
     siProject.parseProject(viewRes.getWorkItems());
+    DerbyUtils.parseProjectzf(siProject, viewRes.getWorkItems(), listener);
 
     try
     {
@@ -477,6 +483,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                   FilePath workspace, TaskListener listener, File changeLogFile,
                   SCMRevisionState baseline) throws AbortException
   {
+
     // Provide links to the Change and Build logs for easy access from Integrity
     listener.getLogger().println("Change Log: " + ciServerURL + run.getUrl() + "changes");
     listener.getLogger().println("Build Log: " + ciServerURL + run.getUrl() + "console");
@@ -486,7 +493,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Lets start with creating an authenticated Integrity API Session for various parts of this
     // operation...
     IntegrityConfigurable coSettings = getProjectSettings();
-    //ISession api = APISession.create(coSettings);
+    ISession api = APISession.create(coSettings);
+    if (null == api) {
+          listener.getLogger().println("Failed to establish an API connection to the Integrity Server!");
+          throw new AbortException("Connection Failed!");
+      }
     // Lets also open the change log file for writing...
     // Override file.encoding property so that we write as UTF-8 and do not have problems with
     // special characters
@@ -495,10 +506,10 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
       // Register the project cache for this build
       Job<?, ?> job = run.getParent();
-      String projectCacheTable =
-                      DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
+      String projectCacheTable = DerbyUtils.registerProjectCache(((DescriptorImpl) this.getDescriptor()).getDataSource(),
                                       job.getName(), configurationName, run.getNumber());
 
+      listener.getLogger().println("Preparing to execute si projectinfo for ");
       // Next, load up the information for this Integrity Project's configuration
       IntegrityCMProject siProject = getIntegrityCMProject(run, listener);
 
@@ -510,8 +521,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       listener.getLogger().println("INFO: Preparing to execute si viewproject for " + siProject.getConfigurationPath());
       listener.getLogger().println("INFO: Initializing CM Project Members...");
-      initializeCMProjectMembers();
-
+      initializeCMProjectMembers(listener);
+      listener.getLogger().println("	initializeCMProject Members() done");
       // Now, we need to find the project state from the previous build.
       String prevProjectCache = null;
       if (null != baseline && baseline instanceof IntegrityRevisionState)
@@ -837,7 +848,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	      changeCount = membersInCP.size();
 	    }
 	  } else {
-	    initializeCMProjectMembers();
+	    initializeCMProjectMembers(listener);
 	    // Compare this project with the old project for file mode
 	    changeCount = DerbyUtils.compareBaseline(serverConfig, prevProjectCache,projectCacheTable, membersInCP,skipAuthorInfo, false, listener);
 	  }
