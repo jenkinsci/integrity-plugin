@@ -167,8 +167,7 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
 
     final ThreadLocalOpenFileHandler openFileHandler = new ThreadLocalOpenFileHandler();
     final ThreadLocalAPISession generateAPISession = new ThreadLocalAPISession(integrityConfig);
-    final ThreadFactory threadFactory =
-        new ThreadFactoryBuilder().setNameFormat("Integrity-Checkout-Task-%d").build();
+    final ThreadFactory threadFactory = new ThreadFactoryBuilder().setNameFormat("Integrity-Checkout-Task-%d").build();
     ExecutorService executor = Executors.newFixedThreadPool(checkoutThreadPoolSize, threadFactory);
     @SuppressWarnings("rawtypes")
     final List<Future> coThreads = new ArrayList<Future>();
@@ -316,13 +315,12 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       }
       executor.shutdown();
       executor.awaitTermination(1, TimeUnit.MINUTES);
-
+      listener.getLogger().println("Successfully executor shutdown ");
       // Lets advice the user that we've checked out all the members
       if (cleanCopy)
       {
         listener.getLogger().println("Successfully checked out " + fetchCount + " files!");
-      } else
-      {
+      } else {
         // Lets advice the user that we've performed the updates to the workspace
         listener.getLogger().println("Successfully updated workspace with "
             + (addCount + updateCount) + " updates and cleaned up " + dropCount + " files!");

@@ -928,9 +928,9 @@ public class DerbyUtils
   db = DescriptorImpl.INTEGRITY_DESCRIPTOR.getDataSource().getPooledConnection().getConnection();
   db.setAutoCommit(false);
     try {
-      listener.getLogger().println("S1:such nach error");
+      //listener.getLogger().println("S1:such nach error");
       if (CPMode) {
-        listener.getLogger().println("S2:such nach error");
+        //listener.getLogger().println("S2:such nach error");
         if (membersInCP.isEmpty()) return changeCount;
         String cpMemberSelectSql = CP_MEMBER_SELECT.replace("CM_PROJECT", projectCacheTable);
         select = db.prepareStatement(cpMemberSelectSql, ResultSet.TYPE_FORWARD_ONLY, ResultSet.CONCUR_UPDATABLE);
@@ -990,14 +990,14 @@ public class DerbyUtils
         if (select != null) select.close();
       } else // File Mode comparison
       {
-        listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
+        //listener.getLogger().println("INFO: S1.2:such nach error: File Mode comparison");
         // Create the select statement for the previous baseline
         String baselineSelectSql = DerbyUtils.BASELINE_SELECT.replaceFirst("CM_PROJECT", baselineProjectCache);
         LOGGER.log(Level.FINE, "Attempting to execute query ", baselineSelectSql);
         baselineSelect = db.prepareStatement(baselineSelectSql);
         baselineRS = baselineSelect.executeQuery();
 
-        listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
+        // listener.getLogger().println("INFO: S1.3:such nach error: Create the select statement for the previous baseline");
 
     // Create a Map to hold the old baseline for easy comparison
     Map<String, EnumMap<CM_PROJECT, Object>> baselinePJ =
@@ -1042,7 +1042,7 @@ public class DerbyUtils
         // Now we will compare the adds and updates between the current project and the baseline
         for (int i = 1; i <= DerbyUtils.getRowCount(rs); i++)
         {
-          listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
+          //listener.getLogger().println("INFO: S1.6: compare current project and the baseline file by file");
           // Move the cursor to the current record
           rs.absolute(i);
           EnumMap<CM_PROJECT, Object> rowHash = DerbyUtils.getRowData(rs);
@@ -1056,7 +1056,7 @@ public class DerbyUtils
           // This file was in the previous baseline as well...
           if (null != baselineMemberInfo)
           {
-            listener.getLogger().println("INFO: S1.7: update member revision");
+            //listener.getLogger().println("INFO: S1.7: update member revision");
             // Did it change? Either by an update or roll back (update member revision)?
             String oldRevision = baselineMemberInfo.get(CM_PROJECT.REVISION).toString();
             if (!rowHash.get(CM_PROJECT.REVISION).toString().equals(oldRevision))
@@ -1079,7 +1079,7 @@ public class DerbyUtils
               changeCount++;
             } else
             {
-              listener.getLogger().println("INFO: S1.7.2: old revision is Read catch");
+              //listener.getLogger().println("INFO: S1.7.2: old revision is Read catch");
               // This member did not change, so lets copy its old author information
               if (null != baselineMemberInfo.get(CM_PROJECT.AUTHOR))
               {
@@ -1113,7 +1113,7 @@ public class DerbyUtils
             // Initialize the delta flag for this member
             rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
             LOGGER.fine("... " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
-            listener.getLogger().println("INFO S1.9: " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
+            //listener.getLogger().println("INFO S1.9: " + memberName + " new file - revision is " + rowHash.get(CM_PROJECT.REVISION).toString());
             changeCount++;
           }
 
@@ -1161,7 +1161,7 @@ public class DerbyUtils
       }
         db.commit();
         db.setAutoCommit(true);
-        listener.getLogger().println("INFO: S1.11: Commit changes to the database");
+        //listener.getLogger().println("INFO: S1.11: Commit changes to the database");
     } finally
 
     {
