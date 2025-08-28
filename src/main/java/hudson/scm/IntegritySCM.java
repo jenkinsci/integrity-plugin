@@ -371,7 +371,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // listener.getLogger().println("\n... done.\n Begin parsing member info into Derby...");
     // Update Derby DB with the API results
     siProject.parseProject(viewRes.getWorkItems());
-    DerbyUtils.parseProjectzf(siProject, viewRes.getWorkItems(), listener);
+    //DerbyUtils.parseProjectzf(siProject, viewRes.getWorkItems(), listener);
 
     try
     {

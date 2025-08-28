@@ -618,14 +618,9 @@ public class DerbyUtils
       {
         rs.close();
       }
-      if (null != delete)
-      {
         delete.close();
-      }
-      if (null != db)
-      {
         db.close();
-      }
+
     }
   }
 
@@ -1165,39 +1160,25 @@ public class DerbyUtils
         }
         // Commit changes to the database...
       }
-        db.commit();
-        db.setAutoCommit(true);
         //listener.getLogger().println("INFO: S1.11: Commit changes to the database");
     } finally
 
     {
       // Close the result set and select statements
-      if (null != baselineRS)
-      {
-        baselineRS.close();
-      }
       if (null != rs)
       {
         rs.close();
-      }
-      if (null != baselineSelect)
-      {
-        baselineSelect.close();
       }
       if (null != pjSelect)
       {
         pjSelect.close();
       }
-      if (null != select)
-      {
-        select.close();
-      }
-
-      // Close DB connection
-      if (null != db)
-      {
-        db.close();
-      }
+      baselineRS.close();
+      baselineSelect.close();
+      select.close();
+      db.commit();
+      db.setAutoCommit(true);
+      db.close();
     }
 
     return changeCount;
@@ -1268,6 +1249,7 @@ public class DerbyUtils
       authSelect.close();
       db.commit();
       db.setAutoCommit(true);
+      db.close();
     }
     // Release the result set
 
@@ -1306,6 +1288,7 @@ public class DerbyUtils
       // Commit the updates
       db.commit();
       db.setAutoCommit(true);
+      db.close();
     }
     // Release the result set
 
@@ -1462,18 +1445,14 @@ public class DerbyUtils
             + " unsupported for updating CP Cache with CP : " + cp + ", State : " + cpState);
       }
 
-      db.commit();
-      db.setAutoCommit(true);
+
     } finally
     {
-      // Close the insert statement
-      if (null != stmt)
-        stmt.close();
-
-      // Close the database connection
-      if (null != db)
-        db.close();
-    }
+      db.commit();
+      db.setAutoCommit(true);
+      stmt.close();
+      db.close();
+    } 
     return cachedCPIds;
   }
   
