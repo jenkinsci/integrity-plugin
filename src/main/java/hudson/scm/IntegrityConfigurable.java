@@ -23,7 +23,13 @@ public final class IntegrityConfigurable implements Serializable
   private boolean secure;
   private String userName;
   private Secret password;
-
+  private AuthenticationType authType = AuthenticationType.BASIC;
+  private String ssoCredentialId;
+  
+  public IntegrityConfigurable() {
+	super();
+}
+  
   @DataBoundConstructor
   public IntegrityConfigurable(String configId, String ipHostName, int ipPort, String hostName,
       int port, boolean secure, String userName, String password)
@@ -38,6 +44,19 @@ public final class IntegrityConfigurable implements Serializable
     this.userName = userName;
     this.password = Secret.fromString(password);
     this.name = String.format("%s@%s:%d", userName, hostName, port);
+  }
+
+
+  public static long getSerialversionuid() {
+	return serialVersionUID;
+}
+
+  public void setName(String name) {
+	this.name = name;
+  }
+
+  public void setPassword(Secret password) {
+	this.password = password;
   }
 
   /**
@@ -220,6 +239,22 @@ public final class IntegrityConfigurable implements Serializable
     this.secure = secure;
   }
 
+  public AuthenticationType getAuthType() {
+	return authType == null ? AuthenticationType.BASIC : authType;
+}
+
+  public void setAuthType(AuthenticationType authType) {
+	this.authType = authType == null ? AuthenticationType.BASIC : authType;
+  }
+
+  public String getSsoCredentialId() {
+	return ssoCredentialId;
+  }
+
+  public void setSsoCredentialId(String ssoCredentialId) {
+	this.ssoCredentialId = ssoCredentialId;
+  }
+
   /**
    * Returns the simple name for this Integrity Configuration
    * 
@@ -235,6 +270,7 @@ public final class IntegrityConfigurable implements Serializable
    * Overridden equality function to safeguard from duplicate connections
    */
   @Override
+  //do I need to do this for authType and ssoCredentialId?
   public boolean equals(Object o)
   {
     if (o instanceof IntegrityConfigurable)
@@ -257,6 +293,7 @@ public final class IntegrityConfigurable implements Serializable
    * @see java.lang.Object#hashCode()
    */
   @Override
+//do I need to do this for authType and ssoCredentialId?
   public int hashCode()
   {
     final int prime = 31;

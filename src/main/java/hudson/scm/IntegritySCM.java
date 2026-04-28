@@ -5,16 +5,53 @@ package hudson.scm;
 
 import static hudson.scm.PollingResult.BUILD_NOW;
 import static hudson.scm.PollingResult.NO_CHANGES;
+
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.Serializable;
+import java.sql.SQLException;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Date;
+import java.util.HashMap;
+import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
+import java.util.UUID;
+import java.util.concurrent.ExecutionException;
+import java.util.logging.Level;
+import java.util.regex.Pattern;
+
+import javax.servlet.ServletException;
+import javax.sql.ConnectionPoolDataSource;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+import org.kohsuke.stapler.StaplerRequest;
+
+import com.cloudbees.plugins.credentials.CredentialsProvider;
+import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.mks.api.Command;
+import com.mks.api.MultiValue;
+import com.mks.api.response.APIException;
+import com.mks.api.response.Response;
+import com.mks.api.response.WorkItem;
+import com.mks.api.response.WorkItemIterator;
+
 import hudson.AbortException;
 import hudson.EnvVars;
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
-import hudson.model.ModelObject;
-import hudson.model.TaskListener;
 import hudson.model.AbstractBuild;
 import hudson.model.Job;
+import hudson.model.ModelObject;
 import hudson.model.Run;
+import hudson.model.TaskListener;
 import hudson.scm.IntegrityCMMember.CPInfo;
 import hudson.scm.IntegrityCMMember.CPMember;
 import hudson.scm.IntegrityCheckpointAction.IntegrityCheckpointDescriptorImpl;
@@ -32,45 +69,13 @@ import hudson.scm.localclient.IntegrityCreateSandboxTask;
 import hudson.scm.localclient.IntegrityResyncSandboxTask;
 import hudson.scm.localclient.IntegrityViewSandboxTask;
 import hudson.scm.localclient.SandboxUtils;
+import hudson.security.ACL;
 import hudson.util.FormValidation;
-import hudson.util.Secret;
 import hudson.util.ListBoxModel;
-
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.IOException;
-import java.io.OutputStreamWriter;
-import java.io.PrintWriter;
-import java.io.Serializable;
-import java.sql.SQLException;
-import java.util.ArrayList;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Hashtable;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
-import java.util.UUID;
-import java.util.concurrent.ExecutionException;
-import java.util.logging.Level;
-import java.util.regex.Pattern;
-
-import javax.servlet.ServletException;
-import javax.sql.ConnectionPoolDataSource;
-
+import hudson.util.Secret;
 import jenkins.model.Jenkins;
+import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
-
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-import org.kohsuke.stapler.StaplerRequest;
-
-import com.mks.api.Command;
-import com.mks.api.MultiValue;
-import com.mks.api.response.APIException;
-import com.mks.api.response.Response;
-import com.mks.api.response.WorkItem;
-import com.mks.api.response.WorkItemIterator;
 
 /**
  * This class provides an integration between Hudson/Jenkins for Continuous Builds and PTC Integrity
@@ -992,10 +997,100 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     {
       // Log the request to configure
       LOGGER.fine("Request to configure IntegritySCM (SCMDescriptor) invoked...");
-      this.configurations =
-          req.bindJSONToList(IntegrityConfigurable.class, formData.get("serverConfig"));
+      LOGGER.fine("FormData: " + formData.toString());
+      
+      // Handle the serverConfig data
+      Object serverConfigData = formData.get("serverConfig");
+      if (serverConfigData != null) {
+        List<IntegrityConfigurable> newConfigurations = new ArrayList<>();
+        
+        // serverConfigData can be either a JSONObject (single config) or JSONArray (multiple configs)
+        if (serverConfigData instanceof JSONArray) {
+          JSONArray configArray = (JSONArray) serverConfigData;
+          for (int i = 0; i < configArray.size(); i++) {
+            JSONObject configObj = configArray.getJSONObject(i);
+            IntegrityConfigurable config = processConfigData(configObj);
+            if (config != null) {
+              newConfigurations.add(config);
+            }
+          }
+        } else if (serverConfigData instanceof JSONObject) {
+          JSONObject configObj = (JSONObject) serverConfigData;
+          IntegrityConfigurable config = processConfigData(configObj);
+          if (config != null) {
+            newConfigurations.add(config);
+          }
+        }
+        
+        this.configurations = newConfigurations;
+      }
+      
       save();
       return true;
+    }
+    
+    /**
+     * Process configuration data from JSON, handling radioBlock structure
+     */
+    private IntegrityConfigurable processConfigData(JSONObject configObj) {
+      LOGGER.fine("Processing config: " + configObj.toString());
+      
+      String configId = configObj.optString("configId", null);
+      String hostName = configObj.optString("hostName", "");
+      int port = configObj.optInt("port", 7001);
+      boolean secure = configObj.optBoolean("secure", false);
+      String ipHostName = configObj.optString("ipHostName", "");
+      int ipPort = configObj.optInt("ipPort", 0);
+      
+      // Handle authType - it can be a string or a JSONObject if radioBlock is used
+      String authTypeStr = "BASIC";
+      String userName = "";
+      String password = "";
+      String ssoCredentialId = "";
+      
+      Object authTypeObj = configObj.get("authType");
+      if (authTypeObj instanceof String) {
+        authTypeStr = (String) authTypeObj;
+      } else if (authTypeObj instanceof JSONObject) {
+        JSONObject authTypeJson = (JSONObject) authTypeObj;
+        // The selected radio button value is stored with key "value"
+        authTypeStr = authTypeJson.optString("value", "BASIC");
+        
+        // If BASIC auth is selected, the userName and password are nested under the authType
+        if ("BASIC".equals(authTypeStr)) {
+          userName = authTypeJson.optString("userName", "");
+          password = authTypeJson.optString("password", "");
+        } else if ("OAUTH".equals(authTypeStr)) {
+          ssoCredentialId = authTypeJson.optString("ssoCredentialId", "");
+          userName = "SSO"; //test Set default username for SSO
+        }
+      }
+      
+      // Also check if userName/password are at the top level (backward compatibility)
+      if (userName.isEmpty() && configObj.has("userName")) {
+        userName = configObj.optString("userName", "");
+      }
+      if (password.isEmpty() && configObj.has("password")) {
+        password = configObj.optString("password", "");
+      }
+      if (ssoCredentialId.isEmpty() && configObj.has("ssoCredentialId")) {
+        ssoCredentialId = configObj.optString("ssoCredentialId", "");
+      }
+        //test Ensure SSO gets default username if OAuth type but username is still empty
+      if ("OAUTH".equals(authTypeStr) && userName.isEmpty()) {
+        userName = "SSO";
+      }
+      
+      LOGGER.fine("Creating config - hostName: " + hostName + ", port: " + port + 
+                  ", userName: " + userName + ", authType: " + authTypeStr);
+      
+      IntegrityConfigurable config = new IntegrityConfigurable(
+          configId, ipHostName, ipPort, hostName, port, secure, userName, password);
+      
+      config.setAuthType(AuthenticationType.valueOf(authTypeStr));
+      config.setSsoCredentialId(ssoCredentialId);
+      
+      return config;
     }
 
     @Override
@@ -1115,8 +1210,38 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listBox.add(config.getName(), config.getConfigId());
         }
       }
-      return listBox;
+      //test     
+      LOGGER.log(Level.SEVERE, "doFillServerConfigItems called, serverConfig={0}", listBox);
+      return listBox; 
     }
+    
+    public ListBoxModel doFillSsoCredentialIdItems() {
+        ListBoxModel items = new ListBoxModel();
+        List<StandardCredentials> creds = CredentialsProvider.lookupCredentialsInItemGroup(
+            StandardCredentials.class,
+            Jenkins.get(),
+            ACL.SYSTEM2,
+            Collections.emptyList()
+        );
+        for (StandardCredentials cred : creds) {
+            if (cred instanceof OAuth2ClientCredentials) {
+                String label = cred.getDescription();
+                if (label == null || label.trim().isEmpty()) {
+                    // Fallback to clientId or ID if description is empty
+                    OAuth2ClientCredentials oauthCred = (OAuth2ClientCredentials) cred;
+                    label = oauthCred.getClientId();
+                    if (label == null || label.trim().isEmpty()) {
+                        label = cred.getId();
+                    }
+                }
+                items.add(label, cred.getId());
+            }
+        }
+        return items;
+    }
+
+
+
 
     /**
      * A credentials validation helper
@@ -1128,6 +1253,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      * @param secure
      * @param ipHostName
      * @param ipPort
+     * @param authType
+     * @param ssoCredentialId
      * @return
      * @throws IOException
      * @throws ServletException
@@ -1140,7 +1267,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         @QueryParameter("serverConfig.password") final String password,
         @QueryParameter("serverConfig.secure") final boolean secure,
         @QueryParameter("serverConfig.ipHostName") final String ipHostName,
-        @QueryParameter("serverConfig.ipPort") final int ipPort)
+        @QueryParameter("serverConfig.ipPort") final int ipPort,
+	    @QueryParameter("serverConfig.authType") final String authType,
+	    @QueryParameter("serverConfig.ssoCredentialId") final String ssoCredentialId)
             throws IOException, ServletException, APIException
     {
       LOGGER.fine("Testing PTC RV&S API Connection...");
@@ -1151,10 +1280,33 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.fine("secure: " + secure);
       LOGGER.fine("ipHostName: " + ipHostName);
       LOGGER.fine("ipPort: " + ipPort);
-
-      IntegrityConfigurable ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port,
-          secure, userName, password);
-      ISession api = APISession.create(ic);
+      LOGGER.fine("ipPort: " + authType);
+      IntegrityConfigurable ic;
+      AuthenticationType authTypeEnum = AuthenticationType.BASIC;
+      if ("OAUTH".equals(authType) && authType != null) {
+          // For SSO, skip user/password validation, just check host/port connectivity
+    	  authTypeEnum = AuthenticationType.OAUTH;
+    	  LOGGER.fine("Using SSO authentication with credential ID: " + ssoCredentialId);
+    	  
+    	  if(ssoCredentialId == null || ssoCredentialId.isEmpty()) {
+    		  return FormValidation.error("SSO Credential ID must be provided for OAUTH authentication.");
+    	  }
+		  //test
+    	  LOGGER.log(Level.SEVERE, "IntegritySCM if block: checking value of username and pwd from form in sso case ", userName + " / " + password);
+          ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port, secure,"" , "");
+          ic.setAuthType(AuthenticationType.OAUTH);
+          ic.setSsoCredentialId(ssoCredentialId);
+      } else {
+		  authTypeEnum = AuthenticationType.BASIC;
+		  //test
+		//test
+    	  LOGGER.log(Level.SEVERE, "IntegritySCM else block: checking value of username and pwd from form in basic auth case ", userName + " / " + password);
+		  ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port,
+		          secure, userName, password);  
+	  }
+	  ISession api = APISession.create(ic);
+	//test
+	  LOGGER.log(Level.SEVERE, "IntegritySCM after IC/getname", ic.getName());
       if (null != api)
       {
     	Command  cmd = new Command(Command.IM, "about");

@@ -1,0 +1,23 @@
+<j:jelly xmlns:j="jelly:core" xmlns:f="/lib/form">
+  <f:entry title="ID" field="id">
+    <f:textbox default="${descriptor.getDefaultId()}" />
+    <f:help>
+      Optional. Leave blank for a random ID, or specify a custom one for easier reference.
+    </f:help>
+  </f:entry>
+	  <f:entry title="Description" field="description">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Client ID" field="clientId">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Client Secret" field="clientSecret">
+    <f:password/>
+  </f:entry>
+  <f:entry title="Token Endpoint" field="tokenEndpoint">
+    <f:textbox/>
+  </f:entry>
+  <f:entry title="Scope" field="oAuthScope">
+    <f:textbox/>
+  </f:entry>
+</j:jelly>

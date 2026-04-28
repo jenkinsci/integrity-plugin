@@ -1,48 +1,85 @@
+
 <j:jelly xmlns:j="jelly:core" xmlns:st="jelly:stapler" xmlns:d="jelly:define" xmlns:l="/lib/layout" xmlns:t="/lib/hudson" xmlns:f="/lib/form">
 
   <f:section title="PTC RV&amp;S">
   
-	<f:entry title="PTC RV&amp;S Server Configurations">
-	
-		<f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
-			<table width="100%">
-				<f:invisibleEntry title="Configuration ID" field="configId">
-					<input class="setting-input" name="serverConfig.configId" type="hidden" value="${serverConfig.configId}" />         
-				</f:invisibleEntry>
-				
-				<f:entry title="Hostname" field="hostName">
-					<f:textbox clazz="required" checkMessage="'Hostname' is a required field!" name="serverConfig.hostName" value="${serverConfig.hostName}" />
-				</f:entry>
-				<f:entry title="Port" field="port">
-					<f:textbox clazz="required positive-number" checkMessage="'Port' value must be a positive number!" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
-				</f:entry>				
-				<f:entry title="Username" field="userName">
-					<f:textbox name="serverConfig.userName" value="${serverConfig.userName}" />
-				</f:entry>
-				<f:entry title="Password" field="password">
-					<f:password name="serverConfig.password" value="${serverConfig.password}" />
-				</f:entry>
-				<f:advanced>
-					<f:entry title="Use Secure Connection?" field="secure">
-						<f:checkbox name="serverConfig.secure" checked="${h.ifThenElse(serverConfig==null,false,serverConfig.secure)}"/>
-					</f:entry>
-					<f:entry title="Integration Point Hostname" field="ipHostName">
-						<f:textbox name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
-					</f:entry>
-					<f:entry title="Integration Point Port" field="ipPort">
-						<f:textbox clazz="number" name="serverConfig.ipPort" value="${h.ifThenElse(serverConfig==null,0,serverConfig.ipPort)}"/>
-					</f:entry>
-				</f:advanced>
-				<f:validateButton title="${%Test Connection}" progress="${%Connecting...}" method="testConnection" 
-					with="serverConfig.hostName,serverConfig.port,serverConfig.userName,serverConfig.password,serverConfig.secure,serverConfig.ipHostName,serverConfig.ipPort" />
-			</table>
-			<div align="right">
-				<f:repeatableDeleteButton/>
-			</div>
-		</f:repeatable>
-		
-	</f:entry>
-	
+    <f:entry title="PTC RV&amp;S Server Configurations">
+    
+      <f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
+        <table width="100%">
+          <f:invisibleEntry title="Configuration ID" field="configId">
+            <input class="setting-input" name="serverConfig.configId" type="hidden" value="${serverConfig.configId}" />
+          </f:invisibleEntry>
+
+          <!-- Host / Port -->
+          <f:entry title="Hostname" field="hostName">
+            <f:textbox clazz="required" checkMessage="'Hostname' is a required field!" name="serverConfig.hostName" value="${serverConfig.hostName}" />
+          </f:entry>
+          <f:entry title="Port" field="port">
+            <f:textbox clazz="required positive-number" checkMessage="'Port' value must be a positive number!" name="serverConfig.port" value="${h.ifThenElse(serverConfig==null,7001,serverConfig.port)}" />
+          </f:entry>
+
+          <!-- Authentication Type -->
+          <f:entry title="Authentication Type" field="authType">
+            <!-- Basic Auth (default) -->
+            <f:radioBlock
+                name="serverConfig.authType"
+                value="BASIC"
+                title="Basic Auth"
+                checked="${h.ifThenElse(serverConfig==null,true,serverConfig.authType=='BASIC')}">
+              <f:entry title="Username" field="userName">
+                <f:textbox name="serverConfig.userName" value="${serverConfig.userName}" />
+              </f:entry>
+              <f:entry title="Password" field="password">
+                <f:password name="serverConfig.password" value="${serverConfig.password}" />
+              </f:entry>
+            </f:radioBlock>
+
+            <!-- SSO -->
+            <f:radioBlock
+                name="serverConfig.authType"
+                value="OAUTH"
+                title="SSO"
+                checked="${h.ifThenElse(serverConfig==null,false,serverConfig.authType=='OAUTH')}">
+              <!-- Jenkins Credentials selector filtered to OAuth2ClientCredentials (populate via descriptor.doFillSsoCredentialIdItems) -->
+             <!-- <f:entry title="OAuth2 Client Credentials" field="credentialsId">-->
+               <f:entry title="OAuth2 Client Credentials" field="ssoCredentialId">
+                <f:select
+                    name="serverConfig.ssoCredentialId"
+                    clazz="required"
+                    checkMessage="'OAuth2 Client Credentials' is required for SSO!" />
+              </f:entry>
+            </f:radioBlock>
+          </f:entry>
+
+          <!-- Advanced -->
+          <f:advanced>
+            <f:entry title="Use Secure Connection?" field="secure">
+              <f:checkbox name="serverConfig.secure" checked="${h.ifThenElse(serverConfig==null,false,serverConfig.secure)}"/>
+            </f:entry>
+            <f:entry title="Integration Point Hostname" field="ipHostName">
+              <f:textbox name="serverConfig.ipHostName" value="${serverConfig.ipHostName}"/>
+            </f:entry>
+            <f:entry title="Integration Point Port" field="ipPort">
+              <f:textbox clazz="number" name="serverConfig.ipPort" value="${h.ifThenElse(serverConfig==null,0,serverConfig.ipPort)}"/>
+            </f:entry>
+          </f:advanced>
+
+          <!-- Test Connection -->
+          <f:validateButton
+              title="${%Test Connection}"
+              progress="${%Connecting...}"
+              method="testConnection"
+              with="serverConfig.hostName,serverConfig.port,serverConfig.userName,serverConfig.password,serverConfig.secure,serverConfig.ipHostName,serverConfig.ipPort,serverConfig.authType,serverConfig.ssoCredentialId" />
+        </table>
+
+        <div align="right">
+          <f:repeatableDeleteButton/>
+        </div>
+      </f:repeatable>
+      
+    </f:entry>
+    
   </f:section>
 
 </j:jelly>
