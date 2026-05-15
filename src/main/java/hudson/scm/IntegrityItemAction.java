@@ -689,7 +689,8 @@ public class IntegrityItemAction extends Notifier implements Serializable
 	        DescriptorImpl.INTEGRITY_DESCRIPTOR.getConfiguration(serverConfig);
 	    IntegrityConfigurable ciSettings =
 	        new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(), desSettings.getIpPort(),
-	            desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "");
+	            desSettings.getHostName(), desSettings.getPort(), desSettings.getSecure(), "", "", 
+	            desSettings.getAuthType(), desSettings.getSsoCredentialId());
 	    AbstractProject<?, ?> thisProject = thisBuild.getProject();
 	    if (thisProject.getScm() instanceof IntegritySCM)
 	    {

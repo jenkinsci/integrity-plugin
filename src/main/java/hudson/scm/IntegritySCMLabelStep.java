@@ -99,7 +99,8 @@ public class IntegritySCMLabelStep extends AbstractStepImpl
     this.connectionSettings = new IntegrityConfigurable("TEMP_ID", desSettings.getIpHostName(),
         desSettings.getIpPort(), desSettings.getHostName(), desSettings.getPort(),
         desSettings.getSecure(), null == userName ? desSettings.getUserName() : userName,
-        null == password ? desSettings.getPasswordInPlainText() : password.getPlainText());
+        null == password ? desSettings.getPasswordInPlainText() : password.getPlainText(),
+        desSettings.getAuthType(), desSettings.getSsoCredentialId());
 
     return this.connectionSettings;
   }

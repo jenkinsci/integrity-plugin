@@ -167,7 +167,7 @@ public class IntegritySCMTest
     public void setUp() throws Exception {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, is_Secure_ILM_connection,
-			"Administrator", "password");
+			"Administrator", "password", AuthenticationType.BASIC, null);
 	session = APISession.createLocalIntegrationPoint(integrityConfigurable);
 	slave0 = jenkinsRule.createOnlineSlave(Label.get("slave0"));
 	slave1 = jenkinsRule.createOnlineSlave(Label.get("slave1"));
@@ -268,7 +268,7 @@ public class IntegritySCMTest
     {
 	IntegrityConfigurable integrityConfigurable = new IntegrityConfigurable("test", "localhost",
 			7001, "localhost",7001, is_Secure_ILM_connection,
-			"Administrator", "password");
+			"Administrator", "password", AuthenticationType.BASIC, null);
 	List<IntegrityConfigurable> configurations = new ArrayList<IntegrityConfigurable>();
 	configurations.add(integrityConfigurable);
 	IntegritySCM.DescriptorImpl.INTEGRITY_DESCRIPTOR.setConfigurations(configurations);

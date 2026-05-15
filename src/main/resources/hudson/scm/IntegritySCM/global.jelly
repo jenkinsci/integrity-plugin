@@ -6,7 +6,7 @@
     <f:entry title="PTC RV&amp;S Server Configurations">
     
       <f:repeatable var="serverConfig" varStatus="loopStatus" items="${descriptor.configurations}" minimum="1">
-        <table width="100%">
+        <div>
           <f:invisibleEntry title="Configuration ID" field="configId">
             <input class="setting-input" name="serverConfig.configId" type="hidden" value="${serverConfig.configId}" />
           </f:invisibleEntry>
@@ -71,7 +71,7 @@
               progress="${%Connecting...}"
               method="testConnection"
               with="serverConfig.hostName,serverConfig.port,serverConfig.userName,serverConfig.password,serverConfig.secure,serverConfig.ipHostName,serverConfig.ipPort,serverConfig.authType,serverConfig.ssoCredentialId" />
-        </table>
+        </div>
 
         <div align="right">
           <f:repeatableDeleteButton/>

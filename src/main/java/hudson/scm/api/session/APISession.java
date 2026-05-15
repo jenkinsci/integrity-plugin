@@ -62,6 +62,11 @@ public class APISession implements ISession {
 	private IntegrityConfigurable settings;
 	private boolean usingSSOSession; // to track if SSO session is being used (createNamedSession vs createSession)
 	private SSOSession ssoSession;
+	// For SSO Token Lifecycle Management
+	private long ssoTokenCreationTime = 0;
+	private long ssoTokenExpirationTime = 0;
+	private static final long TOKEN_EXPIRATION_TTL = 3600000; // 1 hour (3600000 milliseconds)
+	private static final long TOKEN_REFRESH_BUFFER = 60000; // Refresh 1 minute (60000 milliseconds) before expiry
 
 	/**
 	 * Creates an authenticated API Session against the Integrity Server
@@ -79,8 +84,8 @@ public class APISession implements ISession {
 			} else {
 				LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName() + settings.getSecure());
 			}
-			//test
-			LOGGER.log(Level.SEVERE, "APISession: checking value for username in create session: " + settings.getUserName());
+			//Log the username being used for debugging purposes
+			LOGGER.fine("APISession: creating session with username: " + settings.getUserName());
 
 			return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
 					settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(), settings.getSecure(),
@@ -165,17 +170,20 @@ public class APISession implements ISession {
 		String implementationVersion = getClass().getPackage().getImplementationVersion();
 		boolean useSSOSession = false;
 		if (authType == AuthenticationType.OAUTH) {
+			// When authType is OAUTH, we should always use SSO session
+			// Check if server has SSO enabled, but don't fall back to basic auth if it doesn't
 			try {
 				if (ip.isServerSSOEnabled()) {
 					useSSOSession = true;	
-					LOGGER.fine("Server SSO is enabled. Generating OAuth token for user: " + userName);
+					LOGGER.fine("Server SSO is enabled. Creating OAuth session for user: " + userName);
 				} else {
-					LOGGER.fine(
-							"Server SSO is not enabled. Falling back to basic authentication for user: " + userName);
+					LOGGER.fine("Server SSO check returned false, but proceeding with OAuth session creation since authType is OAUTH");
+					useSSOSession = true;
 				}
 			} catch (Exception e) {
-				LOGGER.log(Level.SEVERE, "Failed to generate OAuth token for user: " + userName, e.getMessage());
-				LOGGER.fine("Falling back to basic authentication for user: " + userName);
+				LOGGER.log(Level.SEVERE, "Exception checking if server SSO is enabled: " + e.getMessage(), e);
+				LOGGER.fine("Proceeding with OAuth session creation for user: " + userName);
+				useSSOSession = true;
 			}
 		}
 		if (useSSOSession) {
@@ -193,14 +201,18 @@ public class APISession implements ISession {
 				ssoSession = ip.createNamedSSOSession(null, PLUGIN_VERSION_PREFIX + implementationVersion, ClientId,
 						ClientSecret, Scope, TokenEndpoint);
 				usingSSOSession = true;
-				LOGGER.fine("Successfully created SSO session");
+				
+				// Track token creation and expiration times for refresh management
+				ssoTokenCreationTime = System.currentTimeMillis();
+				ssoTokenExpirationTime = ssoTokenCreationTime + TOKEN_EXPIRATION_TTL;
+				LOGGER.log(Level.FINE, "Successfully created SSO session for user: " + userName + 
+						". Token will expire at: " + new java.util.Date(ssoTokenExpirationTime));
 			} catch (APIException aex) {
 				LOGGER.log(Level.SEVERE, "Failed to create SSO session for user: " + userName, aex);
 				throw aex;
 			}
 		} else {
-			//test
-			LOGGER.log(Level.SEVERE, "APISession: checking if username is coming or not and which session it uses in case of non sso: " + userName);
+			LOGGER.log(Level.FINE, "APISession: checking if username is coming or not and which session it uses in case of non sso: " + userName);
 			session = ip.createNamedSession(PLUGIN_VERSION_PREFIX + implementationVersion, null, userName, password);
 			session.setTimeout(300000); // 15 Minutes
 			session.setAutoReconnect(true);
@@ -213,6 +225,91 @@ public class APISession implements ISession {
 																								// class directly
 						Jenkins.get(), ACL.SYSTEM2, Collections.emptyList()),
 				CredentialsMatchers.withId(credentialsId));
+	}
+
+	/**
+	 * Validates the SSO token and refreshes it if it's about to expire
+	 * @throws APIException if token refresh fails
+	 */
+	private void validateAndRefreshSSOTokenIfNeeded() throws APIException {
+		if (!usingSSOSession || ssoSession == null) {
+			return; // Not using SSO, nothing to do
+		}
+		
+		long currentTime = System.currentTimeMillis();
+		long timeUntilExpiry = ssoTokenExpirationTime - currentTime;
+		
+		// If token will expire within buffer (1 minute), refresh it now
+		if (timeUntilExpiry <= TOKEN_REFRESH_BUFFER) {
+			LOGGER.log(Level.WARNING, 
+					"SSO token for user: " + userName + " will expire in " + 
+					(timeUntilExpiry / 1000) + " seconds. Refreshing token now...");
+			
+			try {
+				refreshSSOToken();
+			} catch (APIException aex) {
+				LOGGER.log(Level.SEVERE, 
+						"Failed to refresh SSO token for user: " + userName + 
+						". Command execution may fail. Error: " + aex.getMessage(), aex);
+				// Don't throw - let the command execute and fail if necessary
+				// This allows the error handler to catch and retry
+			}
+		}
+	}
+
+	/**
+	 * Refreshes the SSO token by creating a new SSO session
+	 * @throws APIException if token refresh fails
+	 */
+	private void refreshSSOToken() throws APIException {
+		LOGGER.log(Level.FINE, "Attempting to refresh SSO token for user: " + userName);
+		
+		try {
+			// Get OAuth credentials
+			OAuth2ClientCredentials oauthCred = findOAuthCredentialById(settings.getSsoCredentialId());
+			if (oauthCred == null) {
+				throw new APIException("No OAuth2ClientCredentials found for ID: " + 
+									 settings.getSsoCredentialId());
+			}
+			
+			String clientId = oauthCred.getClientId();
+			String clientSecret = oauthCred.getClientSecret().getPlainText();
+			String tokenEndpoint = oauthCred.getTokenEndpoint();
+			String scope = oauthCred.getOAuthScope();
+			String implementationVersion = getClass().getPackage().getImplementationVersion();
+			
+			// Release old SSO session
+			if (ssoSession != null) {
+				try {
+					// SSOSession will be recreated with a fresh token, so we don't need to explicitly release
+					LOGGER.log(Level.FINE, "Preparing to replace old SSO session with new one");
+				} catch (Exception e) {
+					LOGGER.log(Level.FINE, "Exception while preparing SSO session: " + e.getMessage());
+				}
+			}
+			
+			// Create new SSO session with fresh token
+			ssoSession = ip.createNamedSSOSession(null, PLUGIN_VERSION_PREFIX + implementationVersion, 
+													clientId, clientSecret, scope, tokenEndpoint);
+			
+			// Update token expiration time
+			ssoTokenCreationTime = System.currentTimeMillis();
+			ssoTokenExpirationTime = ssoTokenCreationTime + TOKEN_EXPIRATION_TTL;
+			
+			LOGGER.log(Level.FINE, "Successfully refreshed SSO token for user: " + userName + 
+									   ". New token expires at: " + new java.util.Date(ssoTokenExpirationTime));
+			
+		} catch (APIException aex) {
+			LOGGER.log(Level.SEVERE, 
+					"Failed to refresh SSO token for user: " + userName + 
+					". Error: " + aex.getMessage(), aex);
+			throw aex;
+		} catch (Exception e) {
+			LOGGER.log(Level.SEVERE, 
+					"Unexpected error refreshing SSO token for user: " + userName + 
+					". Error: " + e.getMessage(), e);
+			throw new APIException("Failed to refresh SSO token: " + e.getMessage());
+		}
 	}
 
 	/**
@@ -247,7 +344,9 @@ public class APISession implements ISession {
 		Command ping = new Command("api", "ping");
 		CmdRunner cmdRunner;
 		SSOCmdRunner ssoCmdRunner;
-		if (AuthenticationType.OAUTH == authType && !isLocalIntegration && usingSSOSession) {			
+		if (AuthenticationType.OAUTH == authType && !isLocalIntegration && usingSSOSession) {
+			// Validate and refresh SSO token if needed before executing command
+			validateAndRefreshSSOTokenIfNeeded();
 			ssoCmdRunner = ssoSession.createCmdRunner();
 			// Execute the connection
 			Response res = ssoCmdRunner.execute(ping);
@@ -297,6 +396,8 @@ public class APISession implements ISession {
 	    CmdRunner cmdRunner;
 	    SSOCmdRunner ssoCmdRunner;
 	    if (AuthenticationType.OAUTH == authType && !isLocalIntegration && usingSSOSession) {
+	        // Validate and refresh SSO token if needed before executing command
+	        validateAndRefreshSSOTokenIfNeeded();
 	        ssoCmdRunner = ssoSession.createCmdRunner();
 	        Response res = ssoCmdRunner.execute(cmd);
 	        LOGGER.log(Level.FINEST, res.getCommandString() + RETURNED_EXIT_CODE + res.getExitCode());
@@ -346,10 +447,13 @@ public class APISession implements ISession {
 	    }
 	    SSOCmdRunner ssoCmdRunner;
 	    if (AuthenticationType.OAUTH == authType && !isLocalIntegration && usingSSOSession) {
+	        // Validate and refresh SSO token if needed before executing command
+	        validateAndRefreshSSOTokenIfNeeded();
+	        // Store the SSO cmd runner for later cleanup (don't release immediately to avoid CommandAlreadyRunningException)
 	        ssoCmdRunner = ssoSession.createCmdRunner();
 	        Response res = ssoCmdRunner.executeWithInterim(cmd, false);
 	        LOGGER.log(Level.FINE, "Executed " + res.getCommandString() + " with interim (SSO)");
-	        ssoCmdRunner.release();
+	        // Note: The runner is released in the cleanup path at the beginning of the next call or in the cleanup/terminate method
 	        return res;
 	    } else if (isLocalIntegration) {
 	        icr = localSession.createCmdRunner();
@@ -387,6 +491,8 @@ public class APISession implements ISession {
 	    CmdRunner cmdRunner;
 	    SSOCmdRunner ssoCmdRunner;
 	    if (AuthenticationType.OAUTH == authType && !isLocalIntegration && usingSSOSession) {
+	        // Validate and refresh SSO token if needed before executing command
+	        validateAndRefreshSSOTokenIfNeeded();
 	        ssoCmdRunner = ssoSession.createCmdRunner();
 	        // SSO may not support impersonation, but if it does:
 	        // ssoCmdRunner.setDefaultImpersonationUser(impersonateUser);

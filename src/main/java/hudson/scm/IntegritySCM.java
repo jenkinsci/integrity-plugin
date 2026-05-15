@@ -356,7 +356,28 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Lets parse this project
     IAPICommand command = CommandFactory.createCommand(IAPICommand.VIEW_PROJECT_COMMAND, getProjectSettings());
 
-    command.addOption(new APIOption(IAPIOption.PROJECT, siProject.getConfigurationPath()));
+    // Build the project configuration path, including variant name if present
+    String projectPath = siProject.getConfigurationPath();
+    
+    // If the configuration path doesn't end with project.pj, it may be a sandbox/variant
+    // config path that won't work with si viewproject. Use the project name instead.
+    if (projectPath == null || !projectPath.toLowerCase().endsWith("project.pj"))
+    {
+      String pjName = siProject.getProjectName();
+      if (pjName != null && pjName.toLowerCase().endsWith("project.pj"))
+      {
+        LOGGER.fine("Configuration path '" + projectPath + "' does not end with project.pj, using project name: " + pjName);
+        projectPath = pjName;
+      }
+    }
+    
+    if (siProject.getVariantName() != null && siProject.getVariantName().length() > 0)
+    {
+      projectPath = projectPath + "#d=" + siProject.getVariantName();
+      LOGGER.fine("Adding variant development path to project: " + projectPath);
+    }
+    
+    command.addOption(new APIOption(IAPIOption.PROJECT, projectPath));
     MultiValue mv = APIUtils.createMultiValueField(IAPIFields.FIELD_SEPARATOR, IAPIFields.NAME,
         IAPIFields.CONTEXT, IAPIFields.CP_ID, IAPIFields.MEMBER_REV, IAPIFields.MEMBER_TIMESTAMP,
         IAPIFields.MEMBER_DESCRIPTION, IAPIFields.TYPE);
@@ -365,8 +386,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     // Apply our include/exclude filters
     applyMemberFilters(command);
 
-    LOGGER.fine("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+    LOGGER.fine("Preparing to execute si viewproject for " + projectPath);
     Response viewRes = command.execute();
+    LOGGER.fine("si viewproject returned response");
 
     // Update Derby DB with the API results
     siProject.parseProject(viewRes.getWorkItems());
@@ -513,6 +535,15 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 
       listener.getLogger()
                       .println("Preparing to execute si viewproject for " + siProject.getConfigurationPath());
+      listener.getLogger()
+                      .println("Project Name: " + siProject.getProjectName());
+      listener.getLogger()
+                      .println("Configuration Path: " + siProject.getConfigurationPath());
+      listener.getLogger()
+                      .println("Is Build Project: " + siProject.isBuild());
+      listener.getLogger()
+                      .println("Is Variant Project: " + siProject.isVariant());
+      LOGGER.fine("About to initialize CM Project Members for: " + siProject.getConfigurationPath());
       initializeCMProjectMembers();
 
       // Now, we need to find the project state from the previous build.
@@ -947,18 +978,42 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     public void load() {
       super.load();
 
-      // Initialize our derby environment
-      System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY,
-          Jenkins.getInstance().getRootDir().getAbsolutePath());
-      DerbyUtils.loadDerbyDriver();
-      LOGGER.info("Creating PTC RV&S SCM cache db connection...");
-      connectionPoolDataSource = DerbyUtils
-          .createConnectionPoolDataSource(Jenkins.getInstance().getRootDir().getAbsolutePath());
-      LOGGER.info("Creating PTC RV&S SCM cache registry...");
-      DerbyUtils.createRegistry(connectionPoolDataSource);
+      try {
+        // Initialize our derby environment
+        Jenkins jenkins = Jenkins.get();
+        String rootPath = jenkins.getRootDir().getAbsolutePath();
+        System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY, rootPath);
+        DerbyUtils.loadDerbyDriver();
+        LOGGER.info("Creating PTC RV&S SCM cache db connection...");
+        connectionPoolDataSource = DerbyUtils.createConnectionPoolDataSource(rootPath);
+        LOGGER.info("Creating PTC RV&S SCM cache registry...");
+        DerbyUtils.createRegistry(connectionPoolDataSource);
 
-      // Log the construction...
-      LOGGER.fine("IntegritySCM DescriptorImpl() constructed!");
+        // Log the construction...
+        LOGGER.fine("IntegritySCM DescriptorImpl() constructed!");
+      } catch (Exception e) {
+        LOGGER.warning("Failed to initialize PTC RV&S SCM Derby cache: " + e.getMessage());
+        LOGGER.fine("Will retry initialization on next access.");
+      }
+    }
+
+    /**
+     * Ensures the Derby connection pool is initialized. Called lazily when needed.
+     */
+    private synchronized void ensureInitialized() {
+      if (connectionPoolDataSource == null) {
+        try {
+          Jenkins jenkins = Jenkins.get();
+          String rootPath = jenkins.getRootDir().getAbsolutePath();
+          System.setProperty(DerbyUtils.DERBY_SYS_HOME_PROPERTY, rootPath);
+          DerbyUtils.loadDerbyDriver();
+          connectionPoolDataSource = DerbyUtils.createConnectionPoolDataSource(rootPath);
+          DerbyUtils.createRegistry(connectionPoolDataSource);
+          LOGGER.info("PTC RV&S SCM cache initialized (lazy).");
+        } catch (Exception e) {
+          LOGGER.severe("Failed to initialize PTC RV&S SCM Derby cache: " + e.getMessage());
+        }
+      }
     }
 
     @Override
@@ -1085,10 +1140,8 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
                   ", userName: " + userName + ", authType: " + authTypeStr);
       
       IntegrityConfigurable config = new IntegrityConfigurable(
-          configId, ipHostName, ipPort, hostName, port, secure, userName, password);
-      
-      config.setAuthType(AuthenticationType.valueOf(authTypeStr));
-      config.setSsoCredentialId(ssoCredentialId);
+          configId, ipHostName, ipPort, hostName, port, secure, userName, password,
+          AuthenticationType.valueOf(authTypeStr), ssoCredentialId);
       
       return config;
     }
@@ -1106,6 +1159,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
      */
     public ConnectionPoolDataSource getDataSource()
     {
+      ensureInitialized();
       return connectionPoolDataSource;
     }
 
@@ -1210,8 +1264,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listBox.add(config.getName(), config.getConfigId());
         }
       }
-      //test     
-      LOGGER.log(Level.SEVERE, "doFillServerConfigItems called, serverConfig={0}", listBox);
       return listBox; 
     }
     
@@ -1291,45 +1343,57 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
     	  if(ssoCredentialId == null || ssoCredentialId.isEmpty()) {
     		  return FormValidation.error("SSO Credential ID must be provided for OAUTH authentication.");
     	  }
-		  //test
-    	  LOGGER.log(Level.SEVERE, "IntegritySCM if block: checking value of username and pwd from form in sso case ", userName + " / " + password);
-          ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port, secure,"" , "");
-          ic.setAuthType(AuthenticationType.OAUTH);
-          ic.setSsoCredentialId(ssoCredentialId);
+          ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port, secure,"" , "", AuthenticationType.OAUTH, ssoCredentialId);
       } else {
 		  authTypeEnum = AuthenticationType.BASIC;
-		  //test
-		//test
-    	  LOGGER.log(Level.SEVERE, "IntegritySCM else block: checking value of username and pwd from form in basic auth case ", userName + " / " + password);
 		  ic = new IntegrityConfigurable(null, ipHostName, ipPort, hostName, port,
-		          secure, userName, password);  
+		          secure, userName, password, AuthenticationType.BASIC, null);  
 	  }
-	  ISession api = APISession.create(ic);
-	//test
-	  LOGGER.log(Level.SEVERE, "IntegritySCM after IC/getname", ic.getName());
-      if (null != api)
-      {
-    	Command  cmd = new Command(Command.IM, "about");
-    	Response res = api.runCommand(cmd);
-    	WorkItemIterator wit = res.getWorkItems();
-    	while(wit.hasNext())
-    	{
-    		WorkItem wi = wit.next();
-    		String version = wi.getField("version").getValueAsString();
-    		String versions[] = version.split("\\.");
-    		int majorVer = Integer.parseInt(versions[0]);
-    		int minorVer = Integer.parseInt(versions[1]);
-    		String strVerMsg = "PTC RV&S server version: " + version;
-    		LOGGER.fine(strVerMsg);
-    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
-   			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
-    	}
-        api.terminate();
-        return FormValidation.ok("Connection successful!");
-      } else
-      {
-        return FormValidation.error("Failed to establish connection!");
-      }
+	  // Use a timeout to prevent hanging on unreachable ports (e.g., 3-digit ports)
+	  final IntegrityConfigurable ficFinal = ic;
+	  java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
+	  java.util.concurrent.Future<FormValidation> future = executor.submit(() -> {
+		  ISession api = APISession.create(ficFinal);
+		  LOGGER.log(Level.FINE, "IntegritySCM after IC/getname", ficFinal.getName());
+	      if (null != api)
+	      {
+	    	Command  cmd = new Command(Command.IM, "about");
+	    	Response res = api.runCommand(cmd);
+	    	WorkItemIterator wit = res.getWorkItems();
+	    	while(wit.hasNext())
+	    	{
+	    		WorkItem wi = wit.next();
+	    		String version = wi.getField("version").getValueAsString();
+	    		String versions[] = version.split("\\.");
+	    		int majorVer = Integer.parseInt(versions[0]);
+	    		int minorVer = Integer.parseInt(versions[1]);
+	    		String strVerMsg = "PTC RV&S server version: " + version;
+	    		LOGGER.fine(strVerMsg);
+	    		if (majorVer <= 10 && (majorVer == 10 && minorVer < 8))
+	   			    LOGGER.fine("This plugin version is unsupported with " + strVerMsg);
+	    	}
+	        api.terminate();
+	        return FormValidation.ok("Connection successful!");
+	      } else
+	      {
+	        return FormValidation.error("Failed to establish connection!");
+	      }
+	  });
+	  try {
+		  return future.get(30, java.util.concurrent.TimeUnit.SECONDS);
+	  } catch (java.util.concurrent.TimeoutException te) {
+		  future.cancel(true);
+		  LOGGER.log(Level.WARNING, "Connection test timed out for " + hostName + ":" + port);
+		  return FormValidation.error("Connection timed out! Please verify the hostname and port number.");
+	  } catch (java.util.concurrent.ExecutionException ee) {
+		  LOGGER.log(Level.WARNING, "Connection test failed for " + hostName + ":" + port, ee.getCause());
+		  return FormValidation.error("Connection failed: " + ee.getCause().getMessage());
+	  } catch (InterruptedException ie) {
+		  Thread.currentThread().interrupt();
+		  return FormValidation.error("Connection test was interrupted.");
+	  } finally {
+		  executor.shutdownNow();
+	  }
     }
 
     /**
