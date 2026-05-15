@@ -32,7 +32,7 @@ public final class IntegrityConfigurable implements Serializable
   
   @DataBoundConstructor
   public IntegrityConfigurable(String configId, String ipHostName, int ipPort, String hostName,
-      int port, boolean secure, String userName, String password)
+      int port, boolean secure, String userName, String password, AuthenticationType authType, String ssoCredentialId)
   {
     this.configId =
         (null == configId || configId.length() == 0 ? UUID.randomUUID().toString() : configId);
@@ -43,6 +43,8 @@ public final class IntegrityConfigurable implements Serializable
     this.secure = secure;
     this.userName = userName;
     this.password = Secret.fromString(password);
+    this.authType = authType != null ? authType : AuthenticationType.BASIC;
+    this.ssoCredentialId = ssoCredentialId;
     this.name = String.format("%s@%s:%d", userName, hostName, port);
   }
 

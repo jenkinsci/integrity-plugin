@@ -609,7 +609,7 @@ public abstract class AbstractIntegritySCM extends SCM implements Serializable
 	IntegrityConfigurable ciSettings = new IntegrityConfigurable("TEMP_ID",
 		desSettings.getIpHostName(), desSettings.getIpPort(),
 		desSettings.getHostName(), desSettings.getPort(),
-		desSettings.getSecure(), strUserName, strPassword);
+		desSettings.getSecure(), strUserName, strPassword, desSettings.getAuthType(), desSettings.getSsoCredentialId());
 	LOGGER.fine("Project Userame = " + strUserName);
 	LOGGER.fine("Project User password = " + strPassword);
 	return ciSettings;

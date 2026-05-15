@@ -184,6 +184,9 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
       // Create an empty folder structure first
       createFolderStructure(workspace);
 
+      // Log the size of projectMembersList for debugging
+      listener.getLogger().println("Total files in project members list: " + projectMembersList.size());
+
       // Perform a synchronize of each file in the member list...
       for (Iterator<Hashtable<CM_PROJECT, Object>> it = projectMembersList.iterator(); it
           .hasNext();)
@@ -199,6 +202,8 @@ public class IntegrityCheckoutTask implements FileCallable<Boolean>
         String configPath = memberInfo.get(CM_PROJECT.CONFIG_PATH).toString();
         String checksum = (null == memberInfo.get(CM_PROJECT.CHECKSUM) ? ""
             : memberInfo.get(CM_PROJECT.CHECKSUM).toString());
+
+        LOGGER.fine("Processing file: " + memberName + ", deltaFlag: " + deltaFlag + ", cleanCopy: " + cleanCopy);
 
         if (cleanCopy && deltaFlag != 3)
         {

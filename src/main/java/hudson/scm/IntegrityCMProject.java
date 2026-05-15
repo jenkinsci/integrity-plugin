@@ -678,34 +678,56 @@ public class IntegrityCMProject implements Serializable
 
     pjConfigHash.put(this.getProjectName(), this.getConfigurationPath());
 
+    // Separate lists for members and subprojects
+    List<WorkItem> membersList = new ArrayList<WorkItem>();
+    List<WorkItem> subprojectsList = new ArrayList<WorkItem>();
+    
     while (workItems.hasNext())
     {
       WorkItem wi = workItems.next();
 
       if (wi.getModelType().equals(SIModelTypeName.SI_SUBPROJECT))
       {
-        // Parse folders separately from members in an asynchronous environment. This is to be
-        // executed before member parsing!
-        LOGGER.log(Level.FINE,
-            "Executing parse folder task :" + wi.getField(IAPIFields.NAME).getValueAsString());
-        Map<String, String> future = executor.submit(new ParseProjectFolderTask(wi, this)).get();
-        for (String key : future.keySet())
-        {
-          LOGGER.log(Level.FINEST, "Adding folder key in project configuration. Key: " + key
-              + ", Value: " + future.get(key));
-          pjConfigHash.put(key, future.get(key));
-        }
+        subprojectsList.add(wi);
       } else if (wi.getModelType().equals(SIModelTypeName.MEMBER))
       {
-        // Parse member tasks
-        LOGGER.log(Level.FINE,
-            "Executing parse member task :" + wi.getField(IAPIFields.NAME).getValueAsString());
-        futures.add(executor.submit(new ParseProjectMemberTask(wi, pjConfigHash, this)));
+        membersList.add(wi);
       } else
       {
         LOGGER.log(Level.WARNING,
             "View project output contains an invalid model type: " + wi.getModelType());
       }
+    }
+    
+    // Process subprojects first
+    for (WorkItem wi : subprojectsList)
+    {
+      LOGGER.log(Level.FINE,
+          "Executing parse folder task :" + wi.getField(IAPIFields.NAME).getValueAsString());
+      Map<String, String> future = executor.submit(new ParseProjectFolderTask(wi, this)).get();
+      for (String key : future.keySet())
+      {
+        LOGGER.log(Level.FINEST, "Adding folder key in project configuration. Key: " + key
+            + ", Value: " + future.get(key));
+        pjConfigHash.put(key, future.get(key));
+      }
+    }
+    
+    // Process members
+    for (WorkItem wi : membersList)
+    {
+      LOGGER.log(Level.FINE,
+          "Executing parse member task :" + wi.getField(IAPIFields.NAME).getValueAsString());
+      futures.add(executor.submit(new ParseProjectMemberTask(wi, pjConfigHash, this)));
+    }
+    
+    // For variant projects with empty members, try to get members from subprojects
+    if (membersList.isEmpty() && !subprojectsList.isEmpty() && this.isVariant())
+    {
+      LOGGER.log(Level.WARNING,
+          "Variant project with subprojects but no direct members found. Attempting to fetch members from subprojects...");
+      // Note: This is a limitation - variant projects may need special handling
+      // TODO: Implement recursive member fetch for variant projects
     }
 
     for (Future<Void> f : futures)

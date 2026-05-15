@@ -975,6 +975,25 @@ public class DerbyUtils
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
                   db.commit();
+                } else {
+                  // File added in CP but doesn't exist in project cache yet - need to insert it
+                  rs.moveToInsertRow();
+                  rs.updateShort(CM_PROJECT.TYPE.toString(), (short) 0);
+                  rs.updateString(CM_PROJECT.NAME.toString(), cpMemberName);
+                  rs.updateString(CM_PROJECT.MEMBER_ID.toString(), cpMemberName);
+                  rs.updateTimestamp(CM_PROJECT.TIMESTAMP.toString(),
+                      new Timestamp(new java.util.Date().getTime()));
+                  rs.updateString(CM_PROJECT.DESCRIPTION.toString(), cpMemberOperation.toString());
+                  rs.updateString(CM_PROJECT.AUTHOR.toString(), cpMember.getUser());
+                  rs.updateString(CM_PROJECT.CONFIG_PATH.toString(), cpMember.getLocation());
+                  rs.updateString(CM_PROJECT.REVISION.toString(), cpMemberRevision);
+                  rs.updateString(CM_PROJECT.RELATIVE_FILE.toString(), cpMember.getLocation());
+                  rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
+                  rs.insertRow();
+                  rs.moveToCurrentRow();
+                  LOGGER.fine("... " + cpMemberName + " new file from CP - inserted with revision " + cpMemberRevision);
+                  db.commit();
                 }
                 break;
               case DROP:
@@ -1367,6 +1386,7 @@ public class DerbyUtils
       }
     }
     // Close the database resources
+    LOGGER.fine("viewProject returned " + projectMembersList.size() + " members from table " + projectCacheTable);
 
     return projectMembersList;
   }
