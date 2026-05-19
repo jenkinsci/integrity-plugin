@@ -32,6 +32,7 @@ The plugin provides the following capabilities:
 - Provides the option to update a PTC RV&S Build item with the results of the build. The plugin also provides the option to save the log contents to a rich text field.
 - Provides the option to update a PTC RV&S Test Session item with the results from a build's automated test execution.
 - Updates PTC RV&S project/sub-project with output from builds.
+- Supports SSO authentication.
 
 ### Licensing
 
@@ -51,8 +52,8 @@ This document assumes that you know how to use PTC RV&S and Jenkins. For more in
 
 The installation of the PTC RV&S CM - Jenkins Plugin requires the following prerequisites:
 
-- Jenkins 2.452.2 server or a later server is installed.
-- PTC RV&S 13.3.0.0 or a later server is installed.
+- Jenkins 2.7 server or a later server is installed.
+- PTC RV&S 13.5.0.0 or a later server is installed.
 - API connections on the PTC RV&S server are enabled.
 - For local client integration, PTC RV&S client is installed locally on Jenkins instances, including both controller and agents. For more information, see [PTC RV&S CM - Jenkins Plugin Local Client Integration](#ptc--rvs-cm---jenkins-plugin-local-client-integration).
 
@@ -60,7 +61,7 @@ The installation of the PTC RV&S CM - Jenkins Plugin requires the following prer
 
 - _The plugin uses the API exclusively to communicate with the PTC RV&S server._
 - _The plugin does not require the PTC RV&S client if local client integration is not used._
-- _The plugin install package includes the mksapi.jar 13.3.0.0 (API 5.0), which is licensed under the PTC Freeware license. Please refer to ‘PTC Freeware License Agreement.docx’ located inside the mksapi.jar file._
+- _The plugin install package includes the mksapi.jar 13.5.0.0 (API 5.1), which is licensed under the PTC Freeware license. Please refer to ‘PTC Freeware License Agreement.docx’ located inside the mksapi.jar file._
 
 #### Installing the Plugin
 
