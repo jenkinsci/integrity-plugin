@@ -107,6 +107,7 @@ To authenticate using basic authentication or SSO authentication:
        ii. Select **Client Crendentials**.
        iii. Select **Test Connection** to validate the connection.
        iv. Click **Save**.
+   
 ![](./images/Jenkins_SSO_Auth_Option.png)
 
 You can create a list of the default PTC RV&S server connection profiles using the **PTC RV&S** server configuration options. You can select a PTC RV&S server connection profile when you configure a build job or when you enable other post-build actions like **PTC RV&S – Workflow Item**. See [PTC RV&S Workflows and Documents Integration](#ptc-rvs-workflows--documents-integration) for more information on the **PTC RV&S – Workflow Item** post-build action.
@@ -466,7 +467,7 @@ The above sections of this document provides information on how to install, conf
 
 **Note**: PTC RV&S CM - Jenkins Plugin versions older than 2.5 are no longer supported.
 #### 2026
-- **Version 2.7 (Apr 14, 2026)**
+- **Version 2.7 (May 20, 2026)**
   - Updated mksapi.jar version 13.5.0.0 to use API Version 5.1. This integration is compatible starting PTC RV&S 13.5.0.0.
     
 #### 2024
