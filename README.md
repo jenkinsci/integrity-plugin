@@ -32,7 +32,7 @@ The plugin provides the following capabilities:
 - Provides the option to update a PTC RV&S Build item with the results of the build. The plugin also provides the option to save the log contents to a rich text field.
 - Provides the option to update a PTC RV&S Test Session item with the results from a build's automated test execution.
 - Updates PTC RV&S project/sub-project with output from builds.
-- Supports SSO authentication.
+- Supports for Single Sign-On (SSO) authentication using OpenID Connect.
 
 ### Licensing
 
@@ -87,6 +87,22 @@ To verify the plugin installation, click **Manage Jenkins** \> **System** on the
 ![](./images/Jenkins_Manage_Plugins_Configure_System.png)
 
 The presence of **PTC RV&S** server configuration options validates the successful installation of the plugin.
+
+PTC RV&S Jenkins plugin supports both basic and Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol.
+To authenticate using basic authentication or SSO authentication:
+
+1. Select **PTC RV&S Server** option.
+2. Enter the hostname and the port number.
+   If the configured PTC RV&S server supports SSO, the integration provides the option to authenticate using SSO. If SSO is not configured, the Login with SSO (OIDC) option remains disabled, and Basic Authentication is selected by default.
+   a. For signing using the basic authentication:
+       i. Under **Authentication Type**, select **Basic Auth**.
+       ii. Enter your credentials in the **Username** and **Password** fields.
+       iii. Click **Save** to complete the signing in process.
+   b. For signing using the SSO authentication (Available only if the server is configured for SSO):
+       i. Under **Authentication Type**, select **SSO**.
+       ii. Select **Client Crendentials**.
+       iii. Select **Test Connection** to validate the connection.
+       iv. Click **Save**.
 ![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
 
 You can create a list of the default PTC RV&S server connection profiles using the **PTC RV&S** server configuration options. You can select a PTC RV&S server connection profile when you configure a build job or when you enable other post-build actions like **PTC RV&S – Workflow Item**. See [PTC RV&S Workflows and Documents Integration](#ptc-rvs-workflows--documents-integration) for more information on the **PTC RV&S – Workflow Item** post-build action.
