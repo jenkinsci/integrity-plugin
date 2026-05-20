@@ -94,16 +94,20 @@ To authenticate using basic authentication or SSO authentication:
 1. Select **PTC RV&S Server** option.
 2. Enter the hostname and the port number.
    If the configured PTC RV&S server supports SSO, the integration provides the option to authenticate using SSO. If SSO is not configured, the Login with SSO (OIDC) option remains disabled, and Basic Authentication is selected by default.
+   
    a. For signing using the basic authentication:
        i. Under **Authentication Type**, select **Basic Auth**.
        ii. Enter your credentials in the **Username** and **Password** fields.
        iii. Click **Save** to complete the signing in process.
+   
+   ![](./images/Jenkins_SSO_Auth_Option.png)
+   
    b. For signing using the SSO authentication (Available only if the server is configured for SSO):
        i. Under **Authentication Type**, select **SSO**.
        ii. Select **Client Crendentials**.
        iii. Select **Test Connection** to validate the connection.
        iv. Click **Save**.
-![](./images/Jenkins_Integrity_Server_Configuration_Option.png)
+![](./images/Jenkins_SSO_Auth_Option.png)
 
 You can create a list of the default PTC RV&S server connection profiles using the **PTC RV&S** server configuration options. You can select a PTC RV&S server connection profile when you configure a build job or when you enable other post-build actions like **PTC RV&S – Workflow Item**. See [PTC RV&S Workflows and Documents Integration](#ptc-rvs-workflows--documents-integration) for more information on the **PTC RV&S – Workflow Item** post-build action.
 
