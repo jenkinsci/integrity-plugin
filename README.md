@@ -100,7 +100,7 @@ To authenticate using basic authentication or SSO authentication:
        ii. Enter your credentials in the **Username** and **Password** fields.
        iii. Click **Save** to complete the signing in process.
    
-   ![](./images/Jenkins_SSO_Auth_Option.png)
+   ![](./images/Jenkins_Basic_Auth_Option.png)
    
    b. For signing using the SSO authentication (Available only if the server is configured for SSO):
        i. Under **Authentication Type**, select **SSO**.
