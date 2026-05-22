@@ -93,7 +93,7 @@ PTC RV&S Jenkins plugin supports both basic and Single Sign-On (SSO) authenticat
 To use Single Sign-On (SSO) authentication with the OpenID Connect (OIDC) protocol, add new credentials using the following steps:
 
 1. Click **Manage Jenkins** \> **Credentials** \> **System** \ **Global credentials (unrestricted)** on the Jenkins dashboard.
-2. Under **Kind**, select option **OAuth2 Client Crendentials**.
+2. Under **Kind**, select option **OAuth2 Client Credentials**.
 3. Enter **ID**, **Description**, **Client ID**, **Client Secret**, **Token Endpoint**, **Scope**.
    
 ![](./images/Jenkins_new_credentials.png)
