@@ -93,8 +93,13 @@ To use Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) proto
 
 1. Click **Manage Jenkins** \> **Credentials** \> **System** \ **Global credentials (unrestricted)** on the Jenkins dashboard.
 2. Under **Kind**, select option **OAuth2 Client Crendentials**.
-3. Enter **ID**, **Description**, **Client ID**, **Client Secret**, **Token Endpoint**, **Scope**
+3. Enter **ID**, **Description**, **Client ID**, **Client Secret**, **Token Endpoint**, **Scope**.
+   
 ![](./images/Jenkins_new_credentials.png)
+
+  **Note**
+
+- _All fields are optional. However, it is recommended to add an **ID** and **Description** to identify credentials, because Jenkins integration allows multiple credentials._
 
 To authenticate using basic authentication or SSO authentication:
 
