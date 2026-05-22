@@ -89,11 +89,19 @@ To verify the plugin installation, click **Manage Jenkins** \> **System** on the
 The presence of **PTC RV&S** server configuration options validates the successful installation of the plugin.
 
 PTC RV&S Jenkins plugin supports both basic and Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol.
+To use Single Sign-On (SSO) authentication using the OpenID Connect (OIDC) protocol you need to add New credentials using following steps:
+
+1. Click **Manage Jenkins** \> **Credentials** \> **System** \ **Global credentials (unrestricted)** on the Jenkins dashboard.
+2. Under **Kind**, select option **OAuth2 Client Crendentials**.
+3. Enter **ID**, **Description**, **Client ID**, **Client Secret**, **Token Endpoint**, **Scope**
+![](./images/Jenkins_new_credentials.png)
+
 To authenticate using basic authentication or SSO authentication:
 
 1. Select **PTC RV&S Server** option.
 2. Enter the hostname and the port number.
-   If the configured PTC RV&S server supports SSO, the integration provides the option to authenticate using SSO. If SSO is not configured, the Login with SSO (OIDC) option remains disabled, and Basic Authentication is selected by default.
+
+   If the configured PTC RV&S server supports SSO, you can authenticate using SSO. If the PTC RV&S server is not configured for SSO, you can authenticate using Basic authentication.
    
    a. For signing using the basic authentication:
        i. Under **Authentication Type**, select **Basic Auth**.
