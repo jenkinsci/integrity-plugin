@@ -100,7 +100,7 @@ To use Single Sign-On (SSO) authentication with the OpenID Connect (OIDC) protoc
 
   **Note**
 
-- _All fields are optional. However, it is recommended to add an **ID** and **Description** to identify credentials, because Jenkins integration allows multiple credentials._
+- _**ID** and **Description** fields are optional; However, it is recommended to include them to help identify credentials, as Jenkins integration supports multiple credentials._
 
 To authenticate using basic authentication or SSO authentication:
 
