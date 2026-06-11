@@ -1264,10 +1264,11 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listBox.add(config.getName(), config.getConfigId());
         }
       }
+      LOGGER.log(Level.SEVERE, "doFillServerConfigItems called, serverConfig={0}", listBox);
       return listBox; 
     }
     
-    public ListBoxModel doFillSsoCredentialIdItems() {
+    public ListBoxModel doFillSsoCredentialIdItems(@QueryParameter String ssoCredentialId) {
         ListBoxModel items = new ListBoxModel();
         List<StandardCredentials> creds = CredentialsProvider.lookupCredentialsInItemGroup(
             StandardCredentials.class,
@@ -1277,23 +1278,88 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
         );
         for (StandardCredentials cred : creds) {
             if (cred instanceof OAuth2ClientCredentials) {
-                String label = cred.getDescription();
-                if (label == null || label.trim().isEmpty()) {
-                    // Fallback to clientId or ID if description is empty
-                    OAuth2ClientCredentials oauthCred = (OAuth2ClientCredentials) cred;
-                    label = oauthCred.getClientId();
-                    if (label == null || label.trim().isEmpty()) {
-                        label = cred.getId();
-                    }
-                }
-                items.add(label, cred.getId());
+                String id = cred.getId();
+                String description = cred.getDescription();
+                String label = (description != null && !description.trim().isEmpty())
+                        ? id + " (" + description.trim() + ")"
+                        : id;
+                ListBoxModel.Option option = new ListBoxModel.Option(label, id,
+                        id.equals(ssoCredentialId));
+                items.add(option);
             }
         }
         return items;
     }
+                    // Fallback to clientId or ID if description is empty
+    private static void validateOAuthCredentialsDirect(OAuth2ClientCredentials cred) throws IOException {
+      String tokenUrl = cred.getTokenEndpoint();
+      String clientId = cred.getClientId();
+      String clientSecret = cred.getClientSecret().getPlainText();
+      String scope = cred.getOAuthScope();
+      if (tokenUrl == null || tokenUrl.isBlank()) {
+        throw new IOException("Token endpoint URL is empty.");
+      }
+      StringBuilder body = new StringBuilder();
+      body.append("grant_type=client_credentials");
+      body.append("&client_id=").append(java.net.URLEncoder.encode(clientId, "UTF-8"));
+      body.append("&client_secret=").append(java.net.URLEncoder.encode(clientSecret, "UTF-8"));
+      if (scope != null && !scope.isBlank()) {
+        body.append("&scope=").append(java.net.URLEncoder.encode(scope, "UTF-8"));
+      }
+      java.net.URL url = new java.net.URL(tokenUrl);
+      javax.net.ssl.HttpsURLConnection conn = null;
+      java.net.HttpURLConnection httpConn = null;
+      try {
+        java.net.URLConnection rawConn = url.openConnection();
+        rawConn.setConnectTimeout(10000);
+        rawConn.setReadTimeout(10000);
+        rawConn.setDoOutput(true);
+        rawConn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+        if (rawConn instanceof javax.net.ssl.HttpsURLConnection) {
+          conn = (javax.net.ssl.HttpsURLConnection) rawConn;
+        } else {
+          httpConn = (java.net.HttpURLConnection) rawConn;
+        }
+        byte[] bodyBytes = body.toString().getBytes("UTF-8");
+        rawConn.setRequestProperty("Content-Length", String.valueOf(bodyBytes.length));
+        try (java.io.OutputStream os = rawConn.getOutputStream()) {
+          os.write(bodyBytes);
+                    }
+        int responseCode = (conn != null) ? conn.getResponseCode() : httpConn.getResponseCode();
+        if (responseCode != 200) {
+          throw new IOException("Token endpoint returned HTTP " + responseCode +
+              ". Check clientId, clientSecret, scope, and token URL.");
+                }
 
+        java.io.InputStream is = (conn != null) ? conn.getInputStream() : httpConn.getInputStream();
+        String responseBody = new String(is.readAllBytes(), "UTF-8");
+        if (!responseBody.contains("access_token")) {
+          throw new IOException("Token endpoint response did not contain an access_token. Response: " + responseBody);
+            }
+      } finally {
+        if (conn != null) conn.disconnect();
+        if (httpConn != null) httpConn.disconnect();
+        }
+    }
 
-
+    private static String getFullExceptionMessage(Throwable t) {
+      if (t == null) return "Unknown error";
+      StringBuilder sb = new StringBuilder();
+      Throwable current = t;
+      int depth = 0;
+      while (current != null && depth < 10) {
+        String msg = current.getMessage();
+        String part = (msg != null && !msg.isBlank()) ? msg : current.getClass().getSimpleName();
+        if (sb.length() == 0) {
+          sb.append(part);
+        } else if (!sb.toString().contains(part)) {
+          sb.append(" -> ").append(part);
+        }
+        current = (current.getCause() != current) ? current.getCause() : null;
+        depth++;
+      }
+      return sb.length() > 0 ? sb.toString() : t.getClass().getName();
+    }
 
     /**
      * A credentials validation helper
@@ -1338,7 +1404,7 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       if ("OAUTH".equals(authType) && authType != null) {
           // For SSO, skip user/password validation, just check host/port connectivity
     	  authTypeEnum = AuthenticationType.OAUTH;
-    	  LOGGER.fine("Using SSO authentication with credential ID: " + ssoCredentialId);
+    	  LOGGER.log(Level.SEVERE, "Using SSO authentication with credential ID: " + ssoCredentialId);
     	  
     	  if(ssoCredentialId == null || ssoCredentialId.isEmpty()) {
     		  return FormValidation.error("SSO Credential ID must be provided for OAUTH authentication.");
@@ -1353,10 +1419,38 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	  final IntegrityConfigurable ficFinal = ic;
 	  java.util.concurrent.ExecutorService executor = java.util.concurrent.Executors.newSingleThreadExecutor();
 	  java.util.concurrent.Future<FormValidation> future = executor.submit(() -> {
-		  ISession api = APISession.create(ficFinal);
+		  if ("OAUTH".equals(authType)) {
+			  try {
+				  OAuth2ClientCredentials oauthCred = com.cloudbees.plugins.credentials.CredentialsProvider.lookupCredentials(
+						  OAuth2ClientCredentials.class,
+						  jenkins.model.Jenkins.get(),
+						  null,
+						  (java.util.List<com.cloudbees.plugins.credentials.domains.DomainRequirement>) null)
+					  .stream()
+					  .filter(c -> c.getId().equals(ssoCredentialId))
+					  .findFirst()
+					  .orElse(null);
+				  if (oauthCred == null) {
+					  return FormValidation.error("OAuth2 credential not found for ID: " + ssoCredentialId);
+				  }
+				  validateOAuthCredentialsDirect(oauthCred);
+			  } catch (IOException oauthEx) {
+				  LOGGER.log(Level.SEVERE, "OAuth credential validation failed: " + oauthEx.getMessage(), oauthEx);
+				  return FormValidation.error("OAuth credential validation failed: " + oauthEx.getMessage());
+			  }
+		  }
+		  ISession api = null;
+		  try {
+			  api = APISession.createOrThrow(ficFinal);
+		  } catch (Exception sessionEx) {
+			  String errMsg = getFullExceptionMessage(sessionEx);
+			  LOGGER.log(Level.SEVERE, "APISession creation failed: " + errMsg, sessionEx);
+			  return FormValidation.error("Connection failed: " + errMsg);
+		  }
 		  LOGGER.log(Level.FINE, "IntegritySCM after IC/getname", ficFinal.getName());
 	      if (null != api)
 	      {
+	        try {
 	    	Command  cmd = new Command(Command.IM, "about");
 	    	Response res = api.runCommand(cmd);
 	    	WorkItemIterator wit = res.getWorkItems();
@@ -1374,6 +1468,12 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 	    	}
 	        api.terminate();
 	        return FormValidation.ok("Connection successful!");
+	        } catch (Exception cmdEx) {
+	          String errMsg = getFullExceptionMessage(cmdEx);
+	          LOGGER.log(Level.SEVERE, "Command execution failed after session creation: " + errMsg, cmdEx);
+	          try { api.terminate(); } catch (Exception ignored) {}
+	          return FormValidation.error("Connection established but command failed: " + errMsg);
+	        }
 	      } else
 	      {
 	        return FormValidation.error("Failed to establish connection!");
@@ -1386,8 +1486,9 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
 		  LOGGER.log(Level.WARNING, "Connection test timed out for " + hostName + ":" + port);
 		  return FormValidation.error("Connection timed out! Please verify the hostname and port number.");
 	  } catch (java.util.concurrent.ExecutionException ee) {
-		  LOGGER.log(Level.WARNING, "Connection test failed for " + hostName + ":" + port, ee.getCause());
-		  return FormValidation.error("Connection failed: " + ee.getCause().getMessage());
+		  String errMsg = getFullExceptionMessage(ee.getCause() != null ? ee.getCause() : ee);
+		  LOGGER.log(Level.WARNING, "Connection test failed for " + hostName + ":" + port + " - " + errMsg, ee.getCause());
+		  return FormValidation.error("Connection failed: " + errMsg);
 	  } catch (InterruptedException ie) {
 		  Thread.currentThread().interrupt();
 		  return FormValidation.error("Connection test was interrupted.");

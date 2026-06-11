@@ -971,6 +971,7 @@ public class DerbyUtils
                 {
                   // Initialize the delta flag for this member
                   rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
                   LOGGER
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
@@ -1024,6 +1025,7 @@ public class DerbyUtils
                   // operation.
                   // Initialize the delta flag for this member
                   rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 1);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
                   LOGGER
                       .fine("... " + cpMemberName + " new file - revision is " + cpMemberRevision);
                   rs.updateRow();
@@ -1038,6 +1040,7 @@ public class DerbyUtils
                   // Member Updated
                   // Initialize the delta flag for this member
                   rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
                   LOGGER.fine("... " + cpMemberName + " revision changed - new revision is "
                       + cpMemberRevision);
                   rs.updateRow();
@@ -1068,6 +1071,7 @@ public class DerbyUtils
                   // Member Updated
                   // Initialize the delta flag for this member
                   rs.updateShort(CM_PROJECT.DELTA.toString(), (short) 2);
+                  rs.updateString(CM_PROJECT.CPID.toString(), cpid);
                   LOGGER.fine(
                       "... " + cpMemberName + " renamed - new revision is " + cpMemberRevision);
                   rs.updateRow();

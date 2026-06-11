@@ -8,6 +8,7 @@ import com.mks.api.*;
 import com.mks.api.fedsso.SSOSession;
 import com.mks.api.response.APIException;
 import com.mks.api.response.Response;
+import com.mks.api.util.APIVersion;
 import com.mks.api.fedsso.SSOCmdRunner;
 
 import hudson.scm.AuthenticationType;
@@ -76,20 +77,7 @@ public class APISession implements ISession {
 	public static synchronized ISession create(IntegrityConfigurable settings) {
 		// Attempt to open a connection to the Integrity Server
 		try {
-			AuthenticationType authType = settings.getAuthType();
-			if (authType == AuthenticationType.OAUTH) {
-				{
-					LOGGER.fine("Using OAuth authentication for user: " + settings.getUserName());
-				}
-			} else {
-				LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName() + settings.getSecure());
-			}
-			//Log the username being used for debugging purposes
-			LOGGER.fine("APISession: creating session with username: " + settings.getUserName());
-
-			return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
-					settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(), settings.getSecure(),
-					false, settings);
+			return createOrThrow(settings);
 		} catch (APIException aex) {
 			ExceptionHandler eh = new ExceptionHandler(aex);
 			LOGGER.severe(eh.getMessage());
@@ -97,8 +85,38 @@ public class APISession implements ISession {
 			LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
 			return null;
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, "Failed to create API session ", "Exception");
+			LOGGER.log(Level.SEVERE, "Failed to create API session: " + e.getMessage(), e);
 			return null;
+		}
+	}
+	public static synchronized ISession createOrThrow(IntegrityConfigurable settings) throws Exception {
+			AuthenticationType authType = settings.getAuthType();
+			if (authType == AuthenticationType.OAUTH) {
+					LOGGER.fine("Using OAuth authentication for user: " + settings.getUserName());
+			} else {
+				LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName() + settings.getSecure());
+			}
+			//Log the username being used for debugging purposes
+			LOGGER.fine("APISession: creating session with username: " + settings.getUserName());
+		try {
+			return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
+					settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(), settings.getSecure(),
+					false, settings);
+		} catch (Exception ex) {
+			// Log full exception chain at SEVERE so it always appears in Jenkins logs
+			StringBuilder chain = new StringBuilder("APISession creation error: ");
+			Throwable t = ex;
+			int depth = 0;
+			while (t != null && depth < 10) {
+				String msg = t.getMessage();
+				chain.append("[").append(t.getClass().getSimpleName()).append("] ")
+				     .append(msg != null ? msg : "(no message)");
+				t = (t.getCause() != t) ? t.getCause() : null;
+				if (t != null) chain.append(" -> ");
+				depth++;
+			}
+			LOGGER.log(Level.SEVERE, chain.toString(), ex);
+			throw ex;
 		}
 	}
 
@@ -121,7 +139,7 @@ public class APISession implements ISession {
 			LOGGER.log(Level.SEVERE, API_EXCEPTION, aex);
 			return null;
 		} catch (Exception e) {
-			LOGGER.log(Level.SEVERE, "Failed to create Local API session ", "Exception");
+			LOGGER.log(Level.SEVERE, "Failed to create Local API session: " + e.getMessage(), e);
 			return null;
 		}
 	}
@@ -198,7 +216,7 @@ public class APISession implements ISession {
 				String Scope = oauthCred.getOAuthScope();
 				LOGGER.fine("Creating SSO session for user: " + userName);
 				// Create SSO session
-				ssoSession = ip.createNamedSSOSession(null, PLUGIN_VERSION_PREFIX + implementationVersion, ClientId,
+				ssoSession = ip.createNamedSSOSession(new APIVersion(5,1), PLUGIN_VERSION_PREFIX + implementationVersion, ClientId,
 						ClientSecret, Scope, TokenEndpoint);
 				usingSSOSession = true;
 				
@@ -289,7 +307,7 @@ public class APISession implements ISession {
 			}
 			
 			// Create new SSO session with fresh token
-			ssoSession = ip.createNamedSSOSession(null, PLUGIN_VERSION_PREFIX + implementationVersion, 
+			ssoSession = ip.createNamedSSOSession(new APIVersion(5,1), PLUGIN_VERSION_PREFIX + implementationVersion, 
 													clientId, clientSecret, scope, tokenEndpoint);
 			
 			// Update token expiration time

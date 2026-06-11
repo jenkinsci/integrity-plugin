@@ -94,6 +94,7 @@ public class ParseProjectMemberTask implements Callable<Void>
       if (memberName.startsWith(projectRoot))
       {
         String description = "";
+        String cpid = "";
         // Per JENKINS-19791 some users are getting an exception when attempting
         // to read the 'memberdescription' field in the API response. This is an
         // attempt to catch the exception and ignore it...!
@@ -146,6 +147,19 @@ public class ParseProjectMemberTask implements Callable<Void>
               + " :: Parse Member Task: Defaulting 'membertimestamp' to now - " + timestamp);
         }
 
+        try
+        {
+          Field cpField = wi.getField(IAPIFields.CP_ID);
+          if (cpField != null && cpField.getValueAsString() != null)
+          {
+            cpid = cpField.getValueAsString();
+          }
+        } catch (Exception e)
+        {
+          LOGGER.log(Level.FINE,
+              Thread.currentThread().getName()
+                  + " :: Parse Member Task: Cannot obtain 'cpid' for member: " + memberName);
+        }
         try(StringReader reader = new StringReader(description))
         {
           insert.clearParameters();
@@ -171,7 +185,7 @@ public class ParseProjectMemberTask implements Callable<Void>
           LOGGER.log(Level.FINEST,
               Thread.currentThread().getName() + " :: Parse Member Task: RelativeFile: "
                   + memberName.substring(projectRoot.length()));
-          insert.setString(9, ""); // Cpid
+          insert.setString(9, cpid); // Cpid
           insert.setShort(10, (short) 0); // Delta defaulted to "No change" for CP mode
           LOGGER.log(Level.FINE, "Attempting to execute query " + insert);
           insert.executeUpdate();

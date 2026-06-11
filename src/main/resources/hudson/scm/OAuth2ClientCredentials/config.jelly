@@ -8,16 +8,16 @@
 	  <f:entry title="Description" field="description">
     <f:textbox/>
   </f:entry>
-  <f:entry title="Client ID" field="clientId">
+  <f:entry title="Client ID" field="clientId" required="true">
     <f:textbox/>
   </f:entry>
-  <f:entry title="Client Secret" field="clientSecret">
+  <f:entry title="Client Secret" field="clientSecret" required="true">
     <f:password/>
   </f:entry>
-  <f:entry title="Token Endpoint" field="tokenEndpoint">
+  <f:entry title="Token Endpoint" field="tokenEndpoint" required="true">
     <f:textbox/>
   </f:entry>
-  <f:entry title="Scope" field="oAuthScope">
+  <f:entry title="Scope" field="oAuthScope" required="true">
     <f:textbox/>
   </f:entry>
 </j:jelly>

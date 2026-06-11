@@ -46,6 +46,7 @@
                <f:entry title="OAuth2 Client Credentials" field="ssoCredentialId">
                 <f:select
                     name="serverConfig.ssoCredentialId"
+                    value="${serverConfig.ssoCredentialId}"
                     clazz="required"
                     checkMessage="'OAuth2 Client Credentials' is required for SSO!" />
               </f:entry>
