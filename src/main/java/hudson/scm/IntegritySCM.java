@@ -1404,7 +1404,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       if ("OAUTH".equals(authType) && authType != null) {
           // For SSO, skip user/password validation, just check host/port connectivity
     	  authTypeEnum = AuthenticationType.OAUTH;
-    	  LOGGER.log(Level.SEVERE, "Using SSO authentication with credential ID: " + ssoCredentialId);
     	  
     	  if(ssoCredentialId == null || ssoCredentialId.isEmpty()) {
     		  return FormValidation.error("SSO Credential ID must be provided for OAUTH authentication.");
