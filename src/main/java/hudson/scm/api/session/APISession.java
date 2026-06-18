@@ -94,7 +94,7 @@ public class APISession implements ISession {
 			if (authType == AuthenticationType.OAUTH) {
 					LOGGER.fine("Using OAuth authentication for user: " + settings.getUserName());
 			} else {
-				LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName() + settings.getSecure());
+				LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName());
 			}
 			//Log the username being used for debugging purposes
 			LOGGER.fine("APISession: creating session with username: " + settings.getUserName());
@@ -128,7 +128,7 @@ public class APISession implements ISession {
 	 */
 	public static synchronized ISession createLocalIntegrationPoint(IntegrityConfigurable settings) {
 		try {
-			LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName() + settings.getSecure());
+			LOGGER.fine("Creating PTC RV&S API Session for :" + settings.getUserName());
 			return new APISession(settings.getIpHostName(), settings.getIpPort(), settings.getHostName(),
 					settings.getPort(), settings.getUserName(), settings.getPasswordInPlainText(), settings.getSecure(),
 					true, settings);
