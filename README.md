@@ -480,9 +480,16 @@ The above sections of this document provides information on how to install, conf
 ### Change Log
 
 **Note**: PTC RV&S CM - Jenkins Plugin versions older than 2.5 are no longer supported.
+
 #### 2026
+- **Version 2.7.1 (June 18, 2026)**
+  - Updated mksapi.jar version 13.5.0.0 to use API Version 5.1.
+  - Added a validation form for OAuth credentials.
+  - Fixed SSO credential validation to ensure that Test Connection fails when stored credentials are invalid.
+    
 - **Version 2.7 (May 20, 2026)**
-  - Updated mksapi.jar version 13.5.0.0 to use API Version 5.1. This integration is compatible starting PTC RV&S 13.5.0.0.
+  -  This integration is compatible starting PTC RV&S 13.5.0.0.
+  -  Added support for Single Sign-On (SSO) authentication using OpenID Connect.
     
 #### 2024
 - **Version 2.6 (Aug 03, 2024)**
@@ -536,7 +543,6 @@ The above sections of this document provides information on how to install, conf
   - Added new **Checkout Thread Timeout** field on the Jenkins job configuration page under **Advanced** settings to specify timeout (in minutes) of checkout threads
 
 - **Version 2.0.1 (Feb 8, 2016)**
-
   - PTC Integrity Plugin 2.0.1 is now supported with PTC Integrity 10.8.
 
 - **Version 2.0** **(Jan 27, 2016)**
