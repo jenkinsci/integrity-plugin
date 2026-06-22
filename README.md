@@ -118,7 +118,7 @@ To authenticate using basic authentication or SSO authentication:
    
    b. For signing using the SSO authentication (Available only if the server is configured for SSO):
        i. Under **Authentication Type**, select **SSO**.
-       ii. Select **Client Crendentials**.
+       ii. Select **Client Credentials**.
        iii. Select **Test Connection** to validate the connection.
        iv. Click **Save**.
    
