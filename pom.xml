@@ -7,7 +7,7 @@
   <parent>
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
-    <version>5.31</version>
+    <version>6.2153.vcf31911d10c4</version>
     <relativePath/>
   </parent>
 
@@ -37,7 +37,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
 
     <!-- Mandatory: Jenkins core baseline that supports Java 21 and matches parent 6.x -->
-    <jenkins.version>2.516.3</jenkins.version>
+    <jenkins.version>2.555.3</jenkins.version>
 
     <!-- Removed (mandatory cleanup): java.level is obsolete with modern parent -->
     <!-- Removed (left as-is otherwise): workflow.version.* left untouched for now -->
