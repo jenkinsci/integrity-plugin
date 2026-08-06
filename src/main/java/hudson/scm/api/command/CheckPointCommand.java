@@ -8,7 +8,7 @@ package hudson.scm.api.command;
 
 import java.util.HashMap;
 
-import org.apache.commons.lang.StringUtils;
+import hudson.Util;
 
 import com.mks.api.Command;
 
@@ -35,17 +35,17 @@ public class CheckPointCommand extends BasicAPICommand
     {
 	String chkptLabel = (String) commandHelperObjects.get(IAPIOption.CHECKPOINT_LABEL);
 	String checkpointDesc = (String) commandHelperObjects.get(IAPIOption.CHECKPOINT_DESCRIPTION);
-	if(StringUtils.isNotBlank(chkptLabel))
+	if(Util.fixEmptyAndTrim(chkptLabel) != null)
 	{
 	    // Set the label
 	    cmd.addOption(new APIOption(IAPIOption.LABEL, chkptLabel));
 	}
 	
 	// Set the description
-	if(StringUtils.isNotBlank(checkpointDesc)){
+	if(Util.fixEmptyAndTrim(checkpointDesc) != null){
 	    cmd.addOption(new APIOption(IAPIOption.DESCRIPTION, checkpointDesc));
 	}
-	else if(StringUtils.isNotBlank(chkptLabel)){ // Set the label instead as description
+	else if(Util.fixEmptyAndTrim(chkptLabel) != null){ // Set the label instead as description
 	    cmd.addOption(new APIOption(IAPIOption.DESCRIPTION, chkptLabel));
 	}
 	
