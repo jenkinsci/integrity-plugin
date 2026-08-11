@@ -29,12 +29,14 @@ import java.util.regex.Pattern;
 import javax.servlet.ServletException;
 import javax.sql.ConnectionPoolDataSource;
 
+import org.kohsuke.stapler.AncestorInPath;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
 import com.cloudbees.plugins.credentials.CredentialsProvider;
 import com.cloudbees.plugins.credentials.common.StandardCredentials;
+import com.cloudbees.plugins.credentials.common.StandardListBoxModel;
 import com.mks.api.Command;
 import com.mks.api.MultiValue;
 import com.mks.api.response.APIException;
@@ -48,6 +50,7 @@ import hudson.Extension;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.model.AbstractBuild;
+import hudson.model.Item;
 import hudson.model.Job;
 import hudson.model.ModelObject;
 import hudson.model.Run;
@@ -1268,28 +1271,41 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       return listBox; 
     }
     
-    public ListBoxModel doFillSsoCredentialIdItems(@QueryParameter String ssoCredentialId) {
-        ListBoxModel items = new ListBoxModel();
-        List<StandardCredentials> creds = CredentialsProvider.lookupCredentialsInItemGroup(
-            StandardCredentials.class,
-            Jenkins.get(),
-            ACL.SYSTEM2,
-            Collections.emptyList()
-        );
-        for (StandardCredentials cred : creds) {
-            if (cred instanceof OAuth2ClientCredentials) {
-                String id = cred.getId();
-                String description = cred.getDescription();
-                String label = (description != null && !description.trim().isEmpty())
-                        ? id + " (" + description.trim() + ")"
-                        : id;
-                ListBoxModel.Option option = new ListBoxModel.Option(label, id,
-                        id.equals(ssoCredentialId));
-                items.add(option);
+    public ListBoxModel doFillSsoCredentialIdItems(@AncestorInPath Item item,
+            @QueryParameter String ssoCredentialId) {
+            StandardListBoxModel items = new StandardListBoxModel();
+            if (item == null) {
+                if (!Jenkins.get().hasPermission(Jenkins.ADMINISTER)) {
+                    return items.includeCurrentValue(ssoCredentialId);
+                }
+            } else {
+                if (!item.hasPermission(Item.EXTENDED_READ)
+                    && !item.hasPermission(CredentialsProvider.USE_ITEM)) {
+                    return items.includeCurrentValue(ssoCredentialId);
+                }
             }
+            List<StandardCredentials> creds = CredentialsProvider.lookupCredentialsInItemGroup(
+                StandardCredentials.class,
+                Jenkins.get(),
+                ACL.SYSTEM2,
+                Collections.emptyList()
+            );
+            for (StandardCredentials cred : creds) {
+                if (cred instanceof OAuth2ClientCredentials) {
+                    String label = cred.getDescription();
+                    if (label == null || label.trim().isEmpty()) {
+                        // Fallback to clientId or ID if description is empty
+                        OAuth2ClientCredentials oauthCred = (OAuth2ClientCredentials) cred;
+                        label = oauthCred.getClientId();
+                        if (label == null || label.trim().isEmpty()) {
+                            label = cred.getId();
+                        }
+                    }
+                    items.add(label, cred.getId());
+                }
+            }
+            return items;
         }
-        return items;
-    }
                     // Fallback to clientId or ID if description is empty
     private static void validateOAuthCredentialsDirect(OAuth2ClientCredentials cred) throws IOException {
       String tokenUrl = cred.getTokenEndpoint();
