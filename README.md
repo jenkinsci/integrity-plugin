@@ -482,6 +482,9 @@ The above sections of this document provides information on how to install, conf
 **Note**: PTC RV&S CM - Jenkins Plugin versions older than 2.5 are no longer supported.
 
 #### 2026
+**Version 2.7.2 (August 18, 2026)**
+  - Fixed potential security vulnerability issue.
+
 - **Version 2.7.1 (June 18, 2026)**
   - Updated mksapi.jar version 13.5.0.0 to use API Version 5.1.
   - Added a validation form for OAuth credentials.
