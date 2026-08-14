@@ -482,32 +482,32 @@ The above sections of this document provides information on how to install, conf
 **Note**: PTC RV&S CM - Jenkins Plugin versions older than 2.5 are no longer supported.
 
 #### 2026
-**Version 2.7.2 (August 18, 2026)**
+ **Version 2.7.2 (August 18, 2026)**
   - Fixed potential security vulnerability issue.
 
-- **Version 2.7.1 (June 18, 2026)**
+ **Version 2.7.1 (June 18, 2026)**
   - Updated mksapi.jar version 13.5.0.0 to use API Version 5.1.
   - Added a validation form for OAuth credentials.
   - Fixed SSO credential validation to ensure that Test Connection fails when stored credentials are invalid.
     
-- **Version 2.7 (May 20, 2026)**
+ **Version 2.7 (May 20, 2026)**
   -  This integration is compatible starting PTC RV&S 13.5.0.0.
   -  Added support for Single Sign-On (SSO) authentication using OpenID Connect.
     
 #### 2024
-- **Version 2.6 (Aug 03, 2024)**
+ **Version 2.6 (Aug 03, 2024)**
   - Rebranding changes
   - Updated mksapi.jar version 13.3.0.0 to use API Version 5.0. This integration is compatible starting PTC RV&S 13.3.0.0.
 
 #### 2022
 
-- **Version 2.5 (Jan 07, 2022)**
+ **Version 2.5 (Jan 07, 2022)**
   - Upgraded mksapi.jar (version 4.16.7371)
   - Qualified with Jenkins Java 11 and supported versions
    
 #### 2020
 
-- **Version 2.4 (Dec 18, 2020)**
+  **Version 2.4 (Dec 18, 2020)**
 
   - Rebranding updates
   - Fixed JENKINS-52899 - Clean Workspace doesn't work for local client setting in PTC Integrity Plugin
@@ -517,19 +517,19 @@ The above sections of this document provides information on how to install, conf
 
 #### 2019
 
-- **Version 2.3 (Feb 18, 2019)**
+ **Version 2.3 (Feb 18, 2019)**
   - Upgraded mksapi.jar (version 4.16.2671)
 
 #### 2018
 
-- **Version 2.2 (Mar 26, 2018)**
+ **Version 2.2 (Mar 26, 2018)**
   - Fixed JENKINS-47937 - Server Config not used in Integrity - Workflow Item
   - Implemented Sandbox scope functionality for local client integration
   - Upgraded mksapi.jar (version 4.16.1413)
 
 #### 2017
 
-- **Version 2.1 (Sep 20, 2017)**
+ **Version 2.1 (Sep 20, 2017)**
   - Implemented local client integration functionality
   - Fixed SECURITY-176
   - Fixed JENKINS-31739 - NPE from IntegritySCM.checkout from Workflow
@@ -538,17 +538,17 @@ The above sections of this document provides information on how to install, conf
 
 #### 2016
 
-- **Version 2.0.2 (Nov 15, 2016)**
+ **Version 2.0.2 (Nov 15, 2016)**
 
   - Fixed JENKINS-33475 - Authentification based on project specific username and password fails if system account is not set
   - Fixed JENKINS-31836 - Restarting PTC server during Polling does not time out
   - Fixed JENKINS-33077 - checkPointBeforeBuild fails for projects on development path
   - Added new **Checkout Thread Timeout** field on the Jenkins job configuration page under **Advanced** settings to specify timeout (in minutes) of checkout threads
 
-- **Version 2.0.1 (Feb 8, 2016)**
+  **Version 2.0.1 (Feb 8, 2016)**
   - PTC Integrity Plugin 2.0.1 is now supported with PTC Integrity 10.8.
 
-- **Version 2.0** **(Jan 27, 2016)**
+  **Version 2.0** **(Jan 27, 2016)**
   - **IMPORTANT** – PTC Integrity Plugin 2.0 is not backward compatible. Please create new Jobs.
   - Productized version of PTC Integrity Plugin compatible with PTC Integrity 10.9. Versions older than Integrity 10.9 are no longer supported.
   - Introduced new change detection mode based on Integrity change packages
@@ -557,34 +557,34 @@ The above sections of this document provides information on how to install, conf
 
 #### 2015
 
-- **Version 1.36 (Nov 01, 2015)**
+ **Version 1.36 (Nov 01, 2015)**
 
   - Implemented JENKINS-27140 - Workflow support for Integrity SCM Plugin
   - Improved handling of cache tables to match number of active Jenkins items (Jobs x Builds/Runs)
   - Updated documentation for JENKINS-31144 - Alternate working directory doesn't accepts windows-style path (backslash)
   - Upgraded to Jenkins LTS 1.609.1
 
-- **Version 1.35 (Oct 20, 2015)**
+  **Version 1.35 (Oct 20, 2015)**
 
   - Fixed JENKINS-31030 - Unable run integrity jobs on agent nodes when 'Delete Non Members' is checked
   - Fixed JENKINS-30966 - Dropped members results in an inaccurate count for files checked out on full checkout
   - Implemented a workaround for JENKINS-30389 - ERROR 42Y55: SQLsyntax error exception
   - Added feature JENKINS-29906 - Alternate Workspace Directory parametrization
 
-- **Version 1.34 (Aug 11, 2015)**
+  **Version 1.34 (Aug 11, 2015)**
 
   - Fixed JENKINS-28469 - Integrity SCM failed on cloudbees.Folders during "Delete Non Members"
   - Fixed JENKINS-28573 - Integrity Plugin does not change 'Configuration Name' when job is cloned
 
-- **Version 1.33 (Apr 01, 2015)**
+  **Version 1.33 (Apr 01, 2015)**
 
   - Implemented a workaround fix to resolve JENKINS-13765 - Restore Timestamp Not Working
 
-- **Version 1.32 (Mar 23, 2015)**
+  **Version 1.32 (Mar 23, 2015)**
 
   - Resolved issue where global username and password is used to checkout when a project specified user and password is specified.
 
-- **Version 1.31 (Feb 16, 2015)**
+  **Version 1.31 (Feb 16, 2015)**
 
   - Resolved JENKINS-26770 - 'Apply' doesn't work in version 1.29 of the plugin
   - Implemented JENKINS-26906 - Re-introduce the ability to override the username/password at the specific job
@@ -593,7 +593,7 @@ The above sections of this document provides information on how to install, conf
   - Eliminated unique 'Configuration Name' check in favor of migration path from pre-1.29 to latest
   - Fixed issue with creating APISessions in parallel checkout executions
 
-- **Version 1.30 (Feb 05, 2015)**
+  **Version 1.30 (Feb 05, 2015)**
 
   - Transitioned from several db instance (one per build) to a single db for the entire Jenkins instance. As a result the following issues are resolved:
     - JENKINS-25228 - Using the integrity-plugin together with concurrent builds causes SQL Exceptions
@@ -604,7 +604,7 @@ The above sections of this document provides information on how to install, conf
   - Eliminated the much contested 'Configuration Name' parameter from configuration page. It is now calculated as a GUID and saved under the covers
   - **IMPORTANT** - Please create new Jobs, if you are upgrading from a version older than 1.29. If you are upgrading from 1.29, then simply re-save and re-build all jobs.
 
-- **Version 1.29 (Feb 03, 2015)**
+  **Version 1.29 (Feb 03, 2015)**
   - **IMPORTANT** - This version is not backward compatible! Please create new Jobs.
   - JENKINS-22066 - PTC plugin has massive memory leak if scm names are not unique
   - JENKINS-23369 - Unable to check-in using bypass mode
@@ -616,45 +616,45 @@ The above sections of this document provides information on how to install, conf
 
 #### 2014
 
-- **Version 1.28 (Oct 09, 2014)**
+ **Version 1.28 (Oct 09, 2014)**
 
   - Fixed JENKINS-25068: uncaught null pointer exception during SCM polling
 
-- **Version 1.27 (Oct 08, 2014)**
+  **Version 1.27 (Oct 08, 2014)**
 
   - Fixed API compatibility issue when running Integrity item integration for Build/Test Management against Integrity 10.6
   - Added catch exception to CmdRunner.release() in APISession terminate function per JENKINS-24849
 
-- **Version 1.26 (Sep 04, 2014)**
+  **Version 1.26 (Sep 04, 2014)**
 
   - Resolved JENKINS-23638: Error in Checkin not failing job
   - Added feature JENKINS-23369: Unable to check-in using bypass mode. Pass in keyword **:bypass** for the ItemID build parameter. Example - JobURL/buildWithParameters?token=TOKEN&ItemID=:bypass>
   - Moved from deprecated AbstractBuild.getTestResultAction() (changes contributed by Jesse Glick)
 
-- **Version 1.25 (Jun 11, 2014)**
+  **Version 1.25 (Jun 11, 2014)**
 
   - Fixed 'JENKINS-23404 - NullPointerException when running IntegrityCheckpointAction' with a more descriptive error message
   - Fixed 'JENKINS-23319 - Unable to override Advanced Parameters in Checkpoint Step'‏
 
-- **Version 1.24 (May 20, 2014)**
+  **Version 1.24 (May 20, 2014)**
 
   - Fixed specific serialization issue reported - java.io.NotSerializableException: hudson.scm.IntegrityCheckinAction
   - Added serialization to Checkpoint, Delete Non Members, and Item Actions
   - Suppressing 'unbuffered entity error' on checkout
   - Added additional debug logging for JUnit Test Execution in IntegrityItemAction
 
-- **Version 1.23 (Feb 20, 2014)**
+  **Version 1.23 (Feb 20, 2014)**
 
   - JENKINS-21689: SCM occasionally does not write some checked out files to Workspace
   - JENKINS-21587: memory leak in Plugin 1.22 -orphaned Logger Threads (accepted patch from Matthias Rump - thank you!)
   - JENKINS-21479: Poll SCM trigger not functioning during the first execution (incorporated suggestion from Gregory Pierre - thank you!)
   - JENKINS-21260: PTC integrity plugin: version 1.19 instantly triggers new build though corresponding files in repository have not been changed!
 
-- **Version 1.22 (Jan 24, 2014)**
+  **Version 1.22 (Jan 24, 2014)**
 
   - Rolled back fix about (java.lang.StringIndexOutOfBoundsException) when moved files are fetched from server. Since this doesn't appear to be an actual move, trapping edge case condition and logging warning.
 
-- **Version 1.21 (Jan 23, 2014)**
+  **Version 1.21 (Jan 23, 2014)**
 
   - Contributions from Christian Bürenheide - Thank you!
     - JENKINS-21350: Here we get a NullPointerException when checking out a variant project where the original project has been moved. In my opinion this is a major problem and it would be good to have it fixed in one of the next plugin versions.
@@ -664,7 +664,7 @@ The above sections of this document provides information on how to install, conf
     - JENKINS-21410: memory leak in Plugin 1.20
     - Fixed issue (java.lang.StringIndexOutOfBoundsException) when moved files are fetched from server
 
-- **Version 1.20 (Jan 07, 2014)**
+  **Version 1.20 (Jan 07, 2014)**
   - Fixed JENKINS-20751: PTC_Integrity Plugin- file exclude filter not working for multiple entries - thanks to Matthias Rump for patch!
   - Added enhancement JENKINS-20541 expose pre-build checkpoint Number to build environment
   - Fixed potential security issue where Firefox can expose saved passwords in clear text
@@ -672,14 +672,14 @@ The above sections of this document provides information on how to install, conf
 
 #### 2013
 
-- **Version 1.19 (Dec 30, 2013)**
+ **Version 1.19 (Dec 30, 2013)**
 
   - All fixes/enhancements in this release was contributed by Tyrel Alastair Hunter - Thank you!
   - Fixed JENKINS-21152 Files are now unlocked after checkin even if the file was not updated
   - Fixed JENKINS-21151 Checkin can now be performed when using multiple-scms-plugin
   - Fixed JENKINS-21150 When using the multiple-scms-plugin each scm will have it's own Derby database.
 
-- **Version 1.18 (Oct 04, 2013)**
+  **Version 1.18 (Oct 04, 2013)**
 
   - Fixed Integrity API deprecated calls that were deprecated with Integrity 10.4
   - Fixed JENKINS-19791 Workaround for missing 'memberdescription' field in API response - thanks to Joerg Steeg for patch!
@@ -690,7 +690,7 @@ The above sections of this document provides information on how to install, conf
   - Added the ability to collect Test Results from Jenkins build and update an Integrity Test Session
   - Upgraded to Jenkins 1.533
 
-- **Version 1.17 (Jun 10, 2013)**
+  **Version 1.17 (Jun 10, 2013)**
   - Fixed JENKINS-17853 where pending entries (add, rename, move) were creating incorrect configurations - thanks to Martin Bickel for patch!
   - Fixed JENKINS-17292 which was a duplicate of JENKINS-17853 above - thanks to Tobias Weier for patch!
   - Fixed JENKINS-16275 where potential CDATA tags in comments were causing errors in change log reporting
@@ -701,51 +701,51 @@ The above sections of this document provides information on how to install, conf
 
 #### 2012
 
-- **Version 1.16 (Sep 11, 2012)**
+ **Version 1.16 (Sep 11, 2012)**
 
   - Fixed JENKINS-14871 to resolve an issue when no value is specified for the 'Checkout Thread Pool Size' setting
   - Fixed JENKINS-14844 to resolve missing 'Author' in Change Log - thanks to Ryan Stedman for patch!
   - Upgraded to Jenkins 1.481
 
-- **Version 1.15 (Aug 10, 2012)**
+  **Version 1.15 (Aug 10, 2012)**
 
   - Fixed JENKINS-14704 PTC Integrity Plugin throws/catches SQL Exception in case of too long revision number
   - Added thread polling feature for checkout - contribution from Sascha Dais
   - Added feature to clean workspace of non-source controlled files - contribution from Sascha Dais
   - Upgraded to Jenkins 1.477
 
-- **Version 1.14 (Jul 05, 2012)**
+  **Version 1.14 (Jul 05, 2012)**
 
   - Fixed issue when 'Clean Workspace' option is checked and files were dropped from the SCM Project
   - Resolved url issues in the plugin's configuration pages when running Jenkins as a Webapp on Tomcat or other Java Webservers
   - Upgraded to Jenkins 1.473
 
-- **Version 1.13 (May 01, 2012)**
+  **Version 1.13 (May 01, 2012)**
 
   - Improved caching of large Integrity SCM Projects which should prevent Jenkins from crashing due to out of memory errors
   - Added feature to synchronize changed or deleted files in the workspace that originated from an Integrity SCM Project, resolving JENKINS-13221 and JENKINS-12819
   - Added the ability to turn debug logging on/off for the plug-in
   - Upgraded to Jenkins 1.462 and added dependencies to Apache Derby 10.5.3.0_1 (for better cache management), Apache commons-codec 1.6 (for checksum generation)
 
-- **Version 1.12 (Jan 24, 2012)**
+  **Version 1.12 (Jan 24, 2012)**
   - Included a fix (provided by Brian Krebs) to address Jenkins-11751
   - Included an alternate (provided by Brian Krebs) suggestion to use revision numbers instead of revision dates for determining changes in Integrity CM
   - Upgraded to Jenkins 1.449 and Apache Commons Digester 3.0
 
 #### 2011
 
-- **Version 1.11 (Oct 10, 2011)**
+ **Version 1.11 (Oct 10, 2011)**
 
   - Added the option to update an Integrity "Build" item with the status of a build
   - Changed plugin branding from MKS to PTC
 
-- **Version 1.10 (Sep 23, 2011)**
+  **Version 1.10 (Sep 23, 2011)**
 
   - Improved checkout performance as author information (si revisioninfo) is obtained only if file revision changed from previous build
   - Converted all 'info' logging into 'debug' in an effort to minimize noise sent to jenkins.err.log
   - Fixed numbering issue with Change Log on "Recent Changes" page
 
-- **Version 1.9 (Aug 26, 2011)**
+  **Version 1.9 (Aug 26, 2011)**
 
   - Added the option to use an API Integration Point other than the Integrity Server. Allows for a client to use FSA Proxy cache
   - Added the option to use an alternate workspace directory
@@ -754,27 +754,27 @@ The above sections of this document provides information on how to install, conf
   - Fixed polling to look at the last build vs. the last successful build
   - Updated plugin pom.xml for Jenkins 1.427 dependency
 
-- **Version 1.8 (May 06, 2011)**
+  **Version 1.8 (May 06, 2011)**
 
   - Added the ability to omit author information from Change Log report
   - Enhanced error handling when attempting to obtain author information for Change Log report
 
-- **Version 1.7 (Apr 15, 2011)**
+  **Version 1.7 (Apr 15, 2011)**
 
   - Updated Change Log calculation and Workspace synchronization based on comparison of last build vs. last successful build
   - Fixed a Change Log generation issue when bad xml characters are present in member revision comments/description
 
-- **Version 1.6 (Apr 01, 2011)**
+  **Version 1.6 (Apr 01, 2011)**
 
   - Fixed issue with Change Log when dropped files are encountered
 
-- **Version 1.5 (Mar 17, 2011)**
+  **Version 1.5 (Mar 17, 2011)**
 
   - Fixed a Null Pointer Exception that occurs when an API session cannot be established with the Integrity Server
 
-- **Version 1.4 (Mar 04, 2011)**
+  **Version 1.4 (Mar 04, 2011)**
 
   - Fixed issue with checking out members from shared subprojects
 
-- **Version 1.3 (Feb 28, 2011)**
+  **Version 1.3 (Feb 28, 2011)**
   - Initial Jenkins release
