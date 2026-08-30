@@ -24,7 +24,6 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import org.apache.commons.codec.digest.DigestUtils;
-import org.apache.commons.lang.BooleanUtils;
 
 import com.mks.api.response.APIException;
 import com.mks.api.response.Field;
@@ -176,7 +175,12 @@ public final class IntegrityCMMember
     command.addAdditionalParameters(IAPIOption.TARGET_FILE, targetFile);
 
     Response response = command.execute(api);
-    return BooleanUtils.toBoolean(response.getExitCode(), 0, 1);
+    int exitCode = response.getExitCode();
+    if (exitCode != 0 && exitCode != 1)
+    {
+      throw new IllegalArgumentException("Unexpected exit code: " + exitCode);
+    }
+    return exitCode == 0;
   }
 
   /**
