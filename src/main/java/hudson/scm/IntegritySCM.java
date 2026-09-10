@@ -1267,7 +1267,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
           listBox.add(config.getName(), config.getConfigId());
         }
       }
-      LOGGER.log(Level.SEVERE, "doFillServerConfigItems called, serverConfig={0}", listBox);
       return listBox; 
     }
     
@@ -1410,7 +1409,6 @@ public class IntegritySCM extends AbstractIntegritySCM implements Serializable
       LOGGER.fine("hostName: " + hostName);
       LOGGER.fine("port: " + port);
       LOGGER.fine("userName: " + userName);
-      LOGGER.fine("password: " + Secret.fromString(password).getEncryptedValue());
       LOGGER.fine("secure: " + secure);
       LOGGER.fine("ipHostName: " + ipHostName);
       LOGGER.fine("ipPort: " + ipPort);
